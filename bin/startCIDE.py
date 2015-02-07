@@ -1,20 +1,17 @@
 import sys
-from cherrypy import (config as server_conf,
-                      quickstart,
-                      engine,
-                      tools)
+import cherrypy
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
-from cide.server.index import Welcome
+from cide.server.ideController import IDEController
 
 # Read config file name from command parameters
 config_filename = sys.argv[1]
 
 # Set server config with config file
-server_conf.update(config_filename)
+cherrypy.config.update(config_filename)
 
 # Loading and setting Websocket plugin
-WebSocketPlugin(engine).subscribe()
-tools.websocket = WebSocketTool()
+WebSocketPlugin(cherrypy.engine).subscribe()
+cherrypy.tools.websocket = WebSocketTool()
 
 # Start server for '/' mappings, with config file
-quickstart(Welcome(), "/", config_filename)
+cherrypy.quickstart(IDEController(cherrypy.config['SRC']), "/", config_filename)
