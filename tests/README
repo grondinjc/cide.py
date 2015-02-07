@@ -1,0 +1,7 @@
+# Unit tests with nose
+Install the required packages for unittests
+`pip install -r tests.req`
+
+### Running unit tests
+In the tests directory execute the following command to run all tests :
+`nosetests`
