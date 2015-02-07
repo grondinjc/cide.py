@@ -1,5 +1,6 @@
 # Python and Boost.Python compiled files
 *.pyc
+*~
 src/app/c++/build
 
 # Compiled Object files
