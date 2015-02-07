@@ -1,0 +1,31 @@
+1. Install required packages
+`sudo apt-get install python-pip`
+`sudo pip install virtualenv`
+`sudo pip install virtualenvwrapper`
+
+2. Save some env variables
+`echo "" >> ~/.bashrc`
+`echo "# Python virtual environment" >> ~/.bashrc`
+`echo "export WORKON_HOME=<PATH_TO_VIRTUALENV_DIR>" >> ~/.bashrc`
+`echo "source /usr/local/bin/virtualenvwrapper.sh" >> ~/.bashrc`
+`. ~/.bashrc`
+
+3. Create the virtualenv directory
+`mkdir -p $WORKON_HOME`
+
+4. Create a new vitual environment
+`mkvirtualenv <name>`
+
+5. Install project packages
+`pip install -r python_packages.req`
+`cat unix_packages.req | xargs sudo apt-get install`
+
+6. Create a symlink inside the env to the source folder. (make sure an virtual env is activate)
+`ln -s <path_to_project>/src $VIRTUAL_ENV/lib/python2.7/site-packages/cide`
+
+Usefull commands
+----------------------------------
+List all environments : workon
+Switch to an environment : workon <envname>
+Leave an environment : deactivate
+List all packages inside an env : lssitepackages
