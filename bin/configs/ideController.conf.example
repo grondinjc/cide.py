@@ -1,0 +1,22 @@
+# IDEController app config file
+[DEFAULT]
+# -- Variable path and elements to set --
+SRC = "/srv/www/cide.py/src"
+
+# -- Static content config --
+# Set root (/) of static dir/file to src
+# Just a shortcut for further config. Does not give static access to src folder
+[/]
+tools.staticdir.root = %(SRC)s
+tools.staticfile.root = %(SRC)s
+
+# Maps domain.com/ide/static to src/static
+[/static]
+tools.staticdir.on = True
+tools.staticdir.dir = "static"
+
+# WebSocket
+[/ws]
+tools.websocket.on = True
+tools.websocket.handler_cls = cide.server.ideController.IDEWebSocket
+

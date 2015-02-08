@@ -2,6 +2,10 @@
 *.pyc
 src/app/c++/build
 
+# Non-example conf file
+bin/*.conf
+bin/configs/*.conf
+
 # Compiled Object files
 *.slo
 *.lo
