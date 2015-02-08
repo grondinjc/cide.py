@@ -1,7 +1,7 @@
 # WelcomeController app config file
 [DEFAULT]
 # -- Variable path and elements to set --
-#SRC = "/srv/www/cide.py/src"
+SRC = "/srv/www/cide.py/src"
 
 # -- Static content config --
 # Set root (/) of static dir/file to src

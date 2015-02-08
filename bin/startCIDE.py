@@ -19,7 +19,7 @@ else:
 bin_dir = os.path.dirname(__file__)
 templates_dir = os.path.join(bin_dir, '../src/templates')
 
-configs = ConfigParser.RawConfigParser({'SRC': '/srv/www/cide.py/src'})
+configs = ConfigParser.RawConfigParser()
 configs.read(configs_file)
 
 server_conf_file = os.path.join(bin_dir, configs.get('DEFAULT', 'server'))
