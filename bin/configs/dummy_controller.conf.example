@@ -10,7 +10,7 @@ SRC = "/srv/www/cide.py/src"
 tools.staticdir.root = %(SRC)s
 tools.staticfile.root = %(SRC)s
 
-# Maps domain.com/<<DUMMT>>/static to src/static
+# Maps domain.com/<<DUMMY>>/static to src/static
 [/static]
 tools.staticdir.on = True
 tools.staticdir.dir = "static"
