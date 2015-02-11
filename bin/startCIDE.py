@@ -8,7 +8,7 @@ from cide.server.ideController import IDEController
 
 # Read config file name from command parameters
 if len(sys.argv) != 2:
-  # XXX Log staring error
+  # XXX Log starting error
   print "Missing or too many arguments. Usage : python startCIDE.py <<configs_file>>"
   sys.exit(1)
 else:
@@ -21,9 +21,9 @@ templates_dir = os.path.join(bin_dir, '../src/templates')
 
 configs = ConfigObj(configs_file)
 
-server_conf_file = os.path.join(bin_dir, configs['DEFAULT']['server'])
-welcomeController_conf_file = os.path.join(bin_dir, configs['DEFAULT']['welcomeController'])
-ideController_conf_file = os.path.join(bin_dir, configs['DEFAULT']['ideController'])
+server_conf_file = configs['DEFAULT']['server']
+welcomeController_conf_file = configs['DEFAULT']['welcomeController']
+ideController_conf_file = configs['DEFAULT']['ideController']
 
 # Set server config with config file
 cherrypy.config.update(server_conf_file)
