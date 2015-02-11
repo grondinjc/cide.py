@@ -1,7 +1,7 @@
 import sys
 import os
-import ConfigParser
 import cherrypy
+from configobj import ConfigObj
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from cide.server.welcomeController import WelcomeController
 from cide.server.ideController import IDEController
@@ -16,15 +16,14 @@ else:
 
 
 # Get the server and app config from the config file received
-bin_dir = os.path.dirname(__file__)
+bin_dir = os.path.abspath(os.path.dirname(__file__))
 templates_dir = os.path.join(bin_dir, '../src/templates')
 
-configs = ConfigParser.RawConfigParser()
-configs.read(configs_file)
+configs = ConfigObj(configs_file)
 
-server_conf_file = os.path.join(bin_dir, configs.get('DEFAULT', 'server'))
-welcomeController_conf_file = os.path.join(bin_dir, configs.get('DEFAULT', 'welcomeController'))
-ideController_conf_file = os.path.join(bin_dir, configs.get('DEFAULT', 'ideController'))
+server_conf_file = os.path.join(bin_dir, configs['DEFAULT']['server'])
+welcomeController_conf_file = os.path.join(bin_dir, configs['DEFAULT']['welcomeController'])
+ideController_conf_file = os.path.join(bin_dir, configs['DEFAULT']['ideController'])
 
 # Set server config with config file
 cherrypy.config.update(server_conf_file)

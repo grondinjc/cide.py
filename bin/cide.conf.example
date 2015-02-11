@@ -1,5 +1,5 @@
 [DEFAULT]
-server = ./configs/server.conf
-welcomeController = ./configs/welcomeController.conf
-ideController = ./configs/ideController.conf
+server = './configs/server.conf'
+welcomeController = './configs/welcomeController.conf'
+ideController = './configs/ideController.conf'
 
