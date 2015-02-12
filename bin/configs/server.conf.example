@@ -7,4 +7,7 @@ tools.sessions.on=True
 tools.sessions.lock='explicit'
 ssl_certificate=None
 ssl_private_key=None
+log.screen=True
+log.access_file='<<PRJ>>/logs/cherrypy_access.log'
+log.error_file='<<PRJ>>/logs/cherrypy_error.log'
 
