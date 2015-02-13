@@ -35,14 +35,14 @@ class IDEController(object):
     # return stream.render('html')
 
   @cherrypy.expose
-  def sendEdit(self, content):
+  def save(self, content):
     # XXX Temp dummy method for test
     self.data += content
     for user in IDEWebSocket.IDEClients:
       user.send(self.data)
 
   @cherrypy.expose
-  def refreshEdit(self):
+  def dump(self):
     return self.data
 
   @cherrypy.expose
