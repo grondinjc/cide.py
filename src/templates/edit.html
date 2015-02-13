@@ -11,10 +11,16 @@
     <h1>Editing display</h1>
 
     <!-- Container of all lines -->
+    <h4>Display</h4>
     <div id="editorWidget">
       <ul id="editorDisplay" class="codeDisplay"></ul>
     </div><br/>
-    <textarea id="editorInput" class="codeInputDebug"></textarea>
+
+    <h4>Last version</h4>
+    <textarea id="editorLastVersion" class="codeInputDebug"></textarea>
+
+    <h4>Local</h4>
+    <textarea id="editorLocal" class="codeInputDebug"></textarea>
     
     <!-- JQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
@@ -28,7 +34,10 @@
     <label>at&nbsp;&nbsp;&nbsp;&nbsp;</label><input type="text" id="addAt"/><br/>
     <button onClick="addNewTextAt();">Send</button>
     <br/><br/>
-    <button onClick="test();">Test</button>
+    <button onClick="test_queue();">Stack modifs</button>
+    <button onClick="applyChanges();">Apply modifs</button>
+    <button onClick="show_stack();">Show Stack</button>
+    <button onClick="update_display();">Update display</button>   
 
 
   </body>
