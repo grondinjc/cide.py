@@ -4,12 +4,25 @@ from genshi.template import TemplateLoader
 
 
 class IDEController(object):
+  """
+  Controller of the IDE/Editing part
+  """
 
-  def __init__(self, template_path):
+  def __init__(self, template_path, logger):
+    """
+    IDEController initialiser
+
+    @param template_path: Path to the template directory
+    @param logger: The CIDE.py logger instance
+    """
     self._loader = TemplateLoader(template_path, auto_reload=True)
+
+    self._logger = logger
 
     # XXX Temp dummy vars
     self.data = ""
+
+    self._logger.debug("IDEController instance created")
 
   @cherrypy.expose
   def index(self):
@@ -33,8 +46,11 @@ class IDEController(object):
 
   @cherrypy.expose
   def ws(self):
-    "Method must exist to serve as a exposed hook for the websocket"
-    # TODO log??
+    """
+    Method must exist to serve as a exposed hook for the websocket
+    """
+    self._logger.info("WS creation request from {0}:{1}".format(cherrypy.request.remote.ip,
+                                                                cherrypy.request.remote.port))
 
 
 class IDEWebSocket(WebSocket):
