@@ -1,7 +1,8 @@
 # IDEController app config file
 [DEFAULT]
 # -- Variable path and elements to set --
-SRC = "/srv/www/cide.py/src"
+PRJ = "<<PRJ>>"
+SRC = %(PRJ)s + "/src"
 
 # -- Static content config --
 # Set root (/) of static dir/file to src
