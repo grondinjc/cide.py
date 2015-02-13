@@ -6,6 +6,9 @@ src/app/c++/build
 bin/*.conf
 bin/configs/*.conf
 
+# Logs
+logs/
+
 # Compiled Object files
 *.slo
 *.lo
