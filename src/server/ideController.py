@@ -1,6 +1,7 @@
 import cherrypy
 from ws4py.websocket import WebSocket
 from genshi.template import TemplateLoader
+from threading import Lock
 
 
 class IDEController(object):
@@ -55,10 +56,12 @@ class IDEController(object):
 
 class IDEWebSocket(WebSocket):
   IDEClients = set()
+  __lock = Lock()
 
   def __init__(self, *args, **kw):
     WebSocket.__init__(self, *args, **kw)
-    self.IDEClients.add(self)
+    with self.__lock:
+      self.IDEClients.add(self)
 
   def closed(self, code, reason=None):
     self.IDEClients.remove(self)
