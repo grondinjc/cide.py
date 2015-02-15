@@ -2,7 +2,7 @@
  *  Classe: 			ZoneTransit     																					*
  *  Auteur: 			Mariane Maynard 																					*
  *	Description:	Classe servant a stocker temporairement les modifications	*
-									d'un fichier sur le serveur en attendant d'etre resolues	*
+ *								d'un fichier sur le serveur en attendant d'etre resolues	*
  ****************************************************************************/
 
 #include <vector>
@@ -16,51 +16,35 @@
 using std::vector;
 using std::mutex;
 using std::lock_guard;
+using std::string;
+using boost::shared_ptr;
 
 class ZoneTransit
 {
   private:
     vector<Modification> _modifications;
-    Fichier _file;
+    shared_ptr<Fichier> _fichier;
     mutex _mutex;
 
   public:
-    //ctor par defaut
-    ZoneTransit()
+    ZoneTransit() = default;
+
+    ZoneTransit(const shared_ptr<Fichier>& fichier) noexcept
       : _modifications{}
-      , _file{}
+			, _fichier{fichier}
       , _mutex{}
     {}
-
-    //Sainte-Trinite
-		//n.b : assurez-vous d'avoir une ste-trinite fonctionnelle (implicite ou explicite) avec BOOST_PYTHON
-
-    //ctor de copie
-    ZoneTransit(const ZoneTransit &zt)
-      : _modifications{zt._modifications}
-      , _file{zt._file}
-      , _mutex{}
-    {}
-
-    //swap
-    void swap(const ZoneTransit &zt)
-    {
-      using std::swap;
-      //swap(_modifications, zt._modifications);
-      //swap(_file, zt._file);
-    }
-
-    //assignment
-    ZoneTransit& operator=(const ZoneTransit &zt)
-    {
-      ZoneTransit{zt}.swap(*this);
-      return *this;
-    }
 
 		//ajoute les Modifications par ordre croissant de leur position
     void add(Modification m)
 		{
+			assert(m.getFichier() == _fichier);
 			lock_guard<mutex> lock{_mutex};
+
+			if(_modifications.empty())
+			{
+				_modifications.push_back(m);
+			}
 
 			for(auto it = _modifications.begin(); it != _modifications.end(); ++it)
 			{
@@ -75,11 +59,16 @@ class ZoneTransit
 		//enleve et retourne le dernier element (avec la plus grande position)
     Modification remove()
 		{
+			assert(!_modifications.empty());
 			lock_guard<mutex> lock{_mutex};
-
-			Modification m = _modifications.back();
-			_modifications.pop_back();
-			return m;
+			
+			if(!_modifications.empty())
+			{
+				Modification m = _modifications.back();
+				_modifications.pop_back();
+				return m;
+			}
+			return Modification{};
 		}
 };
 

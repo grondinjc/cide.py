@@ -7,29 +7,33 @@
 #ifndef MODIFICATION
 #define MODIFICATION
 
+#include "Fichier.h"
+
+using boost::shared_ptr;
+
 class Modification
 {
 	private:
 		uint _position;
     size_t _taille;
     //uint _versionID;
-    //Fichier* fichier;
+    shared_ptr<Fichier> _fichier;
 		//string data
     
 	public:
-    //default ctor
-    constexpr Modification() noexcept
-      : _position{}
-      , _taille{}
-    {}
+    Modification() = default;
 
-    constexpr Modification(uint position, size_t taille) noexcept
+    Modification(uint position, size_t taille, const shared_ptr<Fichier>& fichier) noexcept
       : _position{position}
       , _taille{taille}
+			, _fichier{fichier}
     {}
 
-		constexpr uint getPosition() const noexcept {return _position;}
-    constexpr size_t getTaille() const noexcept {return _taille;}
+		virtual ~Modification() = default;
+		virtual uint getPosition() const noexcept {return _position;}
+    virtual size_t getTaille() const noexcept {return _taille;}
+		virtual shared_ptr<Fichier> getFichier() const noexcept {return _fichier;}
+	//virtual effectuerModification();	
 };
 
 #endif //MODIFICATION
