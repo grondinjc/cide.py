@@ -27,7 +27,7 @@ class IDEController(object):
 
   @cherrypy.expose
   def index(self):
-    return "Hello world"
+    return "Hello world %s" % self.data
     # TODO Return page/template render for the IDE part
     # tmpl = loader.load('edit.html')
     # # set args in generate as key1=val1, key2=val2
@@ -36,13 +36,16 @@ class IDEController(object):
 
   @cherrypy.expose
   def save(self, content):
-    # XXX Temp dummy method for test
+    # XXX Temp dummy content for test
     self.data += content
+    sender_addr = (cherrypy.request.remote.ip, cherrypy.request.remote.port)
     for user in IDEWebSocket.IDEClients:
-      user.send(self.data)
+      if user.peer_address != sender_addr:  # XXX Must check ifremote ws port is the same as request
+        user.send(self.data)
 
   @cherrypy.expose
   def dump(self):
+    # XXX Temp dummy content
     return self.data
 
   @cherrypy.expose
