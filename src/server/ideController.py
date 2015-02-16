@@ -82,6 +82,7 @@ class IDEController(object):
   def ws(self):
     """
     Method must exist to serve as a exposed hook for the websocket
+    (Path : /ide/ws)
     """
     self._logger.info("WS creation request from {0}:{1}".format(cherrypy.request.remote.ip,
                                                                 cherrypy.request.remote.port))
