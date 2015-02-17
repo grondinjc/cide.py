@@ -26,7 +26,8 @@ BOOST_PYTHON_MODULE(libZoneTransit)
 	class_<ZoneTransit, boost::noncopyable>("ZoneTransit")
 		.def(init<const shared_ptr<Fichier>&>())
 		.def("add", &ZoneTransit::add)
-		.def("remove", &ZoneTransit::remove);
+		.def("remove", &ZoneTransit::remove)
+		.def("ecrireModifications", &ZoneTransit::ecrireModifications);
 
 	//Definit la classe Modification (non instantiable, abstraite) et le type shared_ptr<Modification>
 	class_<Modification, boost::noncopyable, shared_ptr<Modification>>("Modification", no_init)

@@ -23,7 +23,7 @@ struct Fichier
 	virtual void ecrireSurDisque() = 0;
 	virtual void inserer(const char *data, uint position, size_t taille) = 0;
 	virtual void supprimer(uint position, size_t taille) = 0;
-	virtual void printContenu() = 0;
+	virtual void printContenu() = 0;	//Fonction de debug
 };
 
 #endif //FICHIER
