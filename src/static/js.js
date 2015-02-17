@@ -12,7 +12,6 @@ communicator = null;
 $(document).ready(init);
 function init() {
   // Classes
-  
   communicator = new Communicator();
   communicator.init('editorLocal', 'editorLastVersion', 'editorDisplay');
   communicator.showFileContent("dummyStringForNow");
@@ -42,15 +41,10 @@ setTimeout(function() {
 // #####                           #####
 // #####################################
 
-// JSON Representation helpers
-function createModifGroup(deltas) { return {revision: 0, deltas: deltas}; }
-function createModif(val, at) { return {val: val, at: at}; }
-
-
 function Communicator(pushInterval) {
 
   // Handle null value
-  pushInterval = pushInterval || DEFAULT_PUSH_INTERVAL;
+  this.pushInterval = pushInterval || DEFAULT_PUSH_INTERVAL;
   this.pushIntervalHandle = null;
 
   this.zoneLocal = null;
@@ -63,40 +57,34 @@ function Communicator(pushInterval) {
   this.init = function(localZoneId, lastVersionZoneId, displayZoneId) {
     
     // Get a ref to edit nodes
-    var nodeLocal = $("#" + localZoneId);
     var nodeLastVersion = $("#" + lastVersionZoneId);
     var nodeDisplay = $("#" + displayZoneId);
 
     // Create classes
-    this.zoneLocal = new LocalZone(nodeLocal);
+    this.changeMemory = new LocalChanges();
     this.zoneLastVersion = new LastVersionZone(nodeLastVersion);
     this.zoneDisplay = new DisplayZone(nodeDisplay);
 
     // Setup event handlers
     var obj = this; // For closure
 
-    // Replace cursor at clicked position handler
-    nodeDisplay.focus(this.onDisplayFocus);
-
     // Push changes handler 
     this.pushIntervalHandle = setInterval( 
       function() {
         // try push
-        var changes = obj.zoneLocal.get();
+        var changes = obj.changeMemory.get();
         if(changes.length == 0) return;
         // Send
         obj.send(changes);
       }, 
-    pushInterval);
+    this.pushInterval);
 
     // Local and display sync handler
-    nodeLocal.keypress(function(evt) {
+    nodeDisplay.keypress(function(evt) {
       evt = evt || window.event;
-      alert(String.fromCharCode(evt.which)); 
-    });
-      var repr = [createModif(newVal, at)];
-      this.zoneLocal.update(newVal, at);
-      this.zoneDisplay.update(this.combineText());
+      var charKey = String.fromCharCode(evt.which);
+      var charAt = nodeDisplay.getCursorPosition();
+      obj.changeMemory.update(charKey, charAt);
     });
   };
 
@@ -118,32 +106,27 @@ function Communicator(pushInterval) {
 
   this.notifyForce = function(newVal, at) {
     this.zoneLastVersion.put(newVal, at);
-    this.zoneLocal.clear();
     this.zoneDisplay.update(newVal);
+    this.changeMemory.clear();
   };
 
   this.notifySoft = function(newVal, at) {
+    this.changeMemory.update(newVal, at);
+
     // Quickhack
     var repr = [createModif(newVal, at)];
     this.zoneLastVersion.update(repr);
-    this.zoneLocal.update(newVal, at);
+
     this.zoneDisplay.update(this.combineText());
   };
 
   this.combineText = function() {
     var base = this.zoneLastVersion.get();
-    var modifs = this.zoneLocal.get();
+    var modifs = this.changeMemory.get();
     for(var i = 0; i < modifs.length; ++i){
       base = base.insert(modifs[i].val, modifs[i].at);
     }
     return base;
-  };
-
-  
-  
-  this.onDisplayFocus = function() {
-    var currentPos = getCursorPosition();
-    this.zoneLocal.focus();
   };
 };
 
@@ -203,39 +186,34 @@ function LastVersionZone(node) {
   };
 }
 
-function LocalZone(node) {
-  this.zone = node;
+function LocalChanges() {
 
   this.modifications = [];
   this.currentModificationPos = 0;
-
-  
+  this.currentChange = "";
 
   this.get = function() {
-    //return this.modifications;
-    return [createModif(this.zone.val(), this.currentModificationPos)];
-  };
-
-  this.posEnd = function() {
-    return this.currentModificationPos;
-  };
-
-  this.posStart = function() {
-    return this.currentModificationPos - this.zone.val().length;
+    return this.modifications;
   };
 
   this.clear = function() {
-    this.zone.val("");
     this.modifications.clear();
     this.currentModificationPos = 0;
+    this.currentChange = "";
   };
 
   this.update = function(val, at) {
-    this.currentModificationPos += (at < this.currentModificationPos) ? val.length : 0;
-  };
-
-  this.focus = function() {
-    this.zone.focus();
+    var theoricalAt = this.currentModificationPos + this.currentChange.length + 1;
+    if(theoricalAt != at) {
+      // change somewhere else... save 
+      this.modifications.push(createModif(this.currentChange, this.currentModificationPos));
+      // and start new change
+      this.currentModificationPos = at;
+      this.currentChange = val;
+    }
+    else {
+      this.currentChange += val;
+    }
   };
 }
 
@@ -245,6 +223,10 @@ function LocalZone(node) {
 // #####         Helpers         #####
 // #####                         #####
 // ###################################
+
+/* JSON Representation helpers */
+function createModifGroup(deltas) { return {revision: 0, deltas: deltas}; }
+function createModif(val, at) { return {val: val, at: at}; }
 
 /* SELECTION HELPER FUNCTIONS */
 $.fn.selectRange = function(start, end) {

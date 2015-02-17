@@ -26,12 +26,12 @@ class IDEController(object):
 
   @cherrypy.expose
   def index(self):
-    return "Hello world"
+    #return "Hello world"
     # TODO Return page/template render for the IDE part
-    # tmpl = loader.load('edit.html')
+    tmpl = self._loader.load('edit.html')
     # # set args in generate as key1=val1, key2=val2
-    # stream = tmpl.generate()
-    # return stream.render('html')
+    stream = tmpl.generate()
+    return stream.render('html')
 
   @cherrypy.expose
   def sendEdit(self, content):
