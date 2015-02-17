@@ -13,7 +13,7 @@ $(document).ready(init);
 function init() {
   // Classes
   communicator = new Communicator();
-  communicator.init('editorLocal', 'editorLastVersion', 'editorDisplay');
+  communicator.init('editorLastVersion', 'editorDisplay');
   communicator.showFileContent("dummyStringForNow");
 }
 
@@ -24,16 +24,11 @@ function addNewTextAt(){
   var at = $('#addAt').val();
 }
 
-function test_queue() {
-  registerServerUpdate("X", 0);
-  registerServerUpdate("Y", 11);
-  registerServerUpdate("Z", 3);
+function test_notify() {
+  var modA = createModif("111", 0);
+  var modB = createModif("444", 6);
+  communicator.notifySoft(createModifGroup([modA, modB]));
 }
-
-
-setTimeout(function() {
-  communicator.notifySoft("abc", 0);
-}, 2000);
 
 // #####################################
 // #####                           #####
@@ -54,11 +49,14 @@ function Communicator(pushInterval) {
 
 
 
-  this.init = function(localZoneId, lastVersionZoneId, displayZoneId) {
+  this.init = function(lastVersionZoneId, displayZoneId) {
     
     // Get a ref to edit nodes
     var nodeLastVersion = $("#" + lastVersionZoneId);
     var nodeDisplay = $("#" + displayZoneId);
+
+    // Required to get cursor position on contentEditable pre tag
+    var elementDisplay = document.getElementById(displayZoneId);
 
     // Create classes
     this.changeMemory = new LocalChanges();
@@ -83,8 +81,8 @@ function Communicator(pushInterval) {
     nodeDisplay.keypress(function(evt) {
       evt = evt || window.event;
       var charKey = String.fromCharCode(evt.which);
-      var charAt = nodeDisplay.getCursorPosition();
-      obj.changeMemory.update(charKey, charAt);
+      var charAt = (getCaretCharacterOffsetWithin(elementDisplay) || 0);
+      obj.changeMemory.addChange(charKey, charAt);
     });
   };
 
@@ -93,30 +91,27 @@ function Communicator(pushInterval) {
     var content = "Hello\nWorld";
     // The revision from the response
     this.fileRevision = 0;
-    this.notifyForce(content, 0);
+    this.notifyForce(createModif(content, 0));
   };
 
   this.send = function(modifications) {
     // ajax
   };
 
-  this.receive = function(modifications){
+  this.receive = function(){
     // websocket
   };
 
-  this.notifyForce = function(newVal, at) {
-    this.zoneLastVersion.put(newVal, at);
-    this.zoneDisplay.update(newVal);
+  // change to modification group ?
+  this.notifyForce = function(initialDelta) {
+    this.zoneLastVersion.put(initialDelta.val, initialDelta.at);
+    this.zoneDisplay.update(initialDelta.val);
     this.changeMemory.clear();
   };
 
-  this.notifySoft = function(newVal, at) {
-    this.changeMemory.update(newVal, at);
-
-    // Quickhack
-    var repr = [createModif(newVal, at)];
-    this.zoneLastVersion.update(repr);
-
+  this.notifySoft = function(modifications) {
+    this.changeMemory.update(modifications.deltas);
+    this.zoneLastVersion.update(modifications.deltas);
     this.zoneDisplay.update(this.combineText());
   };
 
@@ -136,45 +131,20 @@ function DisplayZone(node){
   this.max_number_of_lines_reached = 0;
 
   this.update = function(text){
-    var lines = text.split("\n");
-    // Repopulate existing line-tags
-    var index;
-    var max_loop = Math.min(lines.length, this.max_number_of_lines_reached);
-    for(index = 0; index < max_loop; ++index){
-      var lineNode = this.node.children().eq(index);
-      lineNode.text(lines[index]);
-      // Required when line was invisible
-      lineNode.attr('class', LINE_CLASS_VISIBLE); 
-    }
-    // Add new line-tags
-    for( ; index < lines.length; ++index){
-      this.node.append(
-        // Create line tag
-        $(LINE_REPR_TAG).attr('class', LINE_CLASS_VISIBLE)
-                        .append(lines[index]));
-      ++this.max_number_of_lines_reached;
-    }
-    // Hide other lines
-    // Don't delete them 
-    for( ; index < this.max_number_of_lines_reached; ++index){
-      this.node.children().eq(index).attr('class', LINE_CLASS_INVISIBLE);
-    }
+    this.node.text(text);
   };
 }
 
 function LastVersionZone(node) {
   this.zone = node;
 
-  this.add = function(newVal, at){
-    // Add new text
-    var content = this.zone.val();
-    this.zone.val(content.slice(0, at) + newVal + content.slice(at));
-  };
-
   this.update = function(modifications) {
+    var content = this.zone.val();
     for(var i = 0; i < modifications.length; ++i) {
-      this.add(modifications[i].val, modifications[i].at);
+      content = (content.slice(0, modifications[i].at) + modifications[i].val + content.slice(modifications[i].at));
     }
+    
+    this.zone.val(content);
   };
 
   this.put = function(text) {
@@ -189,24 +159,47 @@ function LastVersionZone(node) {
 function LocalChanges() {
 
   this.modifications = [];
-  this.currentModificationPos = 0;
+  this.currentModificationPos = undefined;
   this.currentChange = "";
 
   this.get = function() {
-    return this.modifications;
+    return (this.currentModificationPos == undefined || this.currentChange.length == 0) ?
+      this.modifications.dcopy() :
+      // Quick hack
+      this.modifications.concat([createModif(this.currentChange, this.currentModificationPos)]);
   };
 
   this.clear = function() {
     this.modifications.clear();
-    this.currentModificationPos = 0;
+    this.currentModificationPos = undefined;
     this.currentChange = "";
   };
 
-  this.update = function(val, at) {
-    var theoricalAt = this.currentModificationPos + this.currentChange.length + 1;
-    if(theoricalAt != at) {
+  /* At request was received from the server.
+  All saved offset need to be updated */
+  this.update = function(deltas) {
+    deltas.map(function(delta) {
+      // For stored change
+      this.modifications.map(function(mod) {
+        mod.at += (delta.at < mod.at) ? delta.val.length : 0;
+      });
+      // For current change, when defined
+      if(this.currentModificationPos != undefined) {
+        this.currentModificationPos += (delta.at < this.currentModificationPos) ? delta.val.length : 0;
+      }
+    }, this);
+  };
+
+  /* A change has been made localy. Store it. */
+  this.addChange = function(val, at) {
+    // Set cursor pos when undefined
+    this.currentModificationPos = (this.currentModificationPos || at);
+
+    var theoricalAt = this.currentModificationPos + this.currentChange.length;
+    if(theoricalAt != at && this.currentChange.length != 0) {
       // change somewhere else... save 
       this.modifications.push(createModif(this.currentChange, this.currentModificationPos));
+
       // and start new change
       this.currentModificationPos = at;
       this.currentChange = val;
@@ -251,7 +244,35 @@ $.fn.selectRange = function(start, end) {
 $.fn.setCursorPosition = function(pos) { this.selectRange(pos, pos); };
 $.fn.getCursorPosition = function() { return this.prop("selectionStart"); };
 
+// getCaretCharacterOffsetWithin(document.getElementById("editorDisplay"));
+function getCaretCharacterOffsetWithin(element) {
+  var caretOffset = 0;
+  var doc = element.ownerDocument || element.document;
+  var win = doc.defaultView || doc.parentWindow;
+  var sel;
+  if (typeof win.getSelection != "undefined") {
+    sel = win.getSelection();
+    if (sel.rangeCount > 0) {
+      var range = win.getSelection().getRangeAt(0);
+      var preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(element);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      caretOffset = preCaretRange.toString().length;
+    }
+  } else if ( (sel = doc.selection) && sel.type != "Control") {
+    var textRange = sel.createRange();
+    var preCaretTextRange = doc.body.createTextRange();
+    preCaretTextRange.moveToElementText(element);
+    preCaretTextRange.setEndPoint("EndToEnd", textRange);
+    caretOffset = preCaretTextRange.text.length;
+  }
+  return caretOffset;
+}
+
 /* ARRAY HELPER */
+Array.prototype.dcopy = function() {
+  return $.extend(true, [], this);
+};
 Array.prototype.clear = function() {
   while (this.length) {
     this.pop();
