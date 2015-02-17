@@ -1,12 +1,10 @@
-// CONSTANTS
-LINE_REPR = 'li';
-LINE_REPR_TAG = '<' + LINE_REPR +'>';
-LINE_CLASS_VISIBLE = 'line';
-LINE_CLASS_INVISIBLE = 'emptyLine';
-
 // Central point of interractions
 DEFAULT_PUSH_INTERVAL = 2000; // ms
 communicator = null;
+
+// Requests
+HOST = "localhost:8080";
+RETRY_TIMEOUT = 2000; // ms
 
 // Initialize content when ready
 $(document).ready(init);
@@ -71,8 +69,10 @@ function Communicator(pushInterval) {
       function() {
         // try push
         var changes = obj.changeMemory.get();
-        if(changes.length == 0) return;
-        // Send
+        if(changes.length == 0) 
+          return;
+
+        // Send and clear
         obj.send(changes);
       }, 
     this.pushInterval);
@@ -95,7 +95,7 @@ function Communicator(pushInterval) {
   };
 
   this.send = function(modifications) {
-    // ajax
+    
   };
 
   this.receive = function(){
@@ -210,6 +210,53 @@ function LocalChanges() {
   };
 }
 
+function RequestHandler(host, recvFn) {
+
+  this.hostws = "ws://"+ host +"/ide/ws";
+  this.retryTimeout = null;
+  this.socket = new WebSocket(hostws);
+
+  this.recv = recvFn;
+  this.emptyCallback = function(){};
+
+  this.socket.onopen = function(){
+    clearTimeout(this.retryTimeout);
+    alert('WSOPEN');
+  };
+
+  this.socket.onmessage = function(msg){
+    alert(msg);
+    this.recv(msg);
+  };
+
+  this.socket.onclose = function(){
+    clearTimeout(this.retryTimeout);
+    alert('WSCLOSE');
+    this.retryTimeout = setTimeout(connect, 3000);
+  };
+
+  this.send = function(data, url, successCallback, errorCallback) {
+    successCallback = successCallback || this.emptyCallback;
+    errorCallback = errorCallback || this.emptyCallback;
+
+    $.ajax({
+      type: "POST",
+      url: url,
+      data: data,
+      cache: false,
+      dataType: "text",
+      success: function(response, text) { 
+        console.log('SEND SUCCESS', modifications); 
+        successCallback(response, text);
+      },
+      error: function(request, status, error) { 
+        alert(request.responseText); 
+        errorCallback(request, status, error);
+      }
+    }); 
+  };
+}
+
 
 // ###################################
 // #####                         #####
@@ -295,73 +342,6 @@ function sleep(milliseconds) {
 }
 
 
-/*
-$(document).ready(function() {
-  if(!("WebSocket" in window)){
-    alert("BOOM NO WEBSOCKET");
-  }else{
-    connect();
-  }
-});
 
-$('#editor').keypress(function(event) {
-  if (event.which == 13) {  //Enter Key
-    event.preventDefault();
-    sendChanges();
-  }
-});
 
-function connect() {
-  var host = "ws://localhost:8080/ws";
-  //var host = "ws://10.44.88.142:8080/ws";
-  var retryTimeout;
-  var socket = new WebSocket(host);
 
-  socket.onopen = function(){
-    clearTimeout(retryTimeout);
-    alert('WSOPEN');
-    refreshChat();
-  }
-
-  socket.onmessage = function(msg){
-    $('#content').html(msg.data);
-  }
-
-  socket.onclose = function(){
-    clearTimeout(retryTimeout);
-    alert('WSCLOSE');
-    retryTimeout = setTimeout(function(){
-      connect();
-    }, 3000);
-  }      
-}
-
-function sendChanges() {
-  $.ajax({
-    type: "POST",
-    url: "save",
-    data: "content=" + $('#editor').val() + '<br>',
-    cache: false,
-    dataType: "text",
-    success: function(data) {
-      console.log('SEND SUCCESS')
-      $('#editor').val('');
-      //alert('AJAX SUCCESS');
-      //$('#content').text(data);
-    }
-  });
-}
-
-function refreshChat() {
-  $.ajax({
-    type: "GET",
-    url: "refresh",
-    dataType: "text",
-    success: function(data) {
-      console.log('REFRESH SUCCESS')
-      $('#content').html(data);
-      //alert('AJAX SUCCESS');
-      //$('#content').text(data);
-    }
-  });
-}*/
