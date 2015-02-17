@@ -21,24 +21,27 @@ using boost::shared_ptr;
 
 class ZoneTransit
 {
+	public:
+		using ModificationPtr = shared_ptr<Modification>;
+		using FichierPtr = shared_ptr<Fichier>;
   private:
-    vector<Modification> _modifications;
-    shared_ptr<Fichier> _fichier;
+    vector<ModificationPtr> _modifications;
+    FichierPtr _fichier;
     mutex _mutex;
 
   public:
     ZoneTransit() = default;
 
-    ZoneTransit(const shared_ptr<Fichier>& fichier) noexcept
+    ZoneTransit(const FichierPtr& fichier) noexcept
       : _modifications{}
 			, _fichier{fichier}
       , _mutex{}
     {}
 
 		//ajoute les Modifications par ordre croissant de leur position
-    void add(Modification m)
+    void add(const ModificationPtr& m)
 		{
-			assert(m.getFichier() == _fichier);
+			assert(m->getFichier() == _fichier);
 			lock_guard<mutex> lock{_mutex};
 
 			if(_modifications.empty())
@@ -46,9 +49,10 @@ class ZoneTransit
 				_modifications.push_back(m);
 			}
 
+			//cette idee ne fonctionnera peut-etre plus etant donne les cas limites enumeres...
 			for(auto it = _modifications.begin(); it != _modifications.end(); ++it)
 			{
-				if(it->getPosition() > m.getPosition())
+				if((*it)->getPosition() > m->getPosition())
 				{
 					_modifications.insert(it,m);
 					break;
@@ -57,18 +61,27 @@ class ZoneTransit
 		}
 
 		//enleve et retourne le dernier element (avec la plus grande position)
-    Modification remove()
+    ModificationPtr remove()
 		{
 			assert(!_modifications.empty());
 			lock_guard<mutex> lock{_mutex};
 			
 			if(!_modifications.empty())
 			{
-				Modification m = _modifications.back();
+				ModificationPtr m = _modifications.back();
 				_modifications.pop_back();
 				return m;
 			}
-			return Modification{};
+			return ModificationPtr{};
+		}
+
+		//effectue les modifications
+		void ecrireModifications()
+		{
+			for(auto it = _modifications.begin(); it != _modifications.end(); ++it)
+			{
+				(*it)->effectuerModification();
+			}
 		}
 };
 

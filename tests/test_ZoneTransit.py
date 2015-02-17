@@ -7,7 +7,7 @@ class TestZoneTransit(TestCase):
   def test_ctor(self):
 		#dbg()
 		fichierTest = libZoneTransit.Fichier("test")
-		modifTest = libZoneTransit.Modification(5, 3, fichierTest)
+		modifTest = libZoneTransit.Ajout(5, 3, fichierTest, "allo")
 		ztTest = libZoneTransit.ZoneTransit(fichierTest)
 		
 		self.assertEqual(modifTest.position, 5)
@@ -21,3 +21,5 @@ class TestZoneTransit(TestCase):
 		ztTest.add(modifTest)
 		modif = ztTest.remove()
 		self.assertEqual(modifTest, modif)
+
+		fichierTest.printContenu()

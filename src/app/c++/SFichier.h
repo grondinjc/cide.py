@@ -15,7 +15,8 @@
 using std::string;
 using std::ifstream;
 using boost::shared_ptr;
-using std::make_shared;
+using std::endl;
+using std::cout;
 
 class SFichier : public Fichier
 {
@@ -42,6 +43,9 @@ class SFichier : public Fichier
 
 		virtual void supprimer(uint position, size_t taille) override
 		{_contenu.erase(position, taille);}
+
+		virtual void printContenu() override
+		{cout << _contenu << endl;}
 };
 
 //Implementation des factory method pour string
