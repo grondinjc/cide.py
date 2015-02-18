@@ -15,6 +15,7 @@ $('#editor').keypress(function(event) {
 });
 
 function connect() {
+  // TODO Use template to put IP:PORT here?
   //var host = "ws://localhost:8080/ide/ws";
   var host = "ws://10.44.88.142:8080/ide/ws";
   var retryTimeout;
