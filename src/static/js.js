@@ -28,6 +28,15 @@ function test_notify() {
   communicator.notifySoft(createModifGroup([modA, modB]));
 }
 
+function test_ajax() {
+  var modObject = createModif("abc", 0);
+  var modifObject = createModifGroup([modObject]);
+  communicator.requestHandler.send(modifObject, "sendEdit", function(){
+    console.log("Success reveived comm");
+    communicator.changeMemory.clear();
+  });
+}
+
 // #####################################
 // #####                           #####
 // #####          Classes          #####
@@ -45,8 +54,6 @@ function Communicator(pushInterval) {
   this.zoneDisplay = null;
   this.fileRevision = 0;
 
-
-
   this.init = function(lastVersionZoneId, displayZoneId) {
     
     // Get a ref to edit nodes
@@ -61,6 +68,10 @@ function Communicator(pushInterval) {
     this.zoneLastVersion = new LastVersionZone(nodeLastVersion);
     this.zoneDisplay = new DisplayZone(nodeDisplay);
 
+    // Handle ways of sending and receiving data from/to server
+    this.requestHandler = new RequestHandler(HOST, this.receive);
+    this.requestHandler.init();
+
     // Setup event handlers
     var obj = this; // For closure
 
@@ -72,8 +83,12 @@ function Communicator(pushInterval) {
         if(changes.length == 0) 
           return;
 
-        // Send and clear
-        obj.send(changes);
+        // Send and clear on success
+        var modifObject = createModifGroup(changes);
+        obj.requestHandler.send(modifObject, "sendEdit", function(){
+          console.log("Success reveived comm");
+          obj.changeMemory.clear();
+        });
       }, 
     this.pushInterval);
 
@@ -94,12 +109,9 @@ function Communicator(pushInterval) {
     this.notifyForce(createModif(content, 0));
   };
 
-  this.send = function(modifications) {
-    
-  };
-
-  this.receive = function(){
-    // websocket
+  // Data received from server
+  this.receive = function(jsonObj){
+    alert(jsonObj);
   };
 
   // change to modification group ?
@@ -210,47 +222,57 @@ function LocalChanges() {
   };
 }
 
-function RequestHandler(host, recvFn) {
+function RequestHandler(host, recvCallback) {
 
-  this.hostws = "ws://"+ host +"/ide/ws";
-  this.retryTimeout = null;
-  this.socket = new WebSocket(hostws);
+  // For closure
+  var obj = this;
 
-  this.recv = recvFn;
-  this.emptyCallback = function(){};
+  this._hostws = "ws://"+ host +"/ide/ws";
+  this._retryTimeout = null;
+  this._socket = null;
 
-  this.socket.onopen = function(){
-    clearTimeout(this.retryTimeout);
-    alert('WSOPEN');
+  this._recv = recvCallback;
+  this._emptyCallback = function(){};
+
+  this.init = function() {
+    this._connect();
   };
 
-  this.socket.onmessage = function(msg){
-    alert(msg);
-    this.recv(msg);
+  this._connect = function() {
+    this._socket = new WebSocket(this._hostws);
+    this._socket.onopen = this._socket_onopen;
+    this._socket.onmessage = this._socket_onmessage;
+    this._socket.onclose = this._socket_onclose;
   };
 
-  this.socket.onclose = function(){
-    clearTimeout(this.retryTimeout);
-    alert('WSCLOSE');
-    this.retryTimeout = setTimeout(connect, 3000);
+  this._socket_onopen = function(){
+    clearTimeout(obj._retryTimeout);
   };
 
-  this.send = function(data, url, successCallback, errorCallback) {
-    successCallback = successCallback || this.emptyCallback;
-    errorCallback = errorCallback || this.emptyCallback;
+  this._socket_onmessage = function(msg){
+    obj._recv(JSON.parse(msg.data));
+  };
+
+  this._socket_onclose = function(){
+    clearTimeout(obj._retryTimeout);
+    obj._retryTimeout = setTimeout(obj._connect, 3000);
+  };
+
+  this.send = function(data, controller, successCallback, errorCallback) {
+    successCallback = successCallback || this._emptyCallback;
+    errorCallback = errorCallback || this._emptyCallback;
 
     $.ajax({
       type: "POST",
-      url: url,
-      data: data,
+      url: controller,
+      data: JSON.stringify(data),
       cache: false,
-      dataType: "text",
+      contentType: 'application/json',
+      dataType: "json",
       success: function(response, text) { 
-        console.log('SEND SUCCESS', modifications); 
         successCallback(response, text);
       },
-      error: function(request, status, error) { 
-        alert(request.responseText); 
+      error: function(request, status, error) {  
         errorCallback(request, status, error);
       }
     }); 
@@ -340,8 +362,3 @@ function sleep(milliseconds) {
     }
   }
 }
-
-
-
-
-
