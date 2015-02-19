@@ -3,7 +3,7 @@ DEFAULT_PUSH_INTERVAL = 2000; // ms
 communicator = null;
 
 // Requests
-HOST = "localhost:8080";
+HOST = window.location.host;
 RETRY_CONNECT_TIMEOUT = 2000; // ms
 
 // Initialize content when ready
