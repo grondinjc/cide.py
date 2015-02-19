@@ -37,7 +37,7 @@ class IDEController(object):
   @cherrypy.expose
   @cherrypy.tools.json_in()
   @cherrypy.tools.json_out()
-  def sendEdit(self):
+  def save(self):
     json_data = cherrypy.request.json
 
     content = ""
@@ -51,7 +51,13 @@ class IDEController(object):
     # Return default structure {code, status, merrage}
     return {} # ok for now
 
-
+  @cherrypy.expose
+  @cherrypy.tools.json_out()
+  @cherrypy.tools.json_in()
+  def open(self):
+    return {'file':    "dummy",
+            'vers':    0,
+            'content': "Hello world from controller"}
 
   @cherrypy.expose
   def refreshEdit(self):

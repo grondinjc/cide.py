@@ -31,7 +31,7 @@ function test_notify() {
 function test_ajax() {
   var modObject = createModif("abc", 0);
   var modifObject = createModifGroup([modObject]);
-  communicator._requestHandler.send(modifObject, "sendEdit", function(){
+  communicator._requestHandler.send("save", modifObject, function(){
     console.log("Success reveived comm");
     communicator.changeMemory.clear();
   });
@@ -45,6 +45,9 @@ function test_ajax() {
 
 /* Central class that will interact will all other classes. */
 function Communicator(pushInterval) {
+
+  // Setup event handlers
+  var obj = this; // For closure
 
   // Handle null value
   this._pushInterval = pushInterval || DEFAULT_PUSH_INTERVAL;
@@ -73,9 +76,6 @@ function Communicator(pushInterval) {
     this._requestHandler = new RequestHandler(HOST, this.receive);
     this._requestHandler.init();
 
-    // Setup event handlers
-    var obj = this; // For closure
-
     // Push changes handler 
     this._pushIntervalHandle = setInterval( 
       function() {
@@ -86,8 +86,8 @@ function Communicator(pushInterval) {
 
         // Send and clear on success
         var modifObject = createModifGroup(changes);
-        obj._requestHandler.post("sendEdit", modifObject, function(){
-          console.log("Success reveived comm");
+        obj._requestHandler.put("save", modifObject, function(){
+          console.log("Changes sent, clear local changes");
           obj._changeMemory.clear();
         });
       }, 
@@ -103,16 +103,20 @@ function Communicator(pushInterval) {
   };
 
   this.showFileContent = function(filepath) {
+    // force send any pending changes on current file (if any)
+    // TODO changeFileState class
+
     // Do request
-    var content = "Hello\nWorld";
-    // The revision from the response
-    this.fileRevision = 0;
-    this.notifyForce(createModif(content, 0));
+    this._requestHandler.post("open", createOpen(filepath), function(response){
+      // on success
+      obj.fileRevision = response.vers;
+      obj.notifyForce(createModif(response.content, 0));
+    });
   };
 
   // Data received from server
-  this.receive = function(jsonObj){
-    alert(jsonObj);
+  this.receive = function(opCode, jsonObj){
+    console.log("received " + opCode, jsonObj);
   };
 
   // change to modification group ?
@@ -258,7 +262,16 @@ function RequestHandler(host, recvCallback) {
   };
 
   this._socket_onmessage = function(msg){
-    obj._recv(JSON.parse(msg.data));
+    var json_obj = $.parseJSON(msg.data);
+    if('opCode' in json_obj) {
+      // json_obj is in two parts ... opCode and data
+      obj._recv(json_obj.opCode, json_obj.data);
+    }
+    else {
+      // Send default opcode
+      console.log("No opCode in ws request for content", json_obj);
+      obj._recv(0, json_obj);
+    }
   };
 
   this._socket_onclose = function(){
@@ -266,14 +279,14 @@ function RequestHandler(host, recvCallback) {
     obj._retryTimeout = setTimeout(obj._connect, RETRY_CONNECT_TIMEOUT);
   };
 
-  this._send = function(type, controller, data, successCallback, errorCallback) {
+  this._send = function(type, controller, requestData, successCallback, errorCallback) {
     successCallback = successCallback || this._emptyCallback;
     errorCallback = errorCallback || this._emptyCallback;
 
     $.ajax({
       type: type,
       url: controller,
-      data: JSON.stringify(data),
+      data: requestData,
       cache: false,
       contentType: 'application/json',
       dataType: "json",
@@ -286,14 +299,19 @@ function RequestHandler(host, recvCallback) {
     }); 
   };
 
-  // Send a dictionnary data object by ajax 
+  // Send a POST ; data is in payload
   this.post = function(controller, data, successCallback, errorCallback) {
-    this._send("POST", controller, data, successCallback, errorCallback);
+    this._send("POST", controller, JSON.stringify(data), successCallback, errorCallback);
   };
 
-  // Send a dictionnary data object by ajax
-  this.get = function(controller, successCallback, errorCallback) {
-    this._send("GET", controller, {}, successCallback, errorCallback);
+  // Send a PUT ; data is in payload
+  this.put = function(controller, data, successCallback, errorCallback) {
+    this._send("PUT", controller, JSON.stringify(data), successCallback, errorCallback);
+  };
+
+  // Send a GET ; data is in query string
+  this.get = function(controller, data, successCallback, errorCallback) {
+    this._send("GET", controller, $.param(data), successCallback, errorCallback);
   };
 }
 
@@ -305,8 +323,13 @@ function RequestHandler(host, recvCallback) {
 // ###################################
 
 /* JSON Representation helpers */
-function createModifGroup(deltas) { return {revision: 0, deltas: deltas}; }
-function createModif(val, at) { return {val: val, at: at}; }
+function createModifGroup(deltas) { return { revision: 0, deltas: deltas}; }
+function createModif(val, at) { return { val: val, at: at}; }
+
+// used for /ide/open
+function createOpen(filename) { return { file: filename}; }
+
+
 
 /* SELECTION HELPER FUNCTIONS */
 $.fn.selectRange = function(start, end) {
