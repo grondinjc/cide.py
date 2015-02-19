@@ -4,7 +4,7 @@ communicator = null;
 
 // Requests
 HOST = "localhost:8080";
-RETRY_TIMEOUT = 2000; // ms
+RETRY_CONNECT_TIMEOUT = 2000; // ms
 
 // Initialize content when ready
 $(document).ready(init);
@@ -31,7 +31,7 @@ function test_notify() {
 function test_ajax() {
   var modObject = createModif("abc", 0);
   var modifObject = createModifGroup([modObject]);
-  communicator.requestHandler.send(modifObject, "sendEdit", function(){
+  communicator._requestHandler.send(modifObject, "sendEdit", function(){
     console.log("Success reveived comm");
     communicator.changeMemory.clear();
   });
@@ -43,16 +43,17 @@ function test_ajax() {
 // #####                           #####
 // #####################################
 
+/* Central class that will interact will all other classes. */
 function Communicator(pushInterval) {
 
   // Handle null value
-  this.pushInterval = pushInterval || DEFAULT_PUSH_INTERVAL;
-  this.pushIntervalHandle = null;
+  this._pushInterval = pushInterval || DEFAULT_PUSH_INTERVAL;
+  this._pushIntervalHandle = null;
 
-  this.zoneLocal = null;
-  this.zoneLastVersion = null;
-  this.zoneDisplay = null;
-  this.fileRevision = 0;
+  this._changeMemory = null;
+  this._zoneLastVersion = null;
+  this._zoneDisplay = null;
+  this._fileRevision = 0;
 
   this.init = function(lastVersionZoneId, displayZoneId) {
     
@@ -64,40 +65,40 @@ function Communicator(pushInterval) {
     var elementDisplay = document.getElementById(displayZoneId);
 
     // Create classes
-    this.changeMemory = new LocalChanges();
-    this.zoneLastVersion = new LastVersionZone(nodeLastVersion);
-    this.zoneDisplay = new DisplayZone(nodeDisplay);
+    this._changeMemory = new LocalChanges();
+    this._zoneLastVersion = new LastVersionZone(nodeLastVersion);
+    this._zoneDisplay = new DisplayZone(nodeDisplay);
 
     // Handle ways of sending and receiving data from/to server
-    this.requestHandler = new RequestHandler(HOST, this.receive);
-    this.requestHandler.init();
+    this._requestHandler = new RequestHandler(HOST, this.receive);
+    this._requestHandler.init();
 
     // Setup event handlers
     var obj = this; // For closure
 
     // Push changes handler 
-    this.pushIntervalHandle = setInterval( 
+    this._pushIntervalHandle = setInterval( 
       function() {
         // try push
-        var changes = obj.changeMemory.get();
+        var changes = obj._changeMemory.get();
         if(changes.length == 0) 
           return;
 
         // Send and clear on success
         var modifObject = createModifGroup(changes);
-        obj.requestHandler.send(modifObject, "sendEdit", function(){
+        obj._requestHandler.send(modifObject, "sendEdit", function(){
           console.log("Success reveived comm");
-          obj.changeMemory.clear();
+          obj._changeMemory.clear();
         });
       }, 
-    this.pushInterval);
+    this._pushInterval);
 
     // Local and display sync handler
     nodeDisplay.keypress(function(evt) {
       evt = evt || window.event;
       var charKey = String.fromCharCode(evt.which);
       var charAt = (getCaretCharacterOffsetWithin(elementDisplay) || 0);
-      obj.changeMemory.addChange(charKey, charAt);
+      obj._changeMemory.addChange(charKey, charAt);
     });
   };
 
@@ -116,20 +117,20 @@ function Communicator(pushInterval) {
 
   // change to modification group ?
   this.notifyForce = function(initialDelta) {
-    this.zoneLastVersion.put(initialDelta.val, initialDelta.at);
-    this.zoneDisplay.update(initialDelta.val);
-    this.changeMemory.clear();
+    this._zoneLastVersion.put(initialDelta.val, initialDelta.at);
+    this._zoneDisplay.update(initialDelta.val);
+    this._changeMemory.clear();
   };
 
   this.notifySoft = function(modifications) {
     this.changeMemory.update(modifications.deltas);
-    this.zoneLastVersion.update(modifications.deltas);
-    this.zoneDisplay.update(this.combineText());
+    this._zoneLastVersion.update(modifications.deltas);
+    this._zoneDisplay.update(this.combineText());
   };
 
   this.combineText = function() {
-    var base = this.zoneLastVersion.get();
-    var modifs = this.changeMemory.get();
+    var base = this._zoneLastVersion.get();
+    var modifs = this._changeMemory.get();
     for(var i = 0; i < modifs.length; ++i){
       base = base.insert(modifs[i].val, modifs[i].at);
     }
@@ -137,54 +138,57 @@ function Communicator(pushInterval) {
   };
 };
 
+/* Visible section by the user */
 function DisplayZone(node){
-  this.node = node;
-  // Represent the numper of lines added
-  this.max_number_of_lines_reached = 0;
+  this._zone = node;
 
   this.update = function(text){
-    this.node.text(text);
+    this._zone.text(text);
   };
 }
 
+/* Class to store the last version of the file received by
+the server. It is updated by applying every delta. */
 function LastVersionZone(node) {
-  this.zone = node;
+  this._zone = node;
 
   this.update = function(modifications) {
-    var content = this.zone.val();
+    var content = this._zone.val();
     for(var i = 0; i < modifications.length; ++i) {
       content = (content.slice(0, modifications[i].at) + modifications[i].val + content.slice(modifications[i].at));
     }
     
-    this.zone.val(content);
+    this._zone.val(content);
   };
 
   this.put = function(text) {
-    this.zone.val(text);
+    this._zone.val(text);
   };
 
   this.get = function() {
-     return this.zone.val();
+     return this._zone.val();
   };
 }
 
+
+/* Class to store all changes done by the user */
 function LocalChanges() {
 
-  this.modifications = [];
-  this.currentModificationPos = undefined;
-  this.currentChange = "";
+  this._modifications = [];
+  this._currentModificationPos = undefined;
+  this._currentChange = "";
 
   this.get = function() {
-    return (this.currentModificationPos == undefined || this.currentChange.length == 0) ?
-      this.modifications.dcopy() :
+    return (this._currentModificationPos == undefined || this._currentChange.length == 0) ?
+      this._modifications.dcopy() :
       // Quick hack
-      this.modifications.concat([createModif(this.currentChange, this.currentModificationPos)]);
+      this._modifications.concat([createModif(this._currentChange, this._currentModificationPos)]);
   };
 
   this.clear = function() {
-    this.modifications.clear();
-    this.currentModificationPos = undefined;
-    this.currentChange = "";
+    this._modifications.clear();
+    this._currentModificationPos = undefined;
+    this._currentChange = "";
   };
 
   /* At request was received from the server.
@@ -192,12 +196,12 @@ function LocalChanges() {
   this.update = function(deltas) {
     deltas.map(function(delta) {
       // For stored change
-      this.modifications.map(function(mod) {
+      this._modifications.map(function(mod) {
         mod.at += (delta.at < mod.at) ? delta.val.length : 0;
       });
       // For current change, when defined
-      if(this.currentModificationPos != undefined) {
-        this.currentModificationPos += (delta.at < this.currentModificationPos) ? delta.val.length : 0;
+      if(this._currentModificationPos != undefined) {
+        this._currentModificationPos += (delta.at < this._currentModificationPos) ? delta.val.length : 0;
       }
     }, this);
   };
@@ -205,23 +209,27 @@ function LocalChanges() {
   /* A change has been made localy. Store it. */
   this.addChange = function(val, at) {
     // Set cursor pos when undefined
-    this.currentModificationPos = (this.currentModificationPos || at);
+    this._currentModificationPos = (this._currentModificationPos || at);
 
-    var theoricalAt = this.currentModificationPos + this.currentChange.length;
-    if(theoricalAt != at && this.currentChange.length != 0) {
+    var theoricalAt = this._currentModificationPos + this._currentChange.length;
+    if(theoricalAt != at && this._currentChange.length != 0) {
       // change somewhere else... save 
-      this.modifications.push(createModif(this.currentChange, this.currentModificationPos));
+      this._modifications.push(createModif(this._currentChange, this._currentModificationPos));
 
       // and start new change
-      this.currentModificationPos = at;
-      this.currentChange = val;
+      this._currentModificationPos = at;
+      this._currentChange = val;
     }
     else {
-      this.currentChange += val;
+      this._currentChange += val;
     }
   };
 }
 
+
+/* Class to encapsulate how communications are done.
+This will allow to change only internal representation
+easily when needed */
 function RequestHandler(host, recvCallback) {
 
   // For closure
@@ -255,9 +263,10 @@ function RequestHandler(host, recvCallback) {
 
   this._socket_onclose = function(){
     clearTimeout(obj._retryTimeout);
-    obj._retryTimeout = setTimeout(obj._connect, 3000);
+    obj._retryTimeout = setTimeout(obj._connect, RETRY_CONNECT_TIMEOUT);
   };
 
+  // Send a dictionnary data object by ajax
   this.send = function(data, controller, successCallback, errorCallback) {
     successCallback = successCallback || this._emptyCallback;
     errorCallback = errorCallback || this._emptyCallback;
