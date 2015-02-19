@@ -141,20 +141,24 @@ class IDEController(object):
 
     Input must be JSON of the following format:
       {
-        'file':    '<<Filepath of edited file>>',
-        'vers':    '<<File version>>',
-        'type':    '<<Type of edit (ins | del)>>',
-        'pos':     '<<Position of edit>>',
-        'content': '<<Content of insert | Number of deletes>>'
+        'file':   '<<Filepath of edited file>>',
+        'vers':   '<<File version>>',
+        'changes': [{
+                     'type':    '<<Type of edit (ins | del)>>',
+                     'pos':     '<<Position of edit>>',
+                     'content': '<<Content of insert | Number of deletes>>'
+                   }]
       }
 
     Output on the WS will be JSON of the following format:
       {
         'file':    '<<Filepath of edited file>>',
         'vers':    '<<File version>>',
-        'type':    '<<Type of edit (ins | del)>>',
-        'pos':     '<<Position of edit>>',
-        'content': '<<Content of insert | Number of deletes>>'
+        'changes': [{
+                     'type':    '<<Type of edit (ins | del)>>',
+                     'pos':     '<<Position of edit>>',
+                     'content': '<<Content of insert | Number of deletes>>'
+                   }]
       }
 
     @return: ok: Nothing + (200)
@@ -171,7 +175,7 @@ class IDEController(object):
 
     username = cherrypy.session['username']
     filename = request.json['file']
-    content = request.json['content']
+    changes = request.json['changes']
     self._logger.info("Save for file {3} requested by {0} ({1}:{2})".format(username,
                                                                             request.remote.ip,
                                                                             request.remote.port,
@@ -181,7 +185,8 @@ class IDEController(object):
     # TODO Call app
 
     # XXX Temp dummy content for test
-    self.data += content
+    for change in changes:
+      self.data += change['content']
 
     fileSubscribers = IDEWebSocket.IDEClients.keys()  # XXX TEMP, ASK APP
 
@@ -191,9 +196,11 @@ class IDEController(object):
         try:
           ws.send(simplejson.dumps({"file":    filename,   # XXX Handle closed WS!
                                     "vers":    None,
-                                    "type":    None,
-                                    "pos":     None,
-                                    "content": self.data}))  # XXX TEMP
+                                    "changes": [{
+                                      "type":    None,
+                                      "pos":     None,
+                                      "content": self.data
+                                    }]}))  # XXX TEMP
         except:
           self._logger.error("{0} ({1}:{2}) WS transfer failed".format(username,
                                                                        request.remote.ip,
