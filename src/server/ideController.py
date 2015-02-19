@@ -25,7 +25,7 @@ class IDEController(object):
 
     self._logger.debug("IDEController instance created")
 
-  @cherrypy.expose
+  @cherrypy.expose<
   def index(self):
     #return "Hello world"
     # TODO Return page/template render for the IDE part
