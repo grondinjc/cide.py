@@ -3,8 +3,6 @@ from cherrypy import request
 import simplejson
 from ws4py.websocket import WebSocket
 from genshi.template import TemplateLoader
-from threading import Lock
-from collections import defaultdict
 
 
 class IDEController(object):
@@ -21,9 +19,6 @@ class IDEController(object):
     """
     self._loader = TemplateLoader(template_path, auto_reload=True)
     self._logger = logger
-
-    self._filesSubscribersLock = Lock()  # XXX OH NO WAIT, RWLOCK PLZ??? import threading2
-    self._filesSubscribers = defaultdict(set)
 
     # XXX Temp dummy vars
     self.data = ""
@@ -81,13 +76,8 @@ class IDEController(object):
                                                                             request.remote.port,
                                                                             filename))
 
-    with self._filesSubscribersLock:
-      self._filesSubscribers[filename].add(username)
-
-    # !!!!!!!!!!!!!!!!!!!!!!
-    # TODO Get file stuff
-    # If file doesn't exist, we create it...
-    # !!!!!!!!!!!!!!!!!!!!!!
+    # TODO Check parameters if needed
+    # TODO Call app
 
     return {'file':    filename,
             'vers':    None,
@@ -112,8 +102,9 @@ class IDEController(object):
                                                                              request.remote.ip,
                                                                              request.remote.port,
                                                                              filename))
-    with self._filesSubscribersLock:
-      self._filesSubscribers[filename].discard(username)
+
+    # TODO Check parameters if needed
+    # TODO Call app
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -152,19 +143,21 @@ class IDEController(object):
                                                                             request.remote.port,
                                                                             filename))
 
-    # TODO Check if file exist
-    # TODO Merge, apply, etc
+    # TODO Check parameters if needed
+    # TODO Call app
+
     # XXX Temp dummy content for test
     self.data += request.json['content']
 
-    with self._filesSubscribersLock:
-      for user in self._filesSubscribers[filename]:
-        ws = IDEWebSocket.IDEClients[user]  # XXX CHECK IF WS EXIST and handle!
-        ws.send(simplejson.dumps({"file":    filename,   # XXX Handle closed WS!
-                                  "vers":    None,
-                                  "type":    None,
-                                  "pos":     None,
-                                  "content": self.data}))  # XXX TEMP
+    filesSubscribers = [IDEWebSocket.IDEClients.values()]  # XXX TEMP, ASK APP
+
+    for user in filesSubscribers:
+      ws = IDEWebSocket.IDEClients[user]  # XXX CHECK IF WS EXIST and handle!
+      ws.send(simplejson.dumps({"file":    filename,   # XXX Handle closed WS!
+                                "vers":    None,
+                                "type":    None,
+                                "pos":     None,
+                                "content": self.data}))  # XXX TEMP
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -199,8 +192,8 @@ class IDEController(object):
                                                                            request.remote.ip,
                                                                            request.remote.port,
                                                                            filename))
-    # TODO Check if file exist
-    # TODO Get file stuff
+    # TODO Check parameters if needed
+    # TODO Call app
 
     return {'file':    filename,
             'vers':    None,
