@@ -3,6 +3,13 @@
 *~
 src/app/c++/build
 
+# Non-example conf file
+bin/*.conf
+bin/configs/*.conf
+
+# Logs
+logs/
+
 # Compiled Object files
 *.slo
 *.lo

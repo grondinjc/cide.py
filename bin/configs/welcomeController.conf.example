@@ -1,0 +1,24 @@
+# WelcomeController app config file
+[DEFAULT]
+# -- Variable path and elements to set --
+PRJ = "<<PRJ>>"
+SRC = %(PRJ)s + "/src"
+
+# -- Static content config --
+# Set root (/) of static dir/file to src
+# Just a shortcut for further config. Does not give static access to src folder
+[/]
+tools.staticdir.root = %(SRC)s
+tools.staticfile.root = %(SRC)s
+
+# Maps domain.com/static to src/static
+[/static]
+tools.staticdir.on = True
+tools.staticdir.dir = "static"
+
+# Specific static file config
+# Maps domain.com/ and domain.com/index to src/static/index.html
+[/index]
+tools.staticfile.on = True
+tools.staticfile.filename = "static/index.html"
+

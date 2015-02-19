@@ -1,0 +1,6 @@
+[DEFAULT]
+server = '<<PRJ>>/bin/configs/server.conf'
+welcomeController = '<<PRJ>>/bin/configs/welcomeController.conf'
+ideController = '<<PRJ>>/bin/configs/ideController.conf'
+log_file = '<<PRJ>>/logs/cide.log'
+
