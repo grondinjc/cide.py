@@ -3,6 +3,7 @@ from cherrypy import request
 import simplejson
 from ws4py.websocket import WebSocket
 from genshi.template import TemplateLoader
+import uuid  # XXX Temp for fake session id... Could be used for real?
 
 
 class IDEController(object):
@@ -33,12 +34,13 @@ class IDEController(object):
 
     @return: Template HTML render
     """
-    cherrypy.session['username'] = 'test'
+    if not cherrypy.session.get('username'):
+      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+
     self._logger.info("index requested by {0} ({1}:{2})".format(cherrypy.session['username'],
                                                                 request.remote.ip,
                                                                 request.remote.port))
-    # TODO Return page/template render for the IDE part
-    tmpl = self._loader.load('edit_test.html')
+    tmpl = self._loader.load('edit_test.html')  # XXX Change for real template
     # set args in generate as key1=val1, key2=val2
     stream = tmpl.generate()
     return stream.render('html')
@@ -69,6 +71,9 @@ class IDEController(object):
         'content': '<<Content of the requested file>>'
       }
     """
+    if not cherrypy.session.get('username'):
+      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+
     filename = request.json['file']
     username = cherrypy.session['username']
     self._logger.info("Open for file {3} requested by {0} ({1}:{2})".format(username,
@@ -96,6 +101,9 @@ class IDEController(object):
         'file':    '<<Filepath of file to close>>'
       }
     """
+    if not cherrypy.session.get('username'):
+      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+
     username = cherrypy.session['username']
     filename = cherrypy.request.json['file']
     self._logger.info("Close for file {3} requested by {0} ({1}:{2})".format(username,
@@ -136,6 +144,9 @@ class IDEController(object):
              File doesn't exist: Nothing + (404 - Not found)
              Version is too old: Nothing + (410 - Gone)
     """
+    if not cherrypy.session.get('username'):
+      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+
     username = cherrypy.session['username']
     filename = request.json['file']
     self._logger.info("Save for file {3} requested by {0} ({1}:{2})".format(username,
@@ -186,6 +197,9 @@ class IDEController(object):
       OR
       File doesn't exist: Nothing + (404 Not found)
     """
+    if not cherrypy.session.get('username'):
+      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+
     username = cherrypy.session['username']
     filename = cherrypy.request.json['file']
     self._logger.info("Dump of file {3} requested by {0} ({1}:{2})".format(username,
@@ -205,6 +219,9 @@ class IDEController(object):
     Method must exist to serve as a exposed hook for the websocket
     (Path : /ide/ws)
     """
+    if not cherrypy.session.get('username'):
+      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+
     username = cherrypy.session['username']
     self._logger.info("WS creation request from {0} ({1}:{2})".format(username,
                                                                       request.remote.ip,
