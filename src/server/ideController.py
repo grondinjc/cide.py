@@ -53,6 +53,7 @@ class IDEController(object):
     """
     Subscribe a client to updates for a given file and send a dump of the file
     If the file doesn't exist, it's created.
+    Method : POST
     (Path : /ide/open)
 
     User must start to buffer changes received for file before requesting open.
@@ -91,6 +92,8 @@ class IDEController(object):
     # TODO Check if we have a WS before subscribing?
     # TODO Call app
 
+    print "OPEN"
+    print self.data
     return {'file':    filename,
             'vers':    None,
             'content': self.data}  # XXX TEMP
@@ -101,6 +104,7 @@ class IDEController(object):
   def close(self):
     """
     Unsubscribe a client to updates for a given file
+    Method : PUT
     (Path : /ide/close)
 
     Input must be JSON of the following format:
@@ -117,7 +121,7 @@ class IDEController(object):
                                                                  request.json))
 
     username = cherrypy.session['username']
-    filename = cherrypy.request.json['file']
+    filename = request.json['file']
     self._logger.info("Close for file {3} requested by {0} ({1}:{2})".format(username,
                                                                              request.remote.ip,
                                                                              request.remote.port,
@@ -132,6 +136,7 @@ class IDEController(object):
   def save(self):
     """
     Receive changes to a file from the client
+    Method : PUT
     (Path : /ide/save)
 
     Input must be JSON of the following format:
@@ -178,22 +183,21 @@ class IDEController(object):
     # XXX Temp dummy content for test
     self.data += content
 
-    fileSubscribers = [IDEWebSocket.IDEClients.values()]  # XXX TEMP, ASK APP
+    fileSubscribers = IDEWebSocket.IDEClients.keys()  # XXX TEMP, ASK APP
 
     for user in fileSubscribers:
       ws = IDEWebSocket.IDEClients.get(user)
       if ws:
-        # try:
-        ws.send(simplejson.dumps({"file":    filename,   # XXX Handle closed WS!
-                                  "vers":    None,
-                                  "type":    None,
-                                  "pos":     None,
-                                  "content": self.data}))  # XXX TEMP
-        # except:
-        # self._logger.error("{0} ({1}:{2}) WS transfer failed".format(username,
-        # request.remote.ip,
-        # request.remote.port))
-        # TODO Remove/clear
+        try:
+          ws.send(simplejson.dumps({"file":    filename,   # XXX Handle closed WS!
+                                    "vers":    None,
+                                    "type":    None,
+                                    "pos":     None,
+                                    "content": self.data}))  # XXX TEMP
+        except:
+          self._logger.error("{0} ({1}:{2}) WS transfer failed".format(username,
+                                                                       request.remote.ip,
+                                                                       request.remote.port))
 
       else:
         self._logger.error("{0} ({1}:{2}) has no WS in server".format(username,
@@ -203,10 +207,10 @@ class IDEController(object):
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
-  @cherrypy.tools.json_in()
-  def dump(self):
+  def dump(self, filename):
     """
     Sends the current content of a given file
+    Method : GET
     (Path : /ide/dump)
 
     User must start to buffer changes received for file before requesting dump.
@@ -214,10 +218,7 @@ class IDEController(object):
     so the user misses no update. The user will have to detect which updates
     to apply based on the ``version`` sent.
 
-    Input must be JSON of the following format:
-      {
-        'file': '<<Filepath of requested file>>'
-      }
+    @param filename: Filepath of requested file
 
     @return: JSON of the following format:
       {
@@ -231,13 +232,12 @@ class IDEController(object):
     if not cherrypy.session.get('username'):
       cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
 
-    self._logger.debug("Dump by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
-                                                                request.remote.ip,
-                                                                request.remote.port,
-                                                                request.json))
+    self._logger.debug("Dump by {0} ({1}:{2}) filename: {3}".format(cherrypy.session['username'],
+                                                                    request.remote.ip,
+                                                                    request.remote.port,
+                                                                    filename))
 
     username = cherrypy.session['username']
-    filename = cherrypy.request.json['file']
     self._logger.info("Dump of file {3} requested by {0} ({1}:{2})".format(username,
                                                                            request.remote.ip,
                                                                            request.remote.port,
@@ -277,7 +277,9 @@ class IDEWebSocket(WebSocket):
   def opened(self):
     self.username = cherrypy.session['username']
     self.IDEClients[self.username] = self
+    cherrypy.log("User {0} ({1}) WS connected".format(self.username, self.peer_address))
 
   def closed(self, code, reason=None):
     del self.IDEClients[self.username]
+    cherrypy.log("User {0} ({1}) WS disconnected".format(self.username, self.peer_address))
 

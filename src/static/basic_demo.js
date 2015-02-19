@@ -28,7 +28,7 @@ function connect() {
   }
 
   socket.onmessage = function(msg){
-    var json_result = jQuery.parseJSON(msg.data);
+    var json_result = $.parseJSON(msg.data);
     console.log('CONTENT RECEIVED' + json_result.file)
     $('#content').html(json_result.content);
   }
@@ -43,12 +43,12 @@ function connect() {
 }
 
 function sendChanges() {
-  reqjson = {
+  var reqjson = {
     "file": "test",
     "content": $('#editor').val() + '<br>'
   };
   $.ajax({
-    type: "POST",
+    type: "PUT",
     url: "save",
     contentType: "application/json",
     dataType: "json",
@@ -62,19 +62,17 @@ function sendChanges() {
 }
 
 function openIDE() {
-  reqjson = {
+  var reqjson = {
     "file": "test"
   };
   $.ajax({
     type: "GET",
-    url: "open",
-    contentType: "application/json",
-    dataType: "json",
-    data: JSON.stringify(reqjson),
-    success: function(data) {
-      var json_result = jQuery.parseJSON(data);
+    url: "dump",
+    data: 'filename=test',
+    success: function(json_result) {
       console.log('REFRESH SUCCESS' + json_result.file)
       $('#content').html(json_result.content);
     }
   });
 }
+
