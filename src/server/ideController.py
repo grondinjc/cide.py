@@ -30,18 +30,19 @@ class IDEController(object):
   def index(self):
     """
     IDEController index page generator
-    (Path : /ide/)
+    (Path : /ide/ -- /ide/index)
 
     @return: Template HTML render
     """
     if not cherrypy.session.get('username'):
       cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
 
-    self._logger.info("index requested by {0} ({1}:{2})".format(cherrypy.session['username'],
+    username = cherrypy.session['username']
+    self._logger.info("index requested by {0} ({1}:{2})".format(username,
                                                                 request.remote.ip,
                                                                 request.remote.port))
-    tmpl = self._loader.load('edit_test.html')  # XXX Change for real template
-    # set args in generate as key1=val1, key2=val2
+
+    tmpl = self._loader.load('basic_demo.html')  # XXX Change for real template
     stream = tmpl.generate()
     return stream.render('html')
 
@@ -74,6 +75,11 @@ class IDEController(object):
     if not cherrypy.session.get('username'):
       cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
 
+    self._logger.debug("Open by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
+                                                                request.remote.ip,
+                                                                request.remote.port,
+                                                                request.json))
+
     filename = request.json['file']
     username = cherrypy.session['username']
     self._logger.info("Open for file {3} requested by {0} ({1}:{2})".format(username,
@@ -82,11 +88,12 @@ class IDEController(object):
                                                                             filename))
 
     # TODO Check parameters if needed
+    # TODO Check if we have a WS before subscribing?
     # TODO Call app
 
     return {'file':    filename,
             'vers':    None,
-            'content': None}
+            'content': self.data}  # XXX TEMP
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -103,6 +110,11 @@ class IDEController(object):
     """
     if not cherrypy.session.get('username'):
       cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+
+    self._logger.debug("Close by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
+                                                                 request.remote.ip,
+                                                                 request.remote.port,
+                                                                 request.json))
 
     username = cherrypy.session['username']
     filename = cherrypy.request.json['file']
@@ -147,8 +159,14 @@ class IDEController(object):
     if not cherrypy.session.get('username'):
       cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
 
+    self._logger.debug("Save by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
+                                                                request.remote.ip,
+                                                                request.remote.port,
+                                                                request.json))
+
     username = cherrypy.session['username']
     filename = request.json['file']
+    content = request.json['content']
     self._logger.info("Save for file {3} requested by {0} ({1}:{2})".format(username,
                                                                             request.remote.ip,
                                                                             request.remote.port,
@@ -158,17 +176,30 @@ class IDEController(object):
     # TODO Call app
 
     # XXX Temp dummy content for test
-    self.data += request.json['content']
+    self.data += content
 
-    filesSubscribers = [IDEWebSocket.IDEClients.values()]  # XXX TEMP, ASK APP
+    fileSubscribers = [IDEWebSocket.IDEClients.values()]  # XXX TEMP, ASK APP
 
-    for user in filesSubscribers:
-      ws = IDEWebSocket.IDEClients[user]  # XXX CHECK IF WS EXIST and handle!
-      ws.send(simplejson.dumps({"file":    filename,   # XXX Handle closed WS!
-                                "vers":    None,
-                                "type":    None,
-                                "pos":     None,
-                                "content": self.data}))  # XXX TEMP
+    for user in fileSubscribers:
+      ws = IDEWebSocket.IDEClients.get(user)
+      if ws:
+        # try:
+        ws.send(simplejson.dumps({"file":    filename,   # XXX Handle closed WS!
+                                  "vers":    None,
+                                  "type":    None,
+                                  "pos":     None,
+                                  "content": self.data}))  # XXX TEMP
+        # except:
+        # self._logger.error("{0} ({1}:{2}) WS transfer failed".format(username,
+        # request.remote.ip,
+        # request.remote.port))
+        # TODO Remove/clear
+
+      else:
+        self._logger.error("{0} ({1}:{2}) has no WS in server".format(username,
+                                                                      request.remote.ip,
+                                                                      request.remote.port))
+        # TODO remove from subscribers to file?
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -199,6 +230,11 @@ class IDEController(object):
     """
     if not cherrypy.session.get('username'):
       cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+
+    self._logger.debug("Dump by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
+                                                                request.remote.ip,
+                                                                request.remote.port,
+                                                                request.json))
 
     username = cherrypy.session['username']
     filename = cherrypy.request.json['file']
