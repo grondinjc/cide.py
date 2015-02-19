@@ -86,7 +86,7 @@ function Communicator(pushInterval) {
 
         // Send and clear on success
         var modifObject = createModifGroup(changes);
-        obj._requestHandler.send(modifObject, "sendEdit", function(){
+        obj._requestHandler.post("sendEdit", modifObject, function(){
           console.log("Success reveived comm");
           obj._changeMemory.clear();
         });
@@ -266,13 +266,12 @@ function RequestHandler(host, recvCallback) {
     obj._retryTimeout = setTimeout(obj._connect, RETRY_CONNECT_TIMEOUT);
   };
 
-  // Send a dictionnary data object by ajax
-  this.send = function(data, controller, successCallback, errorCallback) {
+  this._send = function(type, controller, data, successCallback, errorCallback) {
     successCallback = successCallback || this._emptyCallback;
     errorCallback = errorCallback || this._emptyCallback;
 
     $.ajax({
-      type: "POST",
+      type: type,
       url: controller,
       data: JSON.stringify(data),
       cache: false,
@@ -285,6 +284,16 @@ function RequestHandler(host, recvCallback) {
         errorCallback(request, status, error);
       }
     }); 
+  };
+
+  // Send a dictionnary data object by ajax 
+  this.post = function(controller, data, successCallback, errorCallback) {
+    this._send("POST", controller, data, successCallback, errorCallback);
+  };
+
+  // Send a dictionnary data object by ajax
+  this.get = function(controller, successCallback, errorCallback) {
+    this._send("GET", controller, {}, successCallback, errorCallback);
   };
 }
 
