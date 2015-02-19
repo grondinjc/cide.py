@@ -36,9 +36,10 @@ class IDEController(object):
 
   @cherrypy.expose
   @cherrypy.tools.json_in()
+  @cherrypy.tools.json_out()
   def sendEdit(self):
     json_data = cherrypy.request.json
-    # XXX Temp dummy method for test
+
     content = ""
     self.data += content
 
@@ -46,6 +47,11 @@ class IDEController(object):
     ret = json.dumps(dict(test=self.data, othervar=2))
     for user in IDEWebSocket.IDEClients:
       user.send(ret)
+
+    # Return default structure {code, status, merrage}
+    return {} # ok for now
+
+
 
   @cherrypy.expose
   def refreshEdit(self):
