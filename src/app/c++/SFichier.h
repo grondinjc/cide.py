@@ -1,7 +1,7 @@
 /****************************************************************************
- *  Classe: 			SFichier			     																				*
- *  Auteur: 			Mariane Maynard 																					*
- *	Description:	Representation d'un fichier ouvert sur le serveur	      	*
+ *  Classe:       SFichier                                                  *
+ *  Auteur:       Mariane Maynard                                           *
+ *  Description:  Representation d'un fichier ouvert sur le serveur         *
  ****************************************************************************/
 
 #ifndef SFICHIER
@@ -11,53 +11,51 @@
 #include <iostream>
 #include <fstream>
 #include "Fichier.h"
+#include "Types.h"
 
 using std::string;
 using std::ifstream;
 using boost::shared_ptr;
 using std::endl;
 using std::cout;
+using namespace types;
 
-class SFichier : public Fichier
-{
-	private:
-		string _contenu;
+template <>
+  class FichierType<string>
+  {
+    private:
+      string _contenu;
 
-  public:
-		SFichier(const string &contenu)
-			: _contenu(contenu)
-		{}
+    public:
+      FichierType() = default;
 
-		SFichier(const char* filename)
-		{
-			ifstream file;
-			file.open(filename);
-			file >> _contenu;
-			file.close();
-		}
+      FichierType(const string &contenu)
+        : _contenu(contenu)
+      {}
 
-		virtual void ecrireSurDisque() override {}
+      FichierType(const char* filename)
+      {
+        ifstream file;
+        file.open(filename);
+        file >> _contenu;
+        file.close();
+      }
 
-		virtual void inserer(const char *data, uint position, size_t taille) override
-		{_contenu.insert(position, data, taille);}
+      ~FichierType() = default;
 
-		virtual void supprimer(uint position, size_t taille) override
-		{_contenu.erase(position, taille);}
+      void ecrireSurDisque() {}
 
-		virtual void printContenu() override
-		{cout << _contenu << endl;}
-};
+      void inserer(const char *data, pos_t position, size_t taille)
+      {_contenu.insert(position, data, taille);}
 
-//Implementation des factory method pour string
-template<> shared_ptr<Fichier> Fichier::CreateFichier(const char* filename, string)
-{
-	return shared_ptr<Fichier>(static_cast<Fichier*>(new SFichier(filename)));
-}
+      void supprimer(pos_t position, size_t taille)
+      {_contenu.erase(position, taille);}
 
-template<> shared_ptr<Fichier> Fichier::CreateFichier(const string &contenu)
-{
-	return shared_ptr<Fichier>(static_cast<Fichier*>(new SFichier(contenu)));
-}
+      void printContenu()
+      {cout << _contenu << endl;}
+
+      string getContenu() const {return _contenu;}
+  };
 
 #endif //SFICHIER
 

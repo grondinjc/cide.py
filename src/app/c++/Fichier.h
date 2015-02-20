@@ -1,29 +1,50 @@
 /****************************************************************************
- *  Classe: 			Fichier			     																					*
- *  Auteur: 			Mariane Maynard 																					*
- *	Description:	Representation d'un fichier ouvert sur le serveur	      	*
+ *  Classe:       Fichier                                                   *
+ *  Auteur:       Mariane Maynard                                           *
+ *  Description:  Representation d'un fichier ouvert sur le serveur         *
  ****************************************************************************/
 
 #ifndef FICHIER
 #define FICHIER
 
+#include <string>
+#include "Types.h"
+
 using std::string;
-using boost::shared_ptr;
+using namespace types;
 
-struct Fichier
+template<class T>
+class FichierType
 {
-	//Factory methods
-	template <class T>
-		static shared_ptr<Fichier> CreateFichier(const char* filename, T);
+  private:
+    T _contenu;
 
-	template <class T>
-		static shared_ptr<Fichier> CreateFichier(const T &contenu);
+  public:
+    FichierType() = default;
 
-	virtual ~Fichier() = default;
-	virtual void ecrireSurDisque() = 0;
-	virtual void inserer(const char *data, uint position, size_t taille) = 0;
-	virtual void supprimer(uint position, size_t taille) = 0;
-	virtual void printContenu() = 0;	//Fonction de debug
+    FichierType(const T &contenu)
+      : _contenu(contenu)
+    {}
+
+    FichierType(const char* filename)
+    {}
+
+    ~FichierType() = default;
+    void ecrireSurDisque() {}
+    void inserer(const char *data, pos_t position, size_t taille) {}
+    void supprimer(pos_t position, size_t taille) {}
+    void printContenu() {}  //Fonction de debug
+    T getContenu() {return _contenu;}
+};
+
+
+#include "SFichier.h"
+
+namespace types
+{
+  //Classe Fichier par défaut
+  using Fichier = FichierType<string>;
+
 };
 
 #endif //FICHIER

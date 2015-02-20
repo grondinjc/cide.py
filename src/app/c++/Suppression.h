@@ -1,31 +1,30 @@
 /****************************************************************************
- *  Classe: 			Suppression				     																		*
- *  Auteur: 			Mariane Maynard 																					*
- *	Description:	Representation d'une supression de l'utilisateur 			  	*
+ *  Classe:       Suppression                                               *
+ *  Auteur:       Mariane Maynard                                           *
+ *  Description:  Representation d'une supression de l'utilisateur          *
  ****************************************************************************/
 
 #ifndef SUPPRESSION
 #define SUPPRESSION
 
 #include "Fichier.h"
-//#include <boost/python.hpp>
+#include "Types.h"
 
-//using namespace boost::python;
-using boost::shared_ptr;
+using namespace types;
 
-class Suppression : public Modification//, wrapper<Modification>
+class Suppression : public Modification
 {    
-	public:
+  public:
     Suppression() = default;
 
-    Suppression(uint position, size_t taille, const shared_ptr<Fichier>& fichier)
-      : Modification(position, taille, fichier)
+    Suppression(pos_t position, size_t taille)
+      : Modification(position, taille)
     {}
 
-		virtual void effectuerModification() override
-		{
-			getFichier()->supprimer(getPosition(), getTaille());
-		}
+    virtual void effectuerModification(Fichier& fichier) override
+    {
+      fichier.supprimer(getPosition(), getTaille());
+    }
 };
 
 #endif //SUPPRESSION

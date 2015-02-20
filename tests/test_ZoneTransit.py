@@ -1,36 +1,23 @@
 from unittest import TestCase
 
-import libZoneTransit
+from libZoneTransit import ZoneTransit
+from libZoneTransit import Ajout
 from pdb import set_trace as dbg
 
 class TestZoneTransit(TestCase):
-  def test_ctor(self):
-		#dbg()
-		fichierTest = libZoneTransit.Fichier("test")
-		fichierTest.printContenu()
-		
-		modifTest = libZoneTransit.Ajout(2, 4, fichierTest, "allo")
-		ztTest = libZoneTransit.ZoneTransit(fichierTest)
-		
-		self.assertEqual(modifTest.position, 2)
-		self.assertEqual(modifTest.taille, 4)
-		self.assertEqual(modifTest.fichierID, fichierTest)
+  def setUp(self):
+    self.ajout = Ajout(2, 4, "allo")
+    self.zone = ZoneTransit("Hello World")
 
-		fichierTest.ecrireSurDisque()
-		fichierTest.inserer("Hello World", 0, 11)
-		fichierTest.printContenu()
+  def tearDown(self):
+    pass
 
-		fichierTest.supprimer(1, 11)
-		fichierTest.printContenu()
+  def test_addRemove(self):
+    self.zone.add(self.ajout)
+    modif = self.zone.remove()
+    self.assertEqual(self.ajout, modif)
 
-		ztTest.add(modifTest)
-		ztTest.ecrireModifications()
-		fichierTest.printContenu()
-
-		modif = ztTest.remove()
-		self.assertEqual(modifTest, modif)
-
-		suppTest = libZoneTransit.Suppression(2, 5, fichierTest)
-		ztTest.add(suppTest)
-		ztTest.ecrireModifications()
-		fichierTest.printContenu()
+  def test_ecrireModifications(self):
+    self.zone.add(self.ajout)
+    self.zone.ecrireModifications()
+    self.assertEqual(self.zone.contenu, "Heallollo World")
