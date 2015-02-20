@@ -20,13 +20,15 @@
           <td style="vertical-align:top;">
 
             <!-- Editing zone impl -->
-            <div id="tree" class="tree well"></div>
+            <div id="tree" class="tree well">  </div>
 
             <!-- Editing zone impl -->
             <div>
               <h3>Test</h3>
-              <label>add Node</label><input type="text" id="addNode"/>
+              <label>add Node</label><input type="text" id="textNode"/>
               <button onClick="test_AddNode();">Send</button>
+              <button onClick="test_RemoveNode();">Remove</button>
+              <br/>
               <button onClick="test_ManyAddNode();">Send Many</button>
             </div>
           </td>
@@ -56,7 +58,7 @@
             <br/>
             <br/>
             <button onClick="test_notify();">Test notify</button>
-            <button onClick="test_ajax();">Test AJAX</button>
+            <br/><button onClick="test_ajax();">Test AJAX</button>
 
           </td>
         </tr>

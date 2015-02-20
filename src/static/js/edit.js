@@ -44,8 +44,13 @@ function test_ajax() {
 }
 
 function test_AddNode() {
-  var nodeName = $('#addNode').val();
+  var nodeName = $('#textNode').val();
   tree.addNode(nodeName);
+}
+
+function test_RemoveNode() {
+  var nodeName = $('#textNode').val();
+  tree.removeNode(nodeName);
 }
 
 function test_ManyAddNode() {
@@ -356,7 +361,7 @@ function RequestHandler(host, recvCallback) {
 /* Class to encapsulate tree view representation 
 of the project */
 function ProjectTreeView() {
-  this._ROOT_CHILDREN_NODE_ID = "tree-root";
+  this._ID_PREFIX = "tree-node";
 
   this.initRoot = function(treeID, rootNodeName){
     $("#"+treeID).append(
@@ -365,26 +370,42 @@ function ProjectTreeView() {
           $('<span>').attr("class", "tree-node-dir").on("click", this._dirClick).append(
             $('<i>').attr("class", "icon-folder-open")).append(
             rootNodeName)).append(
-          $('<ul>').attr("id", this._ROOT_CHILDREN_NODE_ID+'-'))));
+          $('<ul>').attr("id", this._ID_PREFIX+'/'))));
   };
 
   this.addNode = function(nodepath) {
-    nodepath = nodepath.startsWith("/") ? nodepath.slice(1) : nodepath;
+    nodepath = this._setAbsolute(nodepath).trim();
     if(nodepath.endsWith("/")){
       // Create directory
-      nodepath = nodepath.slice(0,-1);
-      var index = Math.max(nodepath.lastIndexOf("/"), 0);
-      var parentDir = nodepath.slice(0, index);
-      var dirName = index == 0 ? nodepath : nodepath.slice(index+1);
-      this._addDir(dirName, parentDir);
+      var parts = nodepath.split("/");
+      var parentDir = parts.slice(0, -2).join("/") + "/";
+      // The size-1 is necessary empty, size-2 contains the name
+      this._addDir(parts[parts.length-2]+"/", parentDir);
     }
     else {
       // Create file
-      var index = nodepath.lastIndexOf("/");
-      var parentDir = nodepath.slice(0, Math.max(index, 0));
-      var fileName = nodepath.slice(index+1);
-      this._addFile(fileName, parentDir);
+      var parts = nodepath.split("/");
+      var parentParts = parts.slice(0, -1);
+      var parentJoins = parentParts.join("/");
+      var parentDir = parts.slice(0, -1).join("/") + "/";
+      this._addFile(parts[parts.length-1], parentDir);
     }
+  };
+
+  this.removeNode = function(nodepath){
+    /*nodepath = this._setAbsolute(nodepath).trim();
+
+    if(nodepath != "/" && nodepath != ""){
+      var id = this._getNodeIdFromPath(nodepath);
+      $("#"+id).empty();
+    }
+    else {
+      console.log("TRYING TO REMOVE ROOT FOLDER .... BAD ...");
+    }*/
+  };
+
+  this._setAbsolute = function(path){
+    return path.startsWith("/") ? path : "/" + path;
   };
 
   this._getNodeIdFromPath = function (filePath) {
@@ -396,17 +417,18 @@ function ProjectTreeView() {
 
 
   this._addDir = function(dirname, parentDir){
-    var nodeID = this._getNodeIdFromPath(parentDir);
-    $("#"+nodeID).append(
+    var parentId = this._ID_PREFIX + parentDir;
+    $("ul[id*='" + parentId + "']").append(
       $('<li>').attr("class", "parent_li").append(
         $('<span>').attr("class", "tree-node-dir").on("click", this._dirClick).append(
           $('<i>').attr("class", "icon-folder-open")).append(
           dirname)).append(
-        $('<ul>').attr("id", nodeID + (parentDir.length != 0 ? "-" : "") + dirname)));
+        $('<ul>').attr("id", parentId + dirname)));
   };
 
   this._addFile = function(filename, parentDir) {
-    $("#"+this._getNodeIdFromPath(parentDir)).append(
+    var parentId = this._ID_PREFIX + parentDir;
+    $("ul[id*='" + parentId + "']").append(
       $('<li>').attr("class", "parent_li").append(
         $('<span>').attr("class", "tree-node-file").on("click", this._fileClick).append(
           $('<i>').attr("class", "icon-file")).append(
