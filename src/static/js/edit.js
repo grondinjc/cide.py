@@ -1,6 +1,7 @@
 // Central point of interractions
 DEFAULT_PUSH_INTERVAL = 2000; // ms
 communicator = null;
+tree = null;
 
 // Requests
 HOST = window.location.host;
@@ -9,6 +10,9 @@ RETRY_CONNECT_TIMEOUT = 2000; // ms
 // Initialize content when ready
 $(document).ready(init);
 function init() {
+  tree = new ProjectTreeView();
+  tree.initRoot("tree", "ProjectName");
+
   // Classes
   communicator = new Communicator();
   communicator.init('editorLastVersion', 'editorDisplay');
@@ -37,6 +41,29 @@ function test_ajax() {
     console.log("Success reveived comm");
     communicator._changeMemory.clear();
   });
+}
+
+function test_AddNode() {
+  var nodeName = $('#textNode').val();
+  tree.addNode(nodeName);
+}
+
+function test_RemoveNode() {
+  var nodeName = $('#textNode').val();
+  tree.removeNode(nodeName);
+}
+
+function test_ManyAddNode() {
+  tree.addNode('file-toto');
+  tree.addNode('/file-toto');
+  tree.addNode('dir-toto/');
+  tree.addNode('/dir-toto/');
+
+  tree.addNode('/d/');
+  tree.addNode('d/sub-toto-file');
+  tree.addNode('/d/sub-toto-file');
+  tree.addNode('d/sub-toto-dir/');
+  tree.addNode('/d/sub-toto-dir/');
 }
 
 // #####################################
@@ -331,6 +358,135 @@ function RequestHandler(host, recvCallback) {
 }
 
 
+/* Class to encapsulate tree view representation 
+of the project */
+function ProjectTreeView() {
+  this._ID_PREFIX = "tree-node";
+
+  this.initRoot = function(treeID, rootNodeName){
+    $("#"+treeID).append(
+      $('<ul>').append(
+        $('<li>').attr("class", "parent_li").append(
+          $('<span>').attr("class", "tree-node-dir").on("click", this._dirClick).append(
+            $('<i>').attr("class", "icon-folder-open")).append(
+            rootNodeName)).append(
+          $('<ul>').attr("id", this._ID_PREFIX+'/'))));
+  };
+
+  this.addNode = function(nodepath) {
+    nodepath = this._setAbsolute(nodepath).trim();
+    if(this._isDir(nodepath)){
+      // Create directory
+      var parts = nodepath.split("/");
+      var parentDir = parts.slice(0, -2).join("/") + "/";
+      // The size-1 is necessary empty, size-2 contains the name
+      this._addDir(parts[parts.length-2]+"/", parentDir);
+    }
+    else {
+      // Create file
+      var parts = nodepath.split("/");
+      var parentDir = parts.slice(0, -1).join("/") + "/";
+      this._addFile(parts[parts.length-1], parentDir);
+    }
+  };
+
+  this.removeNode = function(nodepath){
+    nodepath = this._setAbsolute(nodepath).trim();
+    if(nodepath == "/"){
+      console.log("TRYING TO REMOVE ROOT FOLDER .... BAD ...");
+      alert("TRYING TO REMOVE ROOT FOLDER .... BAD ...");
+      return;
+    }
+
+    if(this._isDir(nodepath)) {
+      // Remove element and children
+      this._getDirNode(this._ID_PREFIX+nodepath).parent().remove();
+    }
+    else { // File
+      this._getFileNode(this._ID_PREFIX+nodepath).remove();
+    }
+  };
+
+  this._isDir = function(path) {
+    return path.endsWith("/");
+  };
+
+  this._getFileNode = function(id) {
+    // Workaround to allow slashes in selector
+    return $("li[id='" + id + "']");
+  };
+
+  this._getDirNode = function(id) {
+    // Workaround to allow slashes in selector
+    return $("ul[id='" + id + "']");
+  };
+
+  this._setAbsolute = function(path){
+    return path.startsWith("/") ? path : "/" + path;
+  };
+
+  this._addDir = function(dirname, parentDir){
+    var parentId = this._ID_PREFIX + parentDir;
+    var nodeId = parentId + dirname;
+
+    if(this._getDirNode(nodeId).length != 0){
+      alert("Node already exists : " + (parentDir + dirname));
+      return;
+    }
+
+    this._getDirNode(parentId).append(
+      $('<li>').attr("class", "parent_li")
+               .append(
+        $('<span>').attr("class", "tree-node-dir")
+                   .on("click", this._dirClick)
+                   .append($('<i>').attr("class", "icon-folder-open"))
+                   .append(dirname))
+               .append(
+        $('<ul>').attr("id", nodeId)));
+  };
+
+  this._addFile = function(filename, parentDir) {
+    var parentId = this._ID_PREFIX + parentDir;
+    var nodeId = parentId + filename;
+
+    if(this._getFileNode(nodeId).length != 0){
+      alert("Node already exists : " + (parentDir + filename));
+      return;
+    }
+
+    this._getDirNode(parentId).append(
+      $('<li>').attr("class", "parent_li")
+               .attr("id", nodeId)
+               .append(
+        $('<span>').attr("class", "tree-node-file")
+                   .attr("title", parentDir+filename)
+                   .on("click", this._fileClick)
+                   .append($('<i>').attr("class", "icon-file"))
+               .append(filename)));
+  };
+
+  this._fileClick = function(e) {
+    // 'this' is now the treeview node element
+    alert("TODO: Switch to file " + this.title);
+    //communicator.showFileContent(this.title);
+    e.stopPropagation();
+  };
+
+  this._dirClick = function(e) {
+    // 'this' is now the treeview node element
+    var children = $(this).parent('li.parent_li').find(' > ul > li');
+    if (children.is(":visible")) {
+        children.hide('fast');
+        $(this).attr('title', 'Expand this branch').find(' > i').addClass('icon-plus-sign').removeClass('icon-minus-sign');
+    } else {
+        children.show('fast');
+        $(this).attr('title', 'Collapse this branch').find(' > i').addClass('icon-minus-sign').removeClass('icon-plus-sign');
+    }
+    e.stopPropagation();
+  };
+}
+
+
 // ##########################################
 // #####                                #####
 // #####         Representation         #####
@@ -343,8 +499,6 @@ function createModif(content, pos, type) { return { content: content, pos: pos, 
 
 // used for /ide/open
 function createOpen(filename) { return { file: filename}; }
-
-
 
 // ###################################
 // #####                         #####
@@ -413,6 +567,14 @@ Array.prototype.clear = function() {
 /* STRING HELPER */
 String.prototype.insert = function(str, index) {
   return this.slice(0, index) + str + this.slice(index);
+};
+String.prototype.startsWith = function (str) {
+  return this.indexOf(str) == 0;
+};
+String.prototype.endsWith = function(str) {
+    var d = this.length - str.length;
+    var ends = d >= 0 && this.lastIndexOf(str) === d;
+    return d >= 0 && this.lastIndexOf(str) === d;
 };
 
 /* MEASUREMENT HELPER */
