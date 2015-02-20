@@ -55,7 +55,7 @@ function test_RemoveNode() {
 
 function test_ManyAddNode() {
   tree.addNode('file-toto');
-  tree.addNode('/file-toto2');
+  tree.addNode('/file-toto');
   tree.addNode('dir-toto/');
   tree.addNode('/dir-toto/');
 
@@ -385,8 +385,6 @@ function ProjectTreeView() {
     else {
       // Create file
       var parts = nodepath.split("/");
-      var parentParts = parts.slice(0, -1);
-      var parentJoins = parentParts.join("/");
       var parentDir = parts.slice(0, -1).join("/") + "/";
       this._addFile(parts[parts.length-1], parentDir);
     }
@@ -418,18 +416,30 @@ function ProjectTreeView() {
 
   this._addDir = function(dirname, parentDir){
     var parentId = this._ID_PREFIX + parentDir;
-    $("ul[id*='" + parentId + "']").append(
+    var nodeId = parentId + dirname;
+    if($("ul[id*='" + nodeId + "']").length != 0){
+      alert("Node already exists");
+      return;
+    }
+
+    $("ul[id='" + parentId + "']").append(
       $('<li>').attr("class", "parent_li").append(
         $('<span>').attr("class", "tree-node-dir").on("click", this._dirClick).append(
           $('<i>').attr("class", "icon-folder-open")).append(
           dirname)).append(
-        $('<ul>').attr("id", parentId + dirname)));
+        $('<ul>').attr("id", nodeId)));
   };
 
   this._addFile = function(filename, parentDir) {
     var parentId = this._ID_PREFIX + parentDir;
-    $("ul[id*='" + parentId + "']").append(
-      $('<li>').attr("class", "parent_li").append(
+    var nodeId = parentId + filename;
+    if($("li[id*='" + nodeId + "']").length != 0){
+      alert("Node already exists");
+      return;
+    }
+
+    $("ul[id='" + parentId + "']").append(
+      $('<li>').attr("class", "parent_li").attr("id", nodeId).append(
         $('<span>').attr("class", "tree-node-file").on("click", this._fileClick).append(
           $('<i>').attr("class", "icon-file")).append(
           filename)));
