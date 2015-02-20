@@ -1,6 +1,7 @@
 // Central point of interractions
 DEFAULT_PUSH_INTERVAL = 2000; // ms
 communicator = null;
+tree = null;
 
 // Requests
 HOST = window.location.host;
@@ -9,6 +10,9 @@ RETRY_CONNECT_TIMEOUT = 2000; // ms
 // Initialize content when ready
 $(document).ready(init);
 function init() {
+  tree = new ProjectTreeView();
+  tree.initRoot("tree", "ProjectName");
+
   // Classes
   communicator = new Communicator();
   communicator.init('editorLastVersion', 'editorDisplay');
@@ -37,6 +41,24 @@ function test_ajax() {
     console.log("Success reveived comm");
     communicator._changeMemory.clear();
   });
+}
+
+function test_AddNode() {
+  var nodeName = $('#addNode').val();
+  tree.addNode(nodeName);
+}
+
+function test_ManyAddNode() {
+  tree.addNode('file-toto');
+  tree.addNode('/file-toto2');
+  tree.addNode('dir-toto/');
+  tree.addNode('/dir-toto/');
+
+  tree.addNode('/d/');
+  tree.addNode('d/sub-toto-file');
+  tree.addNode('/d/sub-toto-file');
+  tree.addNode('d/sub-toto-dir/');
+  tree.addNode('/d/sub-toto-dir/');
 }
 
 // #####################################
@@ -331,6 +353,85 @@ function RequestHandler(host, recvCallback) {
 }
 
 
+/* Class to encapsulate tree view representation 
+of the project */
+function ProjectTreeView() {
+  this._ROOT_CHILDREN_NODE_ID = "tree-root";
+
+  this.initRoot = function(treeID, rootNodeName){
+    $("#"+treeID).append(
+      $('<ul>').append(
+        $('<li>').attr("class", "parent_li").append(
+          $('<span>').attr("class", "tree-node-dir").on("click", this._dirClick).append(
+            $('<i>').attr("class", "icon-folder-open")).append(
+            rootNodeName)).append(
+          $('<ul>').attr("id", this._ROOT_CHILDREN_NODE_ID+'-'))));
+  };
+
+  this.addNode = function(nodepath) {
+    nodepath = nodepath.startsWith("/") ? nodepath.slice(1) : nodepath;
+    if(nodepath.endsWith("/")){
+      // Create directory
+      nodepath = nodepath.slice(0,-1);
+      var index = Math.max(nodepath.lastIndexOf("/"), 0);
+      var parentDir = nodepath.slice(0, index);
+      var dirName = index == 0 ? nodepath : nodepath.slice(index+1);
+      this._addDir(dirName, parentDir);
+    }
+    else {
+      // Create file
+      var index = nodepath.lastIndexOf("/");
+      var parentDir = nodepath.slice(0, Math.max(index, 0));
+      var fileName = nodepath.slice(index+1);
+      this._addFile(fileName, parentDir);
+    }
+  };
+
+  this._getNodeIdFromPath = function (filePath) {
+    var path = filePath.startsWith("/") ? this._ROOT_CHILDREN_NODE_ID + filePath.replace(/\//g, "-") :
+                                      this._ROOT_CHILDREN_NODE_ID + '-' + filePath.replace(/\//g, "-");
+    return filePath.startsWith("/") ? this._ROOT_CHILDREN_NODE_ID + filePath.replace(/\//g, "-") :
+                                      this._ROOT_CHILDREN_NODE_ID + '-' + filePath.replace(/\//g, "-");
+  };
+
+
+  this._addDir = function(dirname, parentDir){
+    var nodeID = this._getNodeIdFromPath(parentDir);
+    $("#"+nodeID).append(
+      $('<li>').attr("class", "parent_li").append(
+        $('<span>').attr("class", "tree-node-dir").on("click", this._dirClick).append(
+          $('<i>').attr("class", "icon-folder-open")).append(
+          dirname)).append(
+        $('<ul>').attr("id", nodeID + (parentDir.length != 0 ? "-" : "") + dirname)));
+  };
+
+  this._addFile = function(filename, parentDir) {
+    $("#"+this._getNodeIdFromPath(parentDir)).append(
+      $('<li>').attr("class", "parent_li").append(
+        $('<span>').attr("class", "tree-node-file").on("click", this._fileClick).append(
+          $('<i>').attr("class", "icon-file")).append(
+          filename)));
+  };
+
+  this._fileClick = function(e) {
+    // 'this' is now the treeview node element
+    e.stopPropagation();
+  };
+  this._dirClick = function(e) {
+    // 'this' is now the treeview node element
+    var children = $(this).parent('li.parent_li').find(' > ul > li');
+    if (children.is(":visible")) {
+        children.hide('fast');
+        $(this).attr('title', 'Expand this branch').find(' > i').addClass('icon-plus-sign').removeClass('icon-minus-sign');
+    } else {
+        children.show('fast');
+        $(this).attr('title', 'Collapse this branch').find(' > i').addClass('icon-minus-sign').removeClass('icon-plus-sign');
+    }
+    e.stopPropagation();
+  };
+}
+
+
 // ##########################################
 // #####                                #####
 // #####         Representation         #####
@@ -343,8 +444,6 @@ function createModif(content, pos, type) { return { content: content, pos: pos, 
 
 // used for /ide/open
 function createOpen(filename) { return { file: filename}; }
-
-
 
 // ###################################
 // #####                         #####
@@ -413,6 +512,14 @@ Array.prototype.clear = function() {
 /* STRING HELPER */
 String.prototype.insert = function(str, index) {
   return this.slice(0, index) + str + this.slice(index);
+};
+String.prototype.startsWith = function (str) {
+  return this.indexOf(str) == 0;
+};
+String.prototype.endsWith = function(str) {
+    var d = this.length - str.length;
+    var ends = d >= 0 && this.lastIndexOf(str) === d;
+    return d >= 0 && this.lastIndexOf(str) === d;
 };
 
 /* MEASUREMENT HELPER */
