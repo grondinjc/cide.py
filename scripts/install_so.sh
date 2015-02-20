@@ -18,13 +18,13 @@ cd "$DIR_PATH"
 echo "Building libs ..."
 mkdir -p ../src/app/c++/build
 cd ../src/app/c++/build
-cmake ..
+cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/g++
 make
 
 # Deploy all shared lib
 echo ""
 echo "Deploying the following libs :"
-ls | grep *.so
+ls | grep ".so$"
 echo ""
 cp -r *.so $VIRTUAL_ENV/lib/python2.7/site-packages/
 
