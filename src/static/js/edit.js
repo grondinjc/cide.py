@@ -375,7 +375,7 @@ function ProjectTreeView() {
 
   this.addNode = function(nodepath) {
     nodepath = this._setAbsolute(nodepath).trim();
-    if(nodepath.endsWith("/")){
+    if(this._isDir(nodepath)){
       // Create directory
       var parts = nodepath.split("/");
       var parentDir = parts.slice(0, -2).join("/") + "/";
@@ -391,58 +391,78 @@ function ProjectTreeView() {
   };
 
   this.removeNode = function(nodepath){
-    /*nodepath = this._setAbsolute(nodepath).trim();
-
-    if(nodepath != "/" && nodepath != ""){
-      var id = this._getNodeIdFromPath(nodepath);
-      $("#"+id).empty();
-    }
-    else {
+    nodepath = this._setAbsolute(nodepath).trim();
+    if(nodepath == "/"){
       console.log("TRYING TO REMOVE ROOT FOLDER .... BAD ...");
-    }*/
+      alert("TRYING TO REMOVE ROOT FOLDER .... BAD ...");
+      return;
+    }
+
+    if(this._isDir(nodepath)) {
+      // Remove element and children
+      this._getDirNode(this._ID_PREFIX+nodepath).parent().remove();
+    }
+    else { // File
+      this._getFileNode(this._ID_PREFIX+nodepath).remove();
+    }
+  };
+
+  this._isDir = function(path) {
+    return path.endsWith("/");
+  };
+
+  this._getFileNode = function(id) {
+    // Workaround to allow slashes in selector
+    return $("li[id='" + id + "']");
+  };
+
+  this._getDirNode = function(id) {
+    // Workaround to allow slashes in selector
+    return $("ul[id='" + id + "']");
   };
 
   this._setAbsolute = function(path){
     return path.startsWith("/") ? path : "/" + path;
   };
 
-  this._getNodeIdFromPath = function (filePath) {
-    var path = filePath.startsWith("/") ? this._ROOT_CHILDREN_NODE_ID + filePath.replace(/\//g, "-") :
-                                      this._ROOT_CHILDREN_NODE_ID + '-' + filePath.replace(/\//g, "-");
-    return filePath.startsWith("/") ? this._ROOT_CHILDREN_NODE_ID + filePath.replace(/\//g, "-") :
-                                      this._ROOT_CHILDREN_NODE_ID + '-' + filePath.replace(/\//g, "-");
-  };
-
-
   this._addDir = function(dirname, parentDir){
     var parentId = this._ID_PREFIX + parentDir;
     var nodeId = parentId + dirname;
-    if($("ul[id*='" + nodeId + "']").length != 0){
+
+    if(this._getDirNode(nodeId).length != 0){
       alert("Node already exists : " + (parentDir + dirname));
       return;
     }
 
-    $("ul[id='" + parentId + "']").append(
-      $('<li>').attr("class", "parent_li").append(
-        $('<span>').attr("class", "tree-node-dir").on("click", this._dirClick).append(
-          $('<i>').attr("class", "icon-folder-open")).append(
-          dirname)).append(
+    this._getDirNode(parentId).append(
+      $('<li>').attr("class", "parent_li")
+               .append(
+        $('<span>').attr("class", "tree-node-dir")
+                   .on("click", this._dirClick)
+                   .append($('<i>').attr("class", "icon-folder-open"))
+                   .append(dirname))
+               .append(
         $('<ul>').attr("id", nodeId)));
   };
 
   this._addFile = function(filename, parentDir) {
     var parentId = this._ID_PREFIX + parentDir;
     var nodeId = parentId + filename;
-    if($("li[id*='" + nodeId + "']").length != 0){
+
+    if(this._getFileNode(nodeId).length != 0){
       alert("Node already exists : " + (parentDir + filename));
       return;
     }
 
-    $("ul[id='" + parentId + "']").append(
-      $('<li>').attr("class", "parent_li").attr("id", nodeId).append(
-        $('<span>').attr("class", "tree-node-file").attr("title", parentDir+filename).on("click", this._fileClick).append(
-          $('<i>').attr("class", "icon-file")).append(
-          filename)));
+    this._getDirNode(parentId).append(
+      $('<li>').attr("class", "parent_li")
+               .attr("id", nodeId)
+               .append(
+        $('<span>').attr("class", "tree-node-file")
+                   .attr("title", parentDir+filename)
+                   .on("click", this._fileClick)
+                   .append($('<i>').attr("class", "icon-file"))
+               .append(filename)));
   };
 
   this._fileClick = function(e) {
