@@ -418,7 +418,7 @@ function ProjectTreeView() {
     var parentId = this._ID_PREFIX + parentDir;
     var nodeId = parentId + dirname;
     if($("ul[id*='" + nodeId + "']").length != 0){
-      alert("Node already exists");
+      alert("Node already exists : " + (parentDir + dirname));
       return;
     }
 
@@ -434,21 +434,24 @@ function ProjectTreeView() {
     var parentId = this._ID_PREFIX + parentDir;
     var nodeId = parentId + filename;
     if($("li[id*='" + nodeId + "']").length != 0){
-      alert("Node already exists");
+      alert("Node already exists : " + (parentDir + filename));
       return;
     }
 
     $("ul[id='" + parentId + "']").append(
       $('<li>').attr("class", "parent_li").attr("id", nodeId).append(
-        $('<span>').attr("class", "tree-node-file").on("click", this._fileClick).append(
+        $('<span>').attr("class", "tree-node-file").attr("title", parentDir+filename).on("click", this._fileClick).append(
           $('<i>').attr("class", "icon-file")).append(
           filename)));
   };
 
   this._fileClick = function(e) {
     // 'this' is now the treeview node element
+    alert("TODO: Switch to file " + this.title);
+    //communicator.showFileContent(this.title);
     e.stopPropagation();
   };
+
   this._dirClick = function(e) {
     // 'this' is now the treeview node element
     var children = $(this).parent('li.parent_li').find(' > ul > li');
