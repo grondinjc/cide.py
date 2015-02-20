@@ -42,7 +42,7 @@ class IDEController(object):
                                                                 request.remote.ip,
                                                                 request.remote.port))
 
-    tmpl = self._loader.load('basic_demo.html')  # XXX Change for real template
+    tmpl = self._loader.load('edit.html')  # XXX Change for real template
     stream = tmpl.generate()
     return stream.render('html')
 
@@ -198,7 +198,7 @@ class IDEController(object):
                                     "vers":    None,
                                     "changes": [{
                                       "type":    None,
-                                      "pos":     None,
+                                      "pos":     0,
                                       "content": self.data
                                     }]}))  # XXX TEMP
         except:
