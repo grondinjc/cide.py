@@ -5,6 +5,7 @@ from ws4py.websocket import WebSocket
 from genshi.template import TemplateLoader
 import uuid  # XXX Temp for fake session id... Could be used for real?
 
+from cide.server.authController import AuthUtils
 
 class IDEController(object):
   """
@@ -270,6 +271,10 @@ class IDEController(object):
                                                                       request.remote.ip,
                                                                       request.remote.port))
 
+  @cherrypy.expose
+  @AuthUtils.require(AuthUtils.name_is('bobbette'))
+  def testAuth(self):
+    return "Authenticated"
 
 class IDEWebSocket(WebSocket):
   """

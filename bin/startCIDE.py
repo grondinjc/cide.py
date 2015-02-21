@@ -6,11 +6,12 @@ from configobj import ConfigObj
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from cide.server.welcomeController import WelcomeController
 from cide.server.ideController import IDEController
+from cide.server.authController import AuthController, AuthUtils
 
 
 # Read config file name from command parameters
 if len(sys.argv) != 2:
-  cherrypy.log("Missing or too many arguments. Usage : python startCIDE.py <<configs_file>>")
+  cherrypy.log("Missing or too many arguments. Usage : python {0} <<configs_file>>".format(sys.argv[0]))
   sys.exit(1)
 else:
   configs_file = sys.argv[1]
@@ -24,6 +25,7 @@ configs = ConfigObj(configs_file)
 server_conf_file = configs['DEFAULT']['server']
 welcomeController_conf_file = configs['DEFAULT']['welcomeController']
 ideController_conf_file = configs['DEFAULT']['ideController']
+authController_conf_file = configs['DEFAULT']['authController']
 cide_log_file = configs['DEFAULT']['log_file']
 
 # Setup Log
@@ -41,9 +43,13 @@ cherrypy.config.update(server_conf_file)
 WebSocketPlugin(cherrypy.engine).subscribe()
 cherrypy.tools.websocket = WebSocketTool()
 
+# Setting authentication mechanisms
+cherrypy.tools.auth = cherrypy.Tool('before_handler', AuthUtils.check_auth)
+
 # Map URI path to controllers
 cherrypy.tree.mount(WelcomeController(logger), "/", welcomeController_conf_file)
 cherrypy.tree.mount(IDEController(templates_dir, logger), "/ide", ideController_conf_file)
+cherrypy.tree.mount(AuthController(templates_dir, logger), "/auth", authController_conf_file)
 
 # Start server
 cherrypy.engine.start()
