@@ -18,7 +18,7 @@ function init() {
   communicator.init('editorLastVersion', 'editorDisplay');
 
   // Quick hack
-  communicator.showFileContent(communicator._openedFile);
+  //communicator.showFileContent(communicator._openedFile);
 }
 
 
@@ -78,8 +78,14 @@ function Communicator(pushInterval) {
   // Setup event handlers
   var obj = this; // For closure
 
+  // This will be used to store the value inside
+  // the data attribute at the following key
+  this._DATA_TEXT_KEY = "saved-text";
+
   this._openedFile = undefined;
   this._fileRevision = undefined;
+
+  this._difftool = null;
 
   // Quick hack
   // wait to receive projet tree
@@ -97,7 +103,7 @@ function Communicator(pushInterval) {
   
 
   this.init = function(lastVersionZoneId, displayZoneId) {
-    
+
     // Get a ref to edit nodes
     var nodeLastVersion = $("#" + lastVersionZoneId);
     var nodeDisplay = $("#" + displayZoneId);
@@ -114,6 +120,12 @@ function Communicator(pushInterval) {
     this._requestHandler = new RequestHandler(HOST, this.receive);
     this._requestHandler.init();
 
+    // Diff lib to compare two texts
+    this._difftool = new diff_match_patch();
+    
+    // Initialize stored text data attribute
+    nodeDisplay.data(this._DATA_TEXT_KEY, nodeDisplay.text() || ""); 
+    
     // Push changes handler 
     this._pushIntervalHandle = setInterval( 
       function() {
@@ -128,15 +140,34 @@ function Communicator(pushInterval) {
           console.log("Changes sent, clear local changes");
           obj._changeMemory.clear();
         });
-      }, 
+      },
     this._pushInterval);
 
     // Local and display sync handler
-    nodeDisplay.keypress(function(evt) {
-      evt = evt || window.event;
-      var charKey = String.fromCharCode(evt.which);
-      var charAt = (getCaretCharacterOffsetWithin(elementDisplay) || 0);
-      obj._changeMemory.addChange(charKey, charAt);
+    nodeDisplay.bind("input paste", function(evt) {
+      
+      // Get old value, compare and store new
+      // S(this) corresponds to nodeDisplay
+      var oldText = nodeDisplay.data(obj._DATA_TEXT_KEY);
+      var newText = nodeDisplay.text();
+      if(oldText == newText) return; // paste events are trigged early
+      nodeDisplay.data(obj._DATA_TEXT_KEY, newText); 
+
+      // https://code.google.com/p/google-diff-match-patch/wiki/API
+      // A diff is a pair (type, text) where type is 1 for addition,
+      // 0  for 'no-change' and -1 for substraction
+      var diff = obj._difftool.diff_main(oldText, newText);
+      // Since this function is triggered after one change,
+      // only one change will be detected. No need to compute
+      // cursor position over iteration
+      diff.map(function(change){
+        if(change[0] != 0){
+          var at = getCaretCharacterOffsetWithin(elementDisplay);
+          change[0] == 1 ? 
+            obj._changeMemory.addChange(at, change[1]) : 
+            obj._changeMemory.removeChange(at, change[1].length);
+        }
+      });     
     });
   };
 
@@ -253,7 +284,7 @@ function LocalChanges() {
   };
 
   /* A change has been made localy. Store it. */
-  this.addChange = function(val, at) {
+  this.addChange = function(at, val) {
     // Set cursor pos when undefined
     this._currentModificationPos = (this._currentModificationPos || at);
 
@@ -269,6 +300,10 @@ function LocalChanges() {
     else {
       this._currentChange += val;
     }
+  };
+
+  this.removeChange = function(at, count){
+
   };
 }
 
@@ -293,10 +328,10 @@ function RequestHandler(host, recvCallback) {
   };
 
   this._connect = function() {
-    this._socket = new WebSocket(this._hostws);
+    /*this._socket = new WebSocket(this._hostws);
     this._socket.onopen = this._socket_onopen;
     this._socket.onmessage = this._socket_onmessage;
-    this._socket.onclose = this._socket_onclose;
+    this._socket.onclose = this._socket_onclose;*/
   };
 
   this._socket_onopen = function(){
@@ -325,7 +360,7 @@ function RequestHandler(host, recvCallback) {
     successCallback = successCallback || this._emptyCallback;
     errorCallback = errorCallback || this._emptyCallback;
 
-    $.ajax({
+    /*$.ajax({
       type: type,
       url: controller,
       data: requestData,
@@ -338,7 +373,7 @@ function RequestHandler(host, recvCallback) {
       error: function(request, status, error) {  
         errorCallback(request, status, error);
       }
-    }); 
+    });*/ 
   };
 
   // Send a POST ; data is in payload
