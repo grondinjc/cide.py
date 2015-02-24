@@ -164,7 +164,8 @@ function Communicator(pushInterval) {
         if(change[0] != 0){
           var at = getCaretCharacterOffsetWithin(elementDisplay);
           change[0] == 1 ? 
-            obj._changeMemory.addChange(at, change[1]) : 
+            // Cursor position represent updated position, we need to adjust it
+            obj._changeMemory.addChange(at-change[1].length, change[1]) : 
             obj._changeMemory.removeChange(at, change[1].length);
         }
       });     
@@ -251,62 +252,133 @@ function LastVersionZone(node) {
 /* Class to store all changes done by the user */
 function LocalChanges() {
 
+  var obj; // for closure
+
+  this._removeState = new LocalChangeRemoveState(this);
+  this._addState = new LocalChangeAddState(this);
+
+  // First state
+  this._state = this._addState;
+  this._state.init();
+
   this._modifications = [];
-  this._currentModificationPos = undefined;
-  this._currentChange = "";
-
-  this.get = function() {
-    return (this._currentModificationPos == undefined || this._currentChange.length == 0) ?
-      this._modifications.dcopy() :
-      // Quick hack
-      this._modifications.concat([createModif(this._currentChange, this._currentModificationPos)]);
-  };
-
-  this.clear = function() {
-    this._modifications.clear();
-    this._currentModificationPos = undefined;
-    this._currentChange = "";
-  };
-
-  /* At request was received from the server.
-  All saved offset need to be updated */
-  this.update = function(deltas) {
-    deltas.map(function(delta) {
-      // For stored change
-      this._modifications.map(function(mod) {
-        mod.pos += (delta.pos < mod.pos) ? delta.content.length : 0;
-      });
-      // For current change, when defined
-      if(this._currentModificationPos != undefined) {
-        this._currentModificationPos += (delta.pos < this._currentModificationPos) ? delta.content.length : 0;
-      }
-    }, this);
-  };
-
-  /* A change has been made localy. Store it. */
-  this.addChange = function(at, val) {
-    // Set cursor pos when undefined
-    this._currentModificationPos = (this._currentModificationPos || at);
-
-    var theoricalAt = this._currentModificationPos + this._currentChange.length;
-    if(theoricalAt != at && this._currentChange.length != 0) {
-      // change somewhere else... save 
-      this._modifications.push(createModif(this._currentChange, this._currentModificationPos));
-
-      // and start new change
-      this._currentModificationPos = at;
-      this._currentChange = val;
-    }
-    else {
-      this._currentChange += val;
-    }
-  };
-
-  this.removeChange = function(at, count){
-
-  };
 }
+LocalChanges.prototype.get = function() {
+  return (this._currentModificationPos == undefined || this._currentChange.length == 0) ?
+    this._modifications.dcopy() :
+    // Quick hack
+    this._modifications.concat([createModif(this._currentChange, this._currentModificationPos)]);
+};
+LocalChanges.prototype.update = function(deltas) {
+  /* At request was received from the server.
+  It can be additions, or removals or both.
+  All saved offset need to be updated */
+  deltas.map(function(delta) {
+    // For stored change
+    this._modifications.map(function(mod) {
+      mod.pos += (delta.pos < mod.pos) ? delta.content.length : 0;
+    });
+    // For current change, when defined
+    if(this._currentModificationPos != undefined) {
+      this._currentModificationPos += (delta.pos < this._currentModificationPos) ? delta.content.length : 0;
+    }
+  }, this);
+};
+LocalChanges.prototype.clear = function() {
+  this._modifications.clear();
+  this._currentModificationPos = undefined;
+  this._currentChangeData = undefined;
+};
+LocalChanges.prototype.addChange = function(at, val) { 
+  if(!val) return;
+  this._state.add(at, val); 
+};
+LocalChanges.prototype.removeChange = function(at, count) { 
+  if(!count) return;
+  this._state.remove(at, count); 
+};
+LocalChanges.prototype.handleSwitchToAddState = function(val, at){
+  // Get any pending change to avoid data miss
+  if(this._state.isChangeInProgress())
+    this.saveChange(this._state.getPendingChange());
+  
+  this._state = this._addState;
+  this._state.init();
+  this._state.add(val, at);
+};
+LocalChanges.prototype.handleSwitchToRemoveState = function(val, count){
+  // Get any pending change to avoid data miss
+  if(this._state.isChangeInProgress())
+    this.saveChange(this._state.getPendingChange());
 
+  this._state = this._removeState;
+  this._state.init();
+  this._state.remove(val, count);
+};
+LocalChanges.prototype.saveChange = function(change) {
+  this._modifications.push(change);
+};
+
+
+
+
+function LocalChangeAddState(mem){
+  this._mem = mem;
+  this._startAddedPos = undefined;
+  this._addedData = undefined;
+}
+LocalChangeAddState.prototype.add = function(at, val){
+  var theoricalAt = this._startAddedPos + this._addedData.length;
+  if(theoricalAt != at && this._addedData.length != 0) {
+    // change somewhere else... save 
+    this._mem.saveChange(createAddModif(this._addedData, this._startAddedPos));
+
+    // and start new change
+    this._startAddedPos = at;
+    this._addedData = val;
+  }
+  else {
+    this._addedData += val;
+  }
+};
+LocalChangeAddState.prototype.remove = function(at, count) { 
+  this._mem.handleSwitchToRemoveState(at, count); 
+};
+LocalChangeAddState.prototype.init = function() {
+  this._startAddedPos = 0;
+  this._addedData = "";
+};
+LocalChangeAddState.prototype.isChangeInProgress = function() {
+  return this._addedData.length != 0;
+};
+LocalChangeAddState.prototype.getPendingChange = function() {
+  return createAddModif(this._addedData, this._startAddedPos);
+};
+
+
+
+
+
+function LocalChangeRemoveState(mem){
+  this._mem = mem;
+  this._startRemovePos = undefined;
+  this._removedCount = undefined;
+}
+LocalChangeRemoveState.prototype.add = function(at, val){
+  this._mem.handleSwitchToAddState(at, count); 
+};
+LocalChangeRemoveState.prototype.remove = function(at, count) { 
+};
+LocalChangeRemoveState.prototype.init = function() {
+  this._startRemovePos = 0;
+  this._removedCount = 0;
+};
+LocalChangeRemoveState.prototype.isChangeInProgress = function() {
+  return this._removedCount != 0;
+};
+LocalChangeRemoveState.prototype.getPendingChange = function() {
+  return createRemoveModif(this._removedCount, this._startRemovePos);
+};
 
 /* Class to encapsulate how communications are done.
 This will allow to change only internal representation
@@ -530,7 +602,9 @@ function ProjectTreeView() {
 
 // used for /ide/save
 function createModifGroup(changes, file, vers) { return { file: file, vers: vers, changes: changes}; }
-function createModif(content, pos, type) { return { content: content, pos: pos, type: type}; }
+
+function createAddModif(content, pos) { return { content: content, pos: pos, type: 0}; }
+function createRemoveModif(count, pos) { return { count: count, pos: pos, type: 1}; }
 
 // used for /ide/open
 function createOpen(filename) { return { file: filename}; }
