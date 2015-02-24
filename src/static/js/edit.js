@@ -166,7 +166,7 @@ function Communicator(pushInterval) {
           change[0] == 1 ? 
             // Cursor position represent updated position, we need to adjust it
             obj._changeMemory.addChange(at-change[1].length, change[1]) : 
-            obj._changeMemory.removeChange(at, change[1].length);
+            obj._changeMemory.removeChange(at+change[1].length, change[1].length);
         }
       });     
     });
@@ -365,12 +365,28 @@ function LocalChangeRemoveState(mem){
   this._removedCount = undefined;
 }
 LocalChangeRemoveState.prototype.add = function(at, val){
-  this._mem.handleSwitchToAddState(at, count); 
+  this._mem.handleSwitchToAddState(at, val); 
 };
 LocalChangeRemoveState.prototype.remove = function(at, count) { 
+  // Set when cursor was not set before
+  // Needed because we don`t know here the size of the full text
+  this._startRemovePos = this._startRemovePos || at;
+
+  var theoricalAt = this._startRemovePos - this._removedCount;
+  if(theoricalAt != at && this._removedCount != 0) {
+    // change somewhere else... save 
+    this._mem.saveChange(createRemoveModif(this._removedCount, this._startRemovePos));
+
+    // and start new change
+    this._startRemovePos = at;
+    this._removedCount = count;
+  }
+  else {
+    this._removedCount += count;
+  }
 };
 LocalChangeRemoveState.prototype.init = function() {
-  this._startRemovePos = 0;
+  this._startRemovePos = undefined;
   this._removedCount = 0;
 };
 LocalChangeRemoveState.prototype.isChangeInProgress = function() {
