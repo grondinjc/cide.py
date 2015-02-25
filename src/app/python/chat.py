@@ -30,7 +30,7 @@ class Chat(object):
     @return tuple (<<Data to send>>, <<Users to send to>>)
     """
     self._logger.info("Adding {0} to chat users".format(username))
-    data = {"author": "system", "message": username + " connected to the chat."}
+    data = self.makeData("system", username + " connected to the chat.")
 
     with self._usersLock:
       if username not in self._users:
@@ -52,7 +52,7 @@ class Chat(object):
     @return tuple (<<Data to send>>, <<Users to send to>>)
     """
     self._logger.info("Removing {0} from chat users".format(username))
-    data = {"author": "system", "message": username + " disconnected from the chat."}
+    data = self.makeData("system", username + " disconnected from the chat.")
 
     with self._usersLock:
       if username in self._users:
@@ -75,15 +75,28 @@ class Chat(object):
     @return tuple (<<Data to send>>, <<Users to send to>>)
     """
     self._logger.debug("Handling message from {0}, message: {1}".format(author, message))
-    data = {"author": author, "message": message.strip()}
+    message = message.strip()
 
-    if data["message"]:
+    if message:
+      data = self.makeData(author, message.strip())
       with self._usersLock:
         users = self._users.copy()
 
     else:
+      data = None
       users = []
       self._logger.warning("Message from user {0} was empty. Not re-sending.".format(author))
 
     return (data, users)
+
+  def makeData(self, author, message):
+    """
+    Make the dict data to send
+
+    @param author: The author of the message
+    @param message: The message to be sent
+
+    @return A dict to send
+    """
+    return {"author": author, "message": message}
 
