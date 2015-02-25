@@ -2,6 +2,8 @@
   <head>
     <title>This is replaced.</title>
     <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    
+    <!-- CIDE CSS -->
     <link rel="stylesheet" type="text/css" href="static/css/style.css" />
 
     <!-- Bootstrap CSS -->
@@ -26,15 +28,14 @@
             <div>
               <h3>Test</h3>
               <label>add Node</label><input type="text" id="textNode"/>
-              <button onClick="test_AddNode();">Send</button>
-              <button onClick="test_RemoveNode();">Remove</button>
-              <br/>
+              <button onClick="test_AddNode();">Add node</button>
+              <button onClick="test_RemoveNode();">Remove node</button><br/><br/>
               <button onClick="test_ManyAddNode();">Send Many</button>
             </div>
           </td>
 
           <!-- Editing zone -->
-          <td>
+          <td style="width: 75%;">
             <!-- Editing zone impl -->
             <h1>Editing display</h1>
             <!-- Container of all lines -->
@@ -42,23 +43,31 @@
             <div id="editorWidget">
               <pre id="editorDisplay" class="codeDisplay" contenteditable="true"></pre>
             </div>
-            <h4>Last version</h4>
+            <h4>Last version from server</h4>
             <textarea id="editorLastVersion" class="codeInputDebug"></textarea>
 
 
             <!-- Tests -->
             <h3>Test</h3>
-            <label>add</label>
-            <textarea id="addText"></textarea>
-            <br/>
-            <label>at</label>
-            <input type="text" id="addAt"/>
-            <br/>
-            <button onClick="addNewTextAt();">Send</button>
-            <br/>
-            <br/>
-            <button onClick="test_notify();">Test notify</button>
-            <br/><button onClick="test_ajax();">Test AJAX</button>
+            <table>
+              <tbody>
+                <tr>
+
+                  <td>
+                    <label>add text</label><textarea id="addText"></textarea><br/>
+                    <label>at</label><input type="text" id="addAt"/><br/>
+                    <button onClick="addNewTextAt();">Send</button><br/>
+                  </td>
+
+                  <td>
+                    <label>remove count</label><input type="text" id="rmCountText"/><br/>
+                    <label>at</label><input type="text" id="rmAt"/><br/>
+                    <button onClick="removeTextAt();">Send</button><br/>
+                  </td>
+
+                </tr>
+              </tbody>
+            </table>
 
           </td>
         </tr>
@@ -71,5 +80,8 @@
     <script src="static/js/edit.js" type="text/javascript" charset="utf-8"></script>
     <!-- Bootstrap JS -->
     <script type="text/javascript" src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>   
+    <!-- Diff match patch JS -->
+    <script src="static/js/diff_match_patch.js" type="text/javascript" charset="utf-8"></script>
+    
   </body>
 </html>
