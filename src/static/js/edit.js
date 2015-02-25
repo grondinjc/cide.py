@@ -85,7 +85,8 @@ function Communicator(pushInterval) {
   // the data attribute at the following key
   this._DATA_TEXT_KEY = "saved-text";
 
-  // 
+  // Listened events to handle user inputs
+  this._TEXT_EVENTS = "input paste";
 
   this._openedFile = undefined;
   this._fileRevision = undefined;
@@ -154,7 +155,7 @@ function Communicator(pushInterval) {
     );
 
     // Local and display sync handler
-    this._nodeDisplay.bind("input paste", this._handleInputEvent);
+    this._nodeDisplay.bind(this._TEXT_EVENTS, this._handleInputEvent);
 
     var msg = "DEBUG MODE :\n";
     msg +=    "Add and remove feature works locally.\n";
@@ -215,9 +216,9 @@ function Communicator(pushInterval) {
 
   this._updateDisplayNoEvent = function(text) {
     // Hack to avoid considering server text as the user input
-    this._nodeDisplay.unbind("input paste");
+    this._nodeDisplay.unbind(this._TEXT_EVENTS);
     this._zoneDisplay.update(text);
-    this._nodeDisplay.bind("input paste", this._handleInputEvent);
+    this._nodeDisplay.bind(this._TEXT_EVENTS, this._handleInputEvent);
   };
 
   // Data received from server
