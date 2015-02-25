@@ -6,6 +6,8 @@ from configobj import ConfigObj
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
 from cide.server.welcomeController import WelcomeController
 from cide.server.ideController import IDEController
+from cide.server.chatController import ChatController
+from cide.app.python.chat import Chat
 
 
 # Read config file name from command parameters
@@ -24,6 +26,7 @@ configs = ConfigObj(configs_file)
 server_conf_file = configs['DEFAULT']['server']
 welcomeController_conf_file = configs['DEFAULT']['welcomeController']
 ideController_conf_file = configs['DEFAULT']['ideController']
+chatController_conf_file = configs['DEFAULT']['chatController']
 cide_log_file = configs['DEFAULT']['log_file']
 
 # Setup Log
@@ -41,9 +44,13 @@ cherrypy.config.update(server_conf_file)
 WebSocketPlugin(cherrypy.engine).subscribe()
 cherrypy.tools.websocket = WebSocketTool()
 
+# Instanciate App
+chatApp = Chat(logger)
+
 # Map URI path to controllers
 cherrypy.tree.mount(WelcomeController(logger), "/", welcomeController_conf_file)
 cherrypy.tree.mount(IDEController(templates_dir, logger), "/ide", ideController_conf_file)
+cherrypy.tree.mount(ChatController(chatApp, logger), "/chat", chatController_conf_file)
 
 # Start server
 cherrypy.engine.start()
