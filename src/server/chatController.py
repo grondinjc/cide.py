@@ -10,33 +10,20 @@ class ChatController(object):
   Controller of the chat
   """
 
-  def __init__(self, logger):
+  def __init__(self, app, logger):
     """
     ChatController initialiser
 
+    @type app: cide.app.python.chat.Chat
+    @type logger: logging.Logger
+
+    @param app: The Chat App instance
     @param logger: The CIDE.py logger instance
     """
-    # XXX Do we need template or something?
+    self._app = app
     self._logger = logger
 
     self._logger.debug("ChatController instance created")
-
-  @cherrypy.expose
-  def index(self):
-    """
-    ChatController index page generator
-    (Path : /chat/ -- /chat/index)
-
-    @return: ??????
-    """
-    if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
-
-    username = cherrypy.session['username']
-    self._logger.info("index requested by {0} ({1}:{2})".format(username,
-                                                                request.remote.ip,
-                                                                request.remote.port))
-    # XXX Do we need index? Send chat template (Iframe)?
 
   @cherrypy.expose
   def connect(self):
@@ -48,17 +35,15 @@ class ChatController(object):
     The user may start to receive messages before he gets the response for this request.
     """
     if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+      cherrypy.session['username'] = str(uuid.uuid4())  # XXX Session should be set by the id module
 
     username = cherrypy.session['username']
     self._logger.info("Connect to chat requested by {0} ({1}:{2})".format(username,
                                                                           request.remote.ip,
                                                                           request.remote.port))
 
-    # TODO Check parameters if needed
-    # TODO Check if we have a WS before subscribing?
-    # TODO Call app
-    # TODO Send notification of connection in chat?
+    result = self._app.addUser(username)
+    self.sendTo(*result)
 
   @cherrypy.expose
   def disconnect(self):
@@ -68,19 +53,15 @@ class ChatController(object):
     (Path : /chat/disconnect)
     """
     if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+      cherrypy.session['username'] = str(uuid.uuid4())  # XXX Session should be set by the id module
 
     username = cherrypy.session['username']
     self._logger.info("Disconnect from chat requested by {0} ({1}:{2})".format(username,
                                                                                request.remote.ip,
                                                                                request.remote.port))
 
-    # TODO Check parameters if needed
-    # TODO remove from subscribers to chat
-    # TODO Ask for list of all user in chat
-    users = ChatWebSocket.ChatClients.keys()  # XXX TEMP, ASK APP
-    dc_message = {"author": "system", "message": username + " disconnected from the chat."}
-    self.sendTo(dc_message, users)
+    result = self._app.removeUser(username)
+    self.sendTo(*result)
 
   @cherrypy.expose
   @cherrypy.tools.json_in()
@@ -102,7 +83,7 @@ class ChatController(object):
       }
     """
     if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+      cherrypy.session['username'] = str(uuid.uuid4())  # XXX Session should be set by the id module
 
     self._logger.debug("Send by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                 request.remote.ip,
@@ -116,13 +97,8 @@ class ChatController(object):
                                                                              request.remote.port,
                                                                              message))
 
-    # TODO Check parameters if needed
-    # TODO Call app
-
-    # XXX TEMP, might send to only some people
-    users = ChatWebSocket.ChatClients.keys()  # XXX TEMP, ASK APP
-    data = {"author":  username, "message": message}
-    self.sendToSubscribed(data, users)
+    result = self._app.handleMessage(username, message)
+    self.sendTo(*result)
 
   @cherrypy.expose
   def ws(self):
@@ -131,7 +107,7 @@ class ChatController(object):
     (Path : /chat/ws)
     """
     if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+      cherrypy.session['username'] = str(uuid.uuid4())  # XXX Session should be set by the id module
 
     username = cherrypy.session['username']
     self._logger.info("WS creation request from {0} ({1}:{2})".format(username,
@@ -140,10 +116,10 @@ class ChatController(object):
 
   def sendTo(self, data, users):
     """
-    Send a data to list of user
+    Send data to list of user
 
-    @param data: The data to send (dict)
-    @param users: The list of users to send to
+    @param data: The data to send
+    @param users: The set of users to send to
     """
     for user in users:
       ws = ChatWebSocket.ChatClients.get(user)
@@ -155,10 +131,8 @@ class ChatController(object):
 
       else:
         self._logger.error("{0} has no WS in server".format(user))
-        # TODO remove from subscribers to chat
-        # TODO Ask for list of all user in chat
-        dc_message = {"author": "system", "message": user + " was disconnected from the chat."}
-        self.sendTo(dc_message, users)
+        result = self._app.removeUser(user)
+        self.sendTo(*result)
 
 
 class ChatWebSocket(WebSocket):
