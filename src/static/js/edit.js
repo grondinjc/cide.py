@@ -62,15 +62,11 @@ function test_RemoveNode() {
 
 function test_ManyAddNode() {
   tree.addNode('file-toto');
-  tree.addNode('/file-toto');
   tree.addNode('dir-toto/');
-  tree.addNode('/dir-toto/');
 
   tree.addNode('/d/');
   tree.addNode('d/sub-toto-file');
-  tree.addNode('/d/sub-toto-file');
   tree.addNode('d/sub-toto-dir/');
-  tree.addNode('/d/sub-toto-dir/');
 }
 
 // #####################################
@@ -88,6 +84,8 @@ function Communicator(pushInterval) {
   // This will be used to store the value inside
   // the data attribute at the following key
   this._DATA_TEXT_KEY = "saved-text";
+
+  // 
 
   this._openedFile = undefined;
   this._fileRevision = undefined;
@@ -107,13 +105,15 @@ function Communicator(pushInterval) {
   this._changeMemory = null;
   this._zoneLastVersion = null;
   this._zoneDisplay = null;
+
+  this._nodeDisplay = null;
   
 
   this.init = function(lastVersionZoneId, displayZoneId) {
 
     // Get a ref to edit nodes
     var nodeLastVersion = $("#" + lastVersionZoneId);
-    var nodeDisplay = $("#" + displayZoneId);
+    this._nodeDisplay = $("#" + displayZoneId);
 
     // Required to get cursor position on contentEditable pre tag
     var elementDisplay = document.getElementById(displayZoneId);
@@ -121,7 +121,7 @@ function Communicator(pushInterval) {
     // Create classes
     this._changeMemory = new LocalChanges();
     this._zoneLastVersion = new LastVersionZone(nodeLastVersion);
-    this._zoneDisplay = new DisplayZone(nodeDisplay);
+    this._zoneDisplay = new DisplayZone(this._nodeDisplay);
 
     // Handle ways of sending and receiving data from/to server
     this._requestHandler = new RequestHandler(HOST, this.receive);
@@ -131,11 +131,12 @@ function Communicator(pushInterval) {
     this._difftool = new diff_match_patch();
     
     // Initialize stored text data attribute
-    nodeDisplay.data(this._DATA_TEXT_KEY, nodeDisplay.text() || ""); 
+    this._nodeDisplay.data(this._DATA_TEXT_KEY, this._nodeDisplay.text() || ""); 
     
     // Push changes handler 
     this._pushIntervalHandle = setInterval( 
       function() {
+        return; //<<debug>> ... remove this line to send changes to controller
         // try push
         var changes = obj._changeMemory.get();
         if(changes.length == 0) 
@@ -149,43 +150,53 @@ function Communicator(pushInterval) {
           obj._changeMemory.clear();
         });
       },
-    this._pushInterval);
+      this._pushInterval
+    );
 
     // Local and display sync handler
-    nodeDisplay.bind("input paste", function(evt) {
-      
-      // Get old value, compare and store new
-      // S(this) corresponds to nodeDisplay
-      var oldText = nodeDisplay.data(obj._DATA_TEXT_KEY);
-      var newText = nodeDisplay.text();
-      if(oldText == newText) return; // paste events are trigged early
-      nodeDisplay.data(obj._DATA_TEXT_KEY, newText); 
+    this._nodeDisplay.bind("input paste", this._handleInputEvent);
 
-      // https://code.google.com/p/google-diff-match-patch/wiki/API
-      // A diff is a pair (type, text) where type is 1 for addition,
-      // 0  for 'no-change' and -1 for substraction
-      var diff = obj._difftool.diff_main(oldText, newText);
-      // Since this function is triggered after one change,
-      // which corresponds to a maximum of two diff elements,
-      // position needs to be computed over iteration
-      // -- Add text : 1 diff add element
-      // -- Remove text : 1 diff remove element
-      // -- Highlight text and add text : 1 diff add element and 1 diff remove element 
-      var at = 0;
-      diff.map(function(change){
-        switch(change[0]) {
-          case -1:
-            obj._changeMemory.removeChange(at+change[1].length, change[1].length);
-            break;
-          case 1:
-            obj._changeMemory.addChange(at, change[1]);
-            // no break on purpose
-          case 0:     
-            at += change[1].length;
-            break;
-        }
-      });     
-    });
+    var msg = "DEBUG MODE :\n";
+    msg +=    "Add and remove feature works locally.\n";
+    msg +=    "They are not robust (garbage in, garbage out).\n";
+    msg +=    "Unittest infrastructure will be comming next.\n\n";
+    msg +=    "No messages are sent to the controller.\n";
+    msg +=    "To reactivate that, look for <<debug>> in source code.\n";
+    alert(msg);
+  };
+
+  this._handleInputEvent = function(evt) {
+    // Get old value, compare and store new
+    // $(this) corresponds to nodeDisplay
+    var oldText = obj._nodeDisplay.data(obj._DATA_TEXT_KEY);
+    var newText = obj._nodeDisplay.text();
+    if(oldText == newText) return; // paste events are trigged early
+    obj._nodeDisplay.data(obj._DATA_TEXT_KEY, newText); 
+
+    // https://code.google.com/p/google-diff-match-patch/wiki/API
+    // A diff is a pair (type, text) where type is 1 for addition,
+    // 0  for 'no-change' and -1 for substraction
+    var diff = obj._difftool.diff_main(oldText, newText);
+    // Since this function is triggered after one change,
+    // which corresponds to a maximum of two diff elements,
+    // position needs to be computed over iteration
+    // -- Add text : 1 diff add element
+    // -- Remove text : 1 diff remove element
+    // -- Highlight text and add text : 1 diff add element and 1 diff remove element 
+    var at = 0;
+    diff.map(function(change){
+      switch(change[0]) {
+        case -1:
+          obj._changeMemory.removeChange(at+change[1].length, change[1].length);
+          break;
+        case 1:
+          obj._changeMemory.addChange(at, change[1]);
+          // no break on purpose
+        case 0:     
+          at += change[1].length;
+          break;
+      }
+    });     
   };
 
   this.showFileContent = function(filepath) {
@@ -197,7 +208,16 @@ function Communicator(pushInterval) {
       // on success
       obj._fileRevision = response.vers;
       obj.notifyForce(createAddModif(response.content, 0));
+      // Save content in data attributes
+      obj._nodeDisplay.data(obj._DATA_TEXT_KEY, response.content);
     });
+  };
+
+  this._updateDisplayNoEvent = function(text) {
+    // Hack to avoid considering server text as the user input
+    this._nodeDisplay.unbind("input paste");
+    this._zoneDisplay.update(text);
+    this._nodeDisplay.bind("input paste", this._handleInputEvent);
   };
 
   // Data received from server
@@ -208,25 +228,28 @@ function Communicator(pushInterval) {
     obj.notifySoft(jsonObj);
   };
 
-  // change to modification group ?
+  // Does not receive a group of modifications since
+  // every zone will be overriden. One delta is enough
   this.notifyForce = function(initialDelta) {
     this._zoneLastVersion.put(initialDelta.content);
-    this._zoneDisplay.update(initialDelta.content);
     this._changeMemory.clear();
+    this._updateDisplayNoEvent(initialDelta.content); 
   };
 
   this.notifySoft = function(modifications) {
     this._changeMemory.update(modifications.changes);
     this._zoneLastVersion.update(modifications.changes);
-    this._zoneDisplay.update(this.combineText());
+    this._updateDisplayNoEvent(this._combineText());
   };
 
-  this.combineText = function() {
+  this._combineText = function() {
     var base = this._zoneLastVersion.get();
     var modifs = this._changeMemory.get();
-    for(var i = 0; i < modifs.length; ++i){
-      base = base.insert(modifs[i].content, modifs[i].pos);
-    }
+    modifs.map(function(mod) {
+      base = mod.type == CHANGE_RM_TYPE ?
+        base.cut(mod.pos, mod.pos+mod.count):
+        base.insert(mod.content, mod.pos);
+    });
     return base;
   };
 };
@@ -284,6 +307,7 @@ function LocalChanges() {
 LocalChanges.prototype.get = function() {
   if(this._state.isChangeInProgress())
     this.saveChange(this._state.getPendingChange())
+    this._state.init();
   return this._modifications.dcopy();
 };
 LocalChanges.prototype.update = function(deltas) {
@@ -293,12 +317,14 @@ LocalChanges.prototype.update = function(deltas) {
   deltas.map(function(delta) {
     // For stored change
     this._modifications.map(function(mod) {
-      mod.pos += (delta.pos < mod.pos) ? delta.content.length : 0;
+      if(delta.pos < mod.pos) {
+        mod.pos += delta.type == CHANGE_RM_TYPE ?
+          -delta.count :
+          delta.content.length;
+      }
     });
     // For current change, when defined
-    if(this._currentModificationPos != undefined) {
-      this._currentModificationPos += (delta.pos < this._currentModificationPos) ? delta.content.length : 0;
-    }
+    this._state.update(delta);
   }, this);
 };
 LocalChanges.prototype.clear = function() {
@@ -344,6 +370,9 @@ function LocalChangeAddState(mem){
   this._addedData = undefined;
 }
 LocalChangeAddState.prototype.add = function(at, val){
+  // Set when cursor was not set before
+  this._startAddedPos = this._startAddedPos || at;
+  
   var theoricalAt = this._startAddedPos + this._addedData.length;
   if(theoricalAt != at && this._addedData.length != 0) {
     // change somewhere else... save 
@@ -361,7 +390,7 @@ LocalChangeAddState.prototype.remove = function(at, count) {
   this._mem.handleSwitchToRemoveState(at, count); 
 };
 LocalChangeAddState.prototype.init = function() {
-  this._startAddedPos = 0;
+  this._startAddedPos = undefined;
   this._addedData = "";
 };
 LocalChangeAddState.prototype.isChangeInProgress = function() {
@@ -369,6 +398,13 @@ LocalChangeAddState.prototype.isChangeInProgress = function() {
 };
 LocalChangeAddState.prototype.getPendingChange = function() {
   return createAddModif(this._addedData, this._startAddedPos);
+};
+LocalChangeAddState.prototype.update = function(delta) {
+  if(this._startAddedPos != undefined && delta.pos <= this._startAddedPos) {
+    this._startAddedPos += delta.type == CHANGE_RM_TYPE ? 
+      -delta.count : 
+      delta.content.length;
+  }
 };
 
 
@@ -411,6 +447,14 @@ LocalChangeRemoveState.prototype.isChangeInProgress = function() {
 LocalChangeRemoveState.prototype.getPendingChange = function() {
   return createRemoveModif(this._removedCount, this._startRemovePos);
 };
+LocalChangeRemoveState.prototype.update = function(delta) {
+  if(this._startRemovePos != undefined && delta.pos <= this._startRemovePos) {
+    this._startRemovePos += delta.type == CHANGE_RM_TYPE ? 
+      -delta.count : 
+      delta.content.length;
+  }
+};
+
 
 /* Class to encapsulate how communications are done.
 This will allow to change only internal representation
@@ -713,9 +757,12 @@ String.prototype.startsWith = function (str) {
   return this.indexOf(str) == 0;
 };
 String.prototype.endsWith = function(str) {
-    var d = this.length - str.length;
-    var ends = d >= 0 && this.lastIndexOf(str) === d;
-    return d >= 0 && this.lastIndexOf(str) === d;
+  var d = this.length - str.length;
+  var ends = d >= 0 && this.lastIndexOf(str) === d;
+  return d >= 0 && this.lastIndexOf(str) === d;
+};
+String.prototype.cut = function(start, end) {
+  return this.substr(0,start) + this.substr(end+1);
 };
 
 /* MEASUREMENT HELPER */
