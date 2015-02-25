@@ -114,13 +114,15 @@ class ChatController(object):
                                                                       request.remote.ip,
                                                                       request.remote.port))
 
-  def sendTo(self, data, users):
+  def sendTo(self, author, message, users):
     """
     Send data to list of user
 
-    @param data: The data to send
+    @param author: The author of the message
+    @param message: The message to send
     @param users: The set of users to send to
     """
+    data = {"author": author, "message": message}
     for user in users:
       ws = ChatWebSocket.ChatClients.get(user)
       if ws:
