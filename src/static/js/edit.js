@@ -3,6 +3,10 @@ DEFAULT_PUSH_INTERVAL = 2000; // ms
 communicator = null;
 tree = null;
 
+// 
+CHANGE_RM_TYPE = -1;
+CHANGE_ADD_TYPE = 1; 
+
 // Requests
 HOST = window.location.host;
 RETRY_CONNECT_TIMEOUT = 2000; // ms
@@ -25,13 +29,16 @@ function init() {
 // TEST_ONLY
 function addNewTextAt(){
   var content = $('#addText').val();
-  var at = $('#addAt').val();
+  var at = parseInt($('#addAt').val());
+  var modA = createAddModif(content, at);
+  communicator.notifySoft(createModifGroup([modA], "fileName", 0));
 }
 
-function test_notify() {
-  var modA = createModif("111", 0);
-  var modB = createModif("444", 6);
-  communicator.notifySoft(createModifGroup([modA, modB], "fileName", 0));
+function removeTextAt() {
+  var count = parseInt($('#rmCountText').val());
+  var at = parseInt($('#rmAt').val());
+  var modA = createRemoveModif(count, at);
+  communicator.notifySoft(createModifGroup([modA], "fileName", 0));
 }
 
 function test_ajax() {
@@ -240,10 +247,13 @@ function LastVersionZone(node) {
 
   this.update = function(modifications) {
     var changedContent = this._zone.val();
-    for(var i = 0; i < modifications.length; ++i) {
-      // Eventually, check type 
-      changedContent = (changedContent.slice(0, modifications[i].pos) + modifications[i].content + changedContent.slice(modifications[i].pos));
-    }
+    modifications.map(function(mod) {
+      changedContent = mod.type == CHANGE_RM_TYPE ?
+        // Remove
+        (changedContent.slice(0, mod.pos - mod.count) + changedContent.slice(mod.pos)) :
+        // Add
+        (changedContent.slice(0, mod.pos) + mod.content + changedContent.slice(mod.pos));
+    });
     
     this._zone.val(changedContent);
   };
@@ -625,8 +635,8 @@ function ProjectTreeView() {
 // used for /ide/save
 function createModifGroup(changes, file, vers) { return { file: file, vers: vers, changes: changes}; }
 
-function createAddModif(content, pos) { return { content: content, pos: pos, type: 0}; }
-function createRemoveModif(count, pos) { return { count: count, pos: pos, type: 1}; }
+function createAddModif(content, pos) { return { content: content, pos: pos, type: CHANGE_ADD_TYPE}; }
+function createRemoveModif(count, pos) { return { count: count, pos: pos, type: CHANGE_RM_TYPE}; }
 
 // used for /ide/open
 function createOpen(filename) { return { file: filename}; }

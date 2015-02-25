@@ -36,7 +36,7 @@
           </td>
 
           <!-- Editing zone -->
-          <td>
+          <td style="width: 75%;">
             <!-- Editing zone impl -->
             <h1>Editing display</h1>
             <!-- Container of all lines -->
@@ -50,17 +50,25 @@
 
             <!-- Tests -->
             <h3>Test</h3>
-            <label>add</label>
-            <textarea id="addText"></textarea>
-            <br/>
-            <label>at</label>
-            <input type="text" id="addAt"/>
-            <br/>
-            <button onClick="addNewTextAt();">Send</button>
-            <br/>
-            <br/>
-            <button onClick="test_notify();">Test notify</button>
-            <br/><button onClick="test_ajax();">Test AJAX</button>
+            <table>
+              <tbody>
+                <tr>
+
+                  <td>
+                    <label>add text</label><textarea id="addText"></textarea><br/>
+                    <label>at</label><input type="text" id="addAt"/><br/>
+                    <button onClick="addNewTextAt();">Send</button><br/>
+                  </td>
+
+                  <td>
+                    <label>remove count</label><input type="text" id="rmCountText"/><br/>
+                    <label>at</label><input type="text" id="rmAt"/><br/>
+                    <button onClick="removeTextAt();">Send</button><br/>
+                  </td>
+
+                </tr>
+              </tbody>
+            </table>
 
           </td>
         </tr>
