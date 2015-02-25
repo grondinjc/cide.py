@@ -18,7 +18,7 @@ function init() {
   communicator.init('editorLastVersion', 'editorDisplay');
 
   // Quick hack
-  //communicator.showFileContent(communicator._openedFile);
+  communicator.showFileContent(communicator._openedFile);
 }
 
 
@@ -137,6 +137,7 @@ function Communicator(pushInterval) {
         // Send and clear on success
         var modifObject = createModifGroup(changes, obj._openedFile, obj._fileRevision);
         obj._requestHandler.put("save", modifObject, function(){
+          // Will I delete new input ??
           console.log("Changes sent, clear local changes");
           obj._changeMemory.clear();
         });
@@ -188,7 +189,7 @@ function Communicator(pushInterval) {
     this._requestHandler.post("open", createOpen(filepath), function(response){
       // on success
       obj._fileRevision = response.vers;
-      obj.notifyForce(createModif(response.content, 0));
+      obj.notifyForce(createAddModif(response.content, 0));
     });
   };
 
@@ -260,8 +261,7 @@ function LastVersionZone(node) {
 /* Class to store all changes done by the user */
 function LocalChanges() {
 
-  var obj; // for closure
-
+  // Reuse the same states to accelerate
   this._removeState = new LocalChangeRemoveState(this);
   this._addState = new LocalChangeAddState(this);
 
@@ -272,10 +272,9 @@ function LocalChanges() {
   this._modifications = [];
 }
 LocalChanges.prototype.get = function() {
-  return (this._currentModificationPos == undefined || this._currentChange.length == 0) ?
-    this._modifications.dcopy() :
-    // Quick hack
-    this._modifications.concat([createModif(this._currentChange, this._currentModificationPos)]);
+  if(this._state.isChangeInProgress())
+    this.saveChange(this._state.getPendingChange())
+  return this._modifications.dcopy();
 };
 LocalChanges.prototype.update = function(deltas) {
   /* At request was received from the server.
@@ -294,8 +293,7 @@ LocalChanges.prototype.update = function(deltas) {
 };
 LocalChanges.prototype.clear = function() {
   this._modifications.clear();
-  this._currentModificationPos = undefined;
-  this._currentChangeData = undefined;
+  this._state.init();
 };
 LocalChanges.prototype.addChange = function(at, val) { 
   if(!val) return;
@@ -424,10 +422,10 @@ function RequestHandler(host, recvCallback) {
   };
 
   this._connect = function() {
-    /*this._socket = new WebSocket(this._hostws);
+    this._socket = new WebSocket(this._hostws);
     this._socket.onopen = this._socket_onopen;
     this._socket.onmessage = this._socket_onmessage;
-    this._socket.onclose = this._socket_onclose;*/
+    this._socket.onclose = this._socket_onclose;
   };
 
   this._socket_onopen = function(){
@@ -456,7 +454,7 @@ function RequestHandler(host, recvCallback) {
     successCallback = successCallback || this._emptyCallback;
     errorCallback = errorCallback || this._emptyCallback;
 
-    /*$.ajax({
+    $.ajax({
       type: type,
       url: controller,
       data: requestData,
@@ -469,7 +467,7 @@ function RequestHandler(host, recvCallback) {
       error: function(request, status, error) {  
         errorCallback(request, status, error);
       }
-    });*/ 
+    });
   };
 
   // Send a POST ; data is in payload
