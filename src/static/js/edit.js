@@ -158,15 +158,23 @@ function Communicator(pushInterval) {
       // 0  for 'no-change' and -1 for substraction
       var diff = obj._difftool.diff_main(oldText, newText);
       // Since this function is triggered after one change,
-      // only one change will be detected. No need to compute
-      // cursor position over iteration
+      // which corresponds to a maximum of two diff elements,
+      // position needs to be computed over iteration
+      // -- Add text : 1 diff add element
+      // -- Remove text : 1 diff remove element
+      // -- Highlight text and add text : 1 diff add element and 1 diff remove element 
+      var at = 0;
       diff.map(function(change){
-        if(change[0] != 0){
-          var at = getCaretCharacterOffsetWithin(elementDisplay);
-          change[0] == 1 ? 
-            // Cursor position represent updated position, we need to adjust it
-            obj._changeMemory.addChange(at-change[1].length, change[1]) : 
+        switch(change[0]) {
+          case -1:
             obj._changeMemory.removeChange(at+change[1].length, change[1].length);
+            break;
+          case 1:
+            obj._changeMemory.addChange(at, change[1]);
+            // no break on purpose
+          case 0:     
+            at += change[1].length;
+            break;
         }
       });     
     });
