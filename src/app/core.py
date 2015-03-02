@@ -6,6 +6,9 @@ from collections import namedtuple
 
 from cide.app.utils import (get_existing_files, get_existing_nodes)
 
+from threadpool import (ThreadPool,
+                        makeRequests as create_task)
+
 from libZoneTransit import (ZoneTransit, 
                             Ajout as EditAdd, 
                             Suppression as EditRemove)
@@ -19,12 +22,14 @@ class Core(object):
 
   # Not global as it only refers to the application only
   # Tuple to hold const pair (zoneTransit, user registered to changes)
-  FileUserPair = namedtuple('UserFilePair', ['zt', 'users'])
+  FileUserPair = namedtuple('FileUserPair', ['zt', 'users'])
 
-  def __init__(self, project_name, project_path, logger, initial_observer=None):
+  def __init__(self, project_name, project_path, logger, num_threads=10, initial_observer=None):
     self._logger = logger
     self._project_name = project_name
     self._project_path = project_path # considered as /
+
+    self._threadpool = ThreadPool(num_threads)
 
     # Make sure directories exists
     if not os.path.exists(self._project_path):
@@ -42,6 +47,8 @@ class Core(object):
     # Lock when interracting with `filesystem` or with `users`
     self._project_files_lock = Lock()
 
+  def stop(self):
+    self._stop_pool()
 
   # Files, directories and empty directories
   def get_project_nodes(self):
@@ -56,7 +63,9 @@ class Core(object):
       for c in changes:
         change_class = EditAdd if c.is_add else EditRemove
         self._project_files[path].zt.add(change_class(c.pos, c.data))
-  
+      # register async task to apply changes
+      self._add_task(lambda: self._task_apply_changes(path))
+    
   def add_file(self, file_path):
     with self._project_files_lock:
       if file_path not in self._project_files:
@@ -88,9 +97,24 @@ class Core(object):
       if user in self._project_files[path].users:
         self._project_files[path].users.remove(user)
 
+  def _task_apply_changes(self, file_path):
+    with self._project_files_lock:
+      if file_path in self._project_files:
+        self._project_files[file_path].zt.ecrireModifications()
+
   @classmethod
   def _create_file_no_lock(cls, content=""):
     return cls.FileUserPair(ZoneTransit(content), set())
+
+  # Abstraction of threadpool task insertion
+  def _add_task(self, f):
+    # The dummy lambda is necessay since the lib 
+    # absolutely send at least one parameter the the function
+    rq = create_task(lambda *a: f(), [(None, None,)]) # Creates an array
+    self._threadpool.putRequest(rq[0])
+  # Abstraction of threadpool termination
+  def _stop_pool(self):
+    self._threadpool.wait()
 
 
 # Debug only
@@ -113,8 +137,5 @@ if __name__ == "__main__":
   core.add_file(file_edited)
   core.file_edit(file_edited, [add1, add2])
 
-  # hack to execute changes 
-  with core._project_files_lock:
-    core._project_files[file_edited].zt.ecrireModifications()
-
+  core.stop()
   print "\n\n", core.get_file_content(file_edited)
