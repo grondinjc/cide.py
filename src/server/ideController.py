@@ -4,6 +4,7 @@ from cherrypy import request
 import simplejson
 from ws4py.websocket import WebSocket
 from genshi.template import TemplateLoader
+from cide.server.identifyController import require_identify
 import uuid  # XXX Temp for fake session id... Could be used for real?
 
 
@@ -103,6 +104,7 @@ class IDEController(object):
               for c in changes))
 
   @cherrypy.expose
+  @require_identify()
   def index(self):
     """
     IDEController index page generator

@@ -5,6 +5,7 @@ server.socket_port=8080
 server.thread_pool=20
 tools.sessions.on=True
 #tools.sessions.lock='explicit'  # We'll see later...
+tools.auth.on=True
 ssl_certificate=None
 ssl_private_key=None
 log.screen=True
