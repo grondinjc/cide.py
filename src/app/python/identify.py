@@ -1,14 +1,14 @@
 from threading import Lock
 
 
-class Identifier(object):
+class Identify(object):
   """
   User identification app module
   """
 
   def __init__(self, logger):
     """
-    Indentifier initialiser
+    Indentify initialiser
 
     @type logger: logging.Logger
 
@@ -19,7 +19,7 @@ class Identifier(object):
     self._usernamesLock = Lock()
     self._usernames = set()
 
-    self._logger.debug("Chat module instance created")
+    self._logger.debug("Identify module instance created")
 
   def addUsername(self, username):
     """
