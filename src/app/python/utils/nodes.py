@@ -12,3 +12,4 @@ def get_existing_nodes(path):
     node_paths.extend([(os.path.join(root, name), False) for name in files])
     node_paths.extend([(os.path.join(root, name), True) for name in dirs])
   return node_paths
+  

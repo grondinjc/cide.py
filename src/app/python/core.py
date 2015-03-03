@@ -232,3 +232,4 @@ if __name__ == "__main__":
 
   core.stop()
   print "\n\n", core.get_file_content(file_edited)
+  
