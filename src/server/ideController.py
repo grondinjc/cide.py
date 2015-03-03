@@ -367,6 +367,7 @@ class IDEController(object):
     if not cherrypy.session.get('username'):
       cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
 
+    # TODO do not create 2 ws for same session?
     username = cherrypy.session['username']
     self._logger.info("WS creation request from {0} ({1}:{2})".format(username,
                                                                       request.remote.ip,
@@ -435,6 +436,13 @@ class IDEWebSocket(WebSocket):
     cherrypy.log("User {0} ({1}) WS connected".format(self.username, self.peer_address))
 
   def closed(self, code, reason=None):
-    del self.IDEClients[self.username]
+    # XXX May raise Key Error, but I don't get why...double dc?
+    # FIXME Browser doing shenanigans when checking suggestions in URL bar...
+    # FIXME Opening a 2nd WS for same users, and triggers 2 closing...hurray.
+    try:
+      del self.IDEClients[self.username]
+    except:
+      cherrypy.log("ERROR: WS for {0} was not in dict.".format(self.username))
+
     cherrypy.log("User {0} ({1}) WS disconnected".format(self.username, self.peer_address))
 

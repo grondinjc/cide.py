@@ -1,6 +1,5 @@
 import cherrypy
 import urllib
-from threading import Lock
 from genshi.template import TemplateLoader
 
 SESSION_KEY = 'username'
@@ -47,35 +46,18 @@ def require_identify(*conditions):
 
 class IdentifyController(object):
 
-  __usernamesLock = Lock()
-  __usernames = set()
-
-  @classmethod
-  def check_username(cls, username):
-    """
-    Verifies that username is not used or 'system'
-
-    @param username: Username to check
-
-    @return: None on success or a string describing the error on failure
-    """
-    with cls.__usernamesLock:
-      if username == "system":
-        return u"Username 'system' is not allowed."
-
-      elif username in cls.__usernames:
-        return u"Username already used."
-
-      else:
-        cls.__usernames.add(username)
-
-  def __init__(self, template_path, logger):
+  def __init__(self, app, template_path, logger):
     """
     IdentifyController initialiser
 
+    @type app: cide.app.python.identifier.Identifier
+    @type logger: logging.Logger
+
+    @param app: Identifier app instance
     @param template_path: Path to the template directory
     @param logger: The CIDE.py logger instance
     """
+    self._app = app
     self._loader = TemplateLoader(template_path, auto_reload=True)
     self._logger = logger
 
@@ -99,15 +81,17 @@ class IdentifyController(object):
 
     @return: Log in form, or redirect content if log in is successfull
     """
-    # TODO LOG
+    self._logger.info("Login for username '{0}'.".format(username))
     if username is None:
       return self.get_loginform("", from_page=from_page)
 
-    error_msg = self.check_username(username)
+    error_msg = self._app.addUsername(username)
     if error_msg:
+      self._logger.warning("Login failed for username '{0}'.".format(username))
       return self.get_loginform(username, error_msg, from_page)
 
     else:
+      self._logger.info("Login succeded for username '{0}'.".format(username))
       cherrypy.session[SESSION_KEY] = cherrypy.request.login = username
       raise cherrypy.HTTPRedirect(from_page or "/")
 
@@ -120,13 +104,13 @@ class IdentifyController(object):
 
     @return: Page the log ou was requested from, or '/' page
     """
-    # TODO LOG
     sess = cherrypy.session
     username = sess.get(SESSION_KEY, None)
+    self._logger.info("Logout for username '{0}'.".format(username))
+
     sess[SESSION_KEY] = None
     if username:
       cherrypy.request.login = None
-      with self.__usernamesLock:
-        self.__usernames.discard(username)
+      self._app.removeUsername(username)
 
     raise cherrypy.HTTPRedirect(from_page or "/")
