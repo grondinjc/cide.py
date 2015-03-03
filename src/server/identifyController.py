@@ -8,37 +8,29 @@ SESSION_KEY = 'username'
 def check_identify(*args, **kwargs):
   """
   A tool that looks in config for 'identify.require'. If found and it
-  is not None, a login is required and the entry is evaluated as a list of
-  conditions that the user must fulfill
+  is not None, a login is required if user is not identified already.
   """
-  conditions = cherrypy.request.config.get('identify.require', None)
+  login_required = cherrypy.request.config.get('identify.require', False)
   from_page = urllib.quote(cherrypy.request.request_line.split()[1])
-  if conditions is not None:
+  if login_required:
     username = cherrypy.session.get(SESSION_KEY)
     if username:
       cherrypy.request.login = username
-      for condition in conditions:
-        # A condition is just a callable that returns true or false
-        if not condition():
-          raise cherrypy.HTTPRedirect("/identify/login?from_page=%s" % from_page)
 
     else:
       raise cherrypy.HTTPRedirect("/identify/login?from_page=%s" % from_page)
 
 
-def require_identify(*conditions):
+def require_identify():
   """
-  A decorator that appends conditions to the identify.require config
-  variable.
+  A decorator that appends the identification requirement
+  to the identify.require config variable.
   """
   def decorate(f):
     if not hasattr(f, '_cp_config'):
       f._cp_config = dict()
 
-    if 'identify.require' not in f._cp_config:
-      f._cp_config['identify.require'] = []
-
-    f._cp_config['identify.require'].extend(conditions)
+    f._cp_config['identify.require'] = True
     return f
 
   return decorate
@@ -50,10 +42,10 @@ class IdentifyController(object):
     """
     IdentifyController initialiser
 
-    @type app: cide.app.python.identifier.Identifier
+    @type app: cide.app.python.identify.Identify
     @type logger: logging.Logger
 
-    @param app: Identifier app instance
+    @param app: Identify app instance
     @param template_path: Path to the template directory
     @param logger: The CIDE.py logger instance
     """
