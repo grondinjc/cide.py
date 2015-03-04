@@ -5,7 +5,7 @@ from threading import Lock
 from collections import namedtuple
 
 from cide.app.python.utils.nodes import (get_existing_files, 
-                                         get_existing_nodes)
+                                         get_existing_dirs)
 
 from threadpool import (ThreadPool,
                         makeRequests as create_task)
@@ -88,7 +88,8 @@ class Core(object):
     @return list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
     """
     with self._project_files_lock:
-      return get_existing_nodes(self._project_path)
+      return [(d, True) for d in get_existing_dirs(self._project_path)] +
+             [(f, False) for f in self._project_files.keys()]
 
   def get_file_content(self, path):
     """
@@ -162,7 +163,7 @@ class Core(object):
     with self._project_files_lock:
       if path not in self._project_files:
         # Create file when does not exists
-        self._project_files[path] = self._create_file_no_lock(path)
+        self._project_files[path] = self._create_file_no_lock()
       # Register user
       self._project_files[path].users.add(user)
 

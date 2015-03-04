@@ -8,8 +8,9 @@ import uuid  # XXX Temp for fake session id... Could be used for real?
 
 def is_valid_path(path):
   normalized = os.path.normpath(path)
-  return (normalized == path) and # will catch any '..'
-         (not path.endswith('/')) # with means that '/' is illegal
+  # .. is illegal
+  # / is illegal
+  return (normalized == path) and (not path.endswith('/')) 
 
 def is_valid_changes(changes):
   # Check for 'count' or 'content' in keys
@@ -28,6 +29,11 @@ def create_file_version_dict(filename, version, content):
   return {'file':    filename,
           'vers':    version,
           'content': content}
+
+def create_tree_nodes_dict(nodes):
+  return {'nodes': [{'node': name,
+                     'isDir': is_dir}
+                     for (name, is_dir) in nodes]}
 
 class IDEController(object):
   """
@@ -267,6 +273,37 @@ class IDEController(object):
       result = create_argument_error_msg(filename)
 
     return result
+
+  @cherrypy.expose
+  @cherrypy.tools.json_out()
+  def tree(self):
+    """
+    Sends the files and the directories paths included in the project tree
+    Method : GET
+    (Path : /ide/tree)
+
+    @return: JSON of the following format:
+      {
+        'nodes':    [{
+                     'node':    '<<Path of the project node>>',
+                     'isDir':   '<<Flag to diffenciate directories from file>>'
+                    }]
+      }
+    """
+    if not cherrypy.session.get('username'):
+      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+
+    self._logger.debug("Tree dump by {0} ({1}:{2})".format(cherrypy.session['username'],
+                                                                    request.remote.ip,
+                                                                    request.remote.port))
+
+    username = cherrypy.session['username']
+    self._logger.info("Tree dump requested by {0} ({1}:{2})".format(username,
+                                                                    request.remote.ip,
+                                                                    request.remote.port))
+    
+    nodes = self._app.get_project_nodes()
+    return create_tree_nodes_dict(nodes)
 
   @cherrypy.expose
   def ws(self):
