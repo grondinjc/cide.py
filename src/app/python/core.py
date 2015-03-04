@@ -45,8 +45,8 @@ class Core(object):
     @type logger: logging.Logger
     @type num_threads: int
 
-    @param project_name: The CIDE.py logger instance
-    @param project_path: The CIDE.py logger instance
+    @param project_name: The name of the project being edited
+    @param project_path: The system path when files will be written
     @param logger: The CIDE.py logger instance
     @param num_threads: The number of worker for asynchronous tasks
     """
@@ -67,7 +67,7 @@ class Core(object):
     existing_files_path = get_existing_files(self._project_path)
     for path in existing_files_path:
       with open(path, 'r') as f:
-        self._project_files[path] = self._create_file_no_lock(f.read())
+        self._project_files[path] = self._create_file_unsafe(f.read())
 
     # Lock when interracting with `filesystem` or with `users`
     self._project_files_lock = Lock()
@@ -75,7 +75,10 @@ class Core(object):
     # Lock when dealing with application listeners
     self._core_listeners_lock = Lock()
     self._core_listeners = set()
-    self._core_listeners_strategy = StrategyCallEmpty(self.change_core_strategy)
+
+    # Initialize first strategy to null since nobody is registered
+    first_strategy = StrategyCallEmpty(self._change_core_strategy_unsafe)
+    self._core_listeners_strategy = first_strategy
 
   def stop(self):
     """
@@ -143,7 +146,7 @@ class Core(object):
     """
     with self._project_files_lock:
       if path not in self._project_files:
-        self._project_files[path] = self._create_file_no_lock()
+        self._project_files[path] = self._create_file_unsafe()
 
   def delete_file(self, path):
     """
@@ -171,7 +174,7 @@ class Core(object):
     with self._project_files_lock:
       if path not in self._project_files:
         # Create file when does not exists
-        self._project_files[path] = self._create_file_no_lock()
+        self._project_files[path] = self._create_file_unsafe()
       # Register user
       self._project_files[path].users.add(user)
 
@@ -218,10 +221,11 @@ class Core(object):
     rq = create_task(lambda *a: f(), [(None, None,)]) 
     self._threadpool.putRequest(rq[0])
 
-  def _create_file_no_lock(self, content=""):
+  def _create_file_unsafe(self, content=""):
     """
     Creates the representation of a file
     Construction isolated in a function to simply further changes
+    This function is unsafe since no locking is done
 
     @type content: str
     
@@ -266,7 +270,13 @@ class Core(object):
         self._core_listeners.remove(listener)
         self._core_listeners_strategy.downgrade_strategy()
 
-  def change_core_strategy(self, strategy):
+  def _change_core_strategy_unsafe(self, strategy):
+    """
+    Change the current strategy 
+    This function is unsafe since no locking is done
+
+    @param strategy: The new strategy to use
+    """
     self._core_listeners_strategy = strategy
 
   def _notify_event(self, f):
@@ -275,7 +285,7 @@ class Core(object):
 
     @type f: callable
 
-    @param f: The CIDE.py logger instance
+    @param f: The notification callable
     """
     with self._core_listeners_lock:
       self._core_listeners_strategy.send(f, self._core_listeners)

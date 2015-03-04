@@ -46,6 +46,10 @@ class IDEController(object):
     """
     IDEController initialiser
 
+    @type app: cide.app.python.core
+    @type template_path: str
+    @type logger: logging.Logger
+
     @param app: The core application
     @param template_path: Path to the template directory
     @param logger: The CIDE.py logger instance
@@ -318,6 +322,10 @@ class IDEController(object):
     self._logger.info("WS creation request from {0} ({1}:{2})".format(username,
                                                                       request.remote.ip,
                                                                       request.remote.port))
+
+  """
+  Methods
+  """
 
 
 class IDEWebSocket(WebSocket):
