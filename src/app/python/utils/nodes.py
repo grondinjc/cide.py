@@ -11,4 +11,3 @@ def get_existing_dirs(path):
   for root, dirs, _ in os.walk(path, topdown=True):
     dir_paths.extend([os.path.join(root, name) for name in dirs])
   return dir_paths
-  

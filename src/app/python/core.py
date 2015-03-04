@@ -228,28 +228,3 @@ class Core(object):
     Stops the threadpool
     """
     self._threadpool.wait()
-
-
-# Debug only
-if __name__ == "__main__":
-
-  if len(argv) <= 2:
-    error = "Error : Missing parameters \n"
-    error += "Usage : python {0} <project_name> <project_path>"
-    raise Exception(error)
-
-  name = argv[1]
-  path = argv[2]
-
-  add1 = Change(0, "Hello", True)
-  add2 = Change(1, "XXX", True)
-  # expects "HXXXello"
-
-  file_edited = "/file2"
-  core = Core(name, path, None)
-  core.add_file(file_edited)
-  core.file_edit(file_edited, [add1, add2])
-
-  core.stop()
-  print "\n\n", core.get_file_content(file_edited)
-  
