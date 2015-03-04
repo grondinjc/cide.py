@@ -15,7 +15,6 @@
 
 using std::string;
 using std::ifstream;
-using boost::shared_ptr;
 using std::endl;
 using std::cout;
 using namespace types;

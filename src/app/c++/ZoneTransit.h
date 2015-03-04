@@ -44,47 +44,37 @@ class ZoneTransit
     {
       lock_guard<mutex> lock{_mutex};
 
-      if(_modifications.empty())
-      {
-        _modifications.push_back(m);
-      }
+      _modifications.push_back(m);
 
-      //cette idee ne fonctionnera peut-etre plus etant donne les cas limites enumeres...
-      for(auto it = _modifications.begin(); it != _modifications.end(); ++it)
-      {
-        if((*it)->getPosition() > m->getPosition())
-        {
-          _modifications.insert(it,m);
-          break;
-        }
-      }
-    }
-
-    //enleve et retourne le dernier element (avec la plus grande position)
-    ModificationPtr remove()
-    {
-      assert(!_modifications.empty());
-      lock_guard<mutex> lock{_mutex};
-      
-      if(!_modifications.empty())
-      {
-        ModificationPtr m = _modifications.back();
-        _modifications.pop_back();
-        return m;
-      }
-      return ModificationPtr{};
     }
 
     //effectue les modifications
     void ecrireModifications()
     {
+      lock_guard<mutex> lock{_mutex};
+
       for(auto it = _modifications.begin(); it != _modifications.end(); ++it)
       {
         (*it)->effectuerModification(_fichier);
+        mettreAJourModifications(it);
       }
+
+      _modifications.clear();
     }
 
     string getContenu() const {return _fichier.getContenu();}
+
+    bool estVide() const noexcept {return _modifications.empty();}
+
+  private:
+    void mettreAJourModifications(vector<ModificationPtr>::iterator it)
+    {
+      Modification& modification = **it;
+      for(++it; it != _modifications.end(); ++it)
+      {
+        (*it)->mettreAJour(modification);
+      }
+    }
 };
 
 #endif //ZONE_TRANSIT

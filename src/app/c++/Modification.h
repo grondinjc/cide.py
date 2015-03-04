@@ -10,7 +10,6 @@
 #include "Fichier.h"
 #include "Types.h"
 
-using boost::shared_ptr;
 using namespace types;
 
 class Modification
@@ -19,7 +18,7 @@ class Modification
     pos_t _position;
     size_t _taille;
     //uint _versionID;
-    
+
   public:
     Modification() = default;
 
@@ -32,6 +31,17 @@ class Modification
     virtual pos_t getPosition() const noexcept {return _position;}
     virtual size_t getTaille() const noexcept {return _taille;}
     virtual void effectuerModification(Fichier& fichier) = 0;
+
+    virtual void mettreAJour(const Modification& autre)
+    {
+        autre.mettreAJourAutre(*this);
+    }
+
+    virtual void setPosition(pos_t value) noexcept {_position = value;}
+    virtual void setTaille(size_t value) noexcept {_taille = value;}
+
+  protected:
+    virtual void mettreAJourAutre(Modification& autre) const = 0;
 };
 
 #endif //MODIFICATION

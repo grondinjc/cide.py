@@ -34,7 +34,7 @@ class FichierType
     void inserer(const char *data, pos_t position, size_t taille) {}
     void supprimer(pos_t position, size_t taille) {}
     void printContenu() {}  //Fonction de debug
-    T getContenu() {return _contenu;}
+    T getContenu() const {return _contenu;}
 };
 
 

@@ -1,23 +1,62 @@
 from unittest import TestCase
 
-from libZoneTransit import ZoneTransit
-from libZoneTransit import Ajout
+from libZoneTransit import TransitZone
+from libZoneTransit import Removal
+from libZoneTransit import Addition
 from pdb import set_trace as dbg
 
-class TestZoneTransit(TestCase):
+class TestTransitZone(TestCase):
   def setUp(self):
-    self.ajout = Ajout(2, 4, "allo")
-    self.zone = ZoneTransit("Hello World")
+    self.addition1 = Addition(6, 4, "allo")
+    self.removal1 = Removal(0, 11)
+    self.removal2 = Removal(6,5)
+    self.addition2 = Addition(6, 5, "monde")
+    self.zone = TransitZone("Hello World")
 
   def tearDown(self):
     pass
 
-  def test_addRemove(self):
-    self.zone.add(self.ajout)
-    modif = self.zone.remove()
-    self.assertEqual(self.ajout, modif)
+  def test_add(self):
+    self.zone.add(self.addition1)
+    self.assertFalse(self.zone.isEmpty())
 
-  def test_ecrireModifications(self):
-    self.zone.add(self.ajout)
-    self.zone.ecrireModifications()
-    self.assertEqual(self.zone.contenu, "Heallollo World")
+  def test_writeModificationsComplex(self):
+    self.zone.add(self.removal1)
+    self.zone.add(self.removal2)
+    self.zone.add(self.addition1)
+    self.zone.add(self.addition2)
+    self.zone.writeModifications()
+    self.assertEqual(self.zone.content, "allomonde")
+    
+  def test_writeRemovalEmptyContent(self):
+    emptyFileZone = TransitZone("")
+    emptyFileZone.add(self.removal1)
+    self.zone.writeModifications()
+    self.assertEqual(emptyFileZone.content, "")
+    
+  def test_writeAddAfterRemoval(self):
+    self.zone.add(self.removal1)
+    self.zone.add(self.addition1)
+    self.zone.writeModifications()
+    self.assertEqual(self.zone.content, "allo")
+    
+  def test_writeAddAfterRemovalSamePosition(self):
+    self.zone.add(self.removal2)
+    self.zone.add(self.addition2)
+    self.zone.writeModifications()
+    self.assertEqual(self.zone.content, "Hello monde")
+      
+  def test_writeRemovalAfterAddSamePosition(self):
+    self.zone.add(self.addition2)
+    self.zone.add(self.removal2)
+    self.zone.writeModifications()
+    self.assertEqual(self.zone.content, "Hello monde")
+    
+  def test_writeTwoAddsSamePosition(self):
+    self.zone.add(self.addition1)
+    self.zone.add(self.addition2)
+    self.zone.writeModifications()
+    self.assertEqual(self.zone.content, "Hello allomondeWorld")
+    
+  def test_isEmpty(self):
+    self.assertTrue(self.zone.isEmpty())
