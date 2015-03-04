@@ -9,7 +9,7 @@
 
 namespace types
 {
-  using pos_t = uint;
+  using pos_t = int;
 };
 
 #endif //TYPES

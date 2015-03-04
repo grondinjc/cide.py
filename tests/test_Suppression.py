@@ -1,6 +1,7 @@
 from unittest import TestCase
 
 from libZoneTransit import Suppression
+from libZoneTransit import Ajout
 from libZoneTransit import Fichier
 from pdb import set_trace as dbg
 
@@ -21,3 +22,8 @@ class TestSuppression(TestCase):
   def test_effectuer(self):
     self.suppression.effectuer(self.fichier)
     self.assertEqual(self.fichier.contenu, "te")
+    
+  def test_mettreAJour(self):
+    modification = Ajout(0,5,"allo ")
+    self.suppression.mettreAJour(modification)
+    self.assertEqual(self.suppression.position, 7)

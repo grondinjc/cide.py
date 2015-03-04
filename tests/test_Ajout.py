@@ -1,6 +1,7 @@
 from unittest import TestCase
 
 from libZoneTransit import Ajout
+from libZoneTransit import Suppression
 from libZoneTransit import Fichier
 from pdb import set_trace as dbg
 
@@ -21,3 +22,8 @@ class TestAjout(TestCase):
   def test_effectuer(self):
     self.ajout.effectuer(self.fichier)
     self.assertEqual(self.fichier.contenu, "teallost")
+
+  def test_mettreAJour(self):
+    modification = Suppression(0,3)
+    self.ajout.mettreAJour(modification)
+    self.assertEqual(self.ajout.position, 0)

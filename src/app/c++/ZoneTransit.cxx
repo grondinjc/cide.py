@@ -33,8 +33,8 @@ BOOST_PYTHON_MODULE(libZoneTransit)
   class_<ZoneTransit, boost::noncopyable>("ZoneTransit")
     .def(init<const string&>())
     .def("add", &ZoneTransit::add)
-    .def("remove", &ZoneTransit::remove)
     .def("ecrireModifications", &ZoneTransit::ecrireModifications)
+    .def("estVide", &ZoneTransit::estVide)
     .add_property("contenu", &ZoneTransit::getContenu);
 
   //Definit la classe Modification (non instantiable, abstraite) et le type shared_ptr<Modification>
@@ -43,15 +43,14 @@ BOOST_PYTHON_MODULE(libZoneTransit)
   //dans ce cas, je specifie seulement le get, donc les attributs sont publics en read only seulement
     .add_property("position", &Modification::getPosition)
     .add_property("taille", &Modification::getTaille)
-    .def("effectuer", &Modification::effectuerModification);
+    .def("effectuer", &Modification::effectuerModification)
+    .def("mettreAJour", &Modification::mettreAJour);
 
   //Definit Ajout heritant de Modification
   class_<Ajout, bases<Modification>, shared_ptr<Ajout>>("Ajout")
-    .def(init<int, int, char*>())
-    .def(init<int, int, const string&>())
-    .def(init<int, char*>())
-    .def(init<int, const string&>());
+    .def(init<pos_t, size_t, const string&>())
+    .def(init<pos_t, const string&>());
 
   class_<Suppression, bases<Modification>, shared_ptr<Suppression>>("Suppression")
-    .def(init<int, int>());
+    .def(init<pos_t, size_t>());
 }
