@@ -18,6 +18,12 @@ from libZoneTransit import (ZoneTransit,
 # Data field would be the conent if is_add is True and the count when False
 Change = namedtuple('Change', ['pos', 'data', 'is_add'])
 
+
+
+Error = namedtuple('Error', ['message'])
+Warning = namedtuple('Warning', ['message'])
+
+
 class Core(object):
   """
   Cide.py core app module
@@ -69,6 +75,12 @@ class Core(object):
     """
     self._stop_pool()
 
+  def get_project_name(self):
+    """
+    Get the project name
+    """
+    return self._project_name
+
   def get_project_nodes(self):
     """
     Get all files and directories from project 
@@ -80,16 +92,18 @@ class Core(object):
   def get_file_content(self, path):
     """
     Get the content of a file
+    Synchronous function
 
     @type path: str
 
     @param path: The path of the file in the project tree
 
-    @return str The content of the file
+    @return tuple (<<File name>>, <<File Content>>, <<File Version>>)
     """
     with self._project_files_lock:
       if path in self._project_files:
-        return self._project_files[path].zt.contenu
+        return (self._project_files[path].zt.contenu,
+                0) # Version
 
   def file_edit(self, path, changes):
     """
@@ -174,19 +188,6 @@ class Core(object):
       if file_path in self._project_files:
         self._project_files[file_path].zt.ecrireModifications()
 
-  def _create_file_no_lock(self, content=""):
-    """
-    Creates the representation of a file
-    Construction isolated in a function to simply further changes
-
-    @type content: str
-    
-    @param content: The initial content of the file representation
-
-    @return FileUserPair namedtuple
-    """
-    return self.FileUserPair(ZoneTransit(content), set())
-
   def _add_task(self, f):
     """
     Add a task into the threadpool
@@ -202,6 +203,19 @@ class Core(object):
     # Creates an array with one request since one tuple of args was provided
     rq = create_task(lambda *a: f(), [(None, None,)]) 
     self._threadpool.putRequest(rq[0])
+
+  def _create_file_no_lock(self, content=""):
+    """
+    Creates the representation of a file
+    Construction isolated in a function to simply further changes
+
+    @type content: str
+    
+    @param content: The initial content of the file representation
+
+    @return FileUserPair namedtuple
+    """
+    return self.FileUserPair(ZoneTransit(content), set())
 
   def _stop_pool(self):
     """

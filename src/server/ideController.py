@@ -1,3 +1,4 @@
+import os
 import cherrypy
 from cherrypy import request
 import simplejson
@@ -5,24 +6,32 @@ from ws4py.websocket import WebSocket
 from genshi.template import TemplateLoader
 import uuid  # XXX Temp for fake session id... Could be used for real?
 
+def is_valid_path(path):
+  normalized = os.path.normpath(path)
+  return (normalized == path) and
+         (not path.endswith('/')) # with means that '/' is illegal
+
+def create_argument_error_msg(arg):
+  return {arg: arg, message: "Invalid argument provided"}
 
 class IDEController(object):
   """
   Controller of the IDE/Editing part
   """
 
-  def __init__(self, template_path, logger):
+  IDE_HTML_TEMPLATE = 'edit.html'
+
+  def __init__(self, app, template_path, logger):
     """
     IDEController initialiser
 
+    @param app: The core application
     @param template_path: Path to the template directory
     @param logger: The CIDE.py logger instance
     """
+    self._app = app
     self._loader = TemplateLoader(template_path, auto_reload=True)
     self._logger = logger
-
-    # XXX Temp dummy vars
-    self.data = ""
 
     self._logger.debug("IDEController instance created")
 
@@ -42,8 +51,9 @@ class IDEController(object):
                                                                 request.remote.ip,
                                                                 request.remote.port))
 
-    tmpl = self._loader.load('edit.html')  # XXX Change for real template
-    stream = tmpl.generate()
+    tmpl = self._loader.load(IDEController.IDE_HTML_TEMPLATE)
+    project_name = self._app.get_project_name()
+    stream = tmpl.generate(title=project_name)
     return stream.render('html')
 
   @cherrypy.expose
@@ -128,7 +138,7 @@ class IDEController(object):
                                                                              filename))
 
     # TODO Check parameters if needed
-    # TODO Call app
+    self._app.unregister_user_to_file(username, filename)
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -250,11 +260,12 @@ class IDEController(object):
                                                                            request.remote.port,
                                                                            filename))
     # TODO Check parameters if needed
-    # TODO Call app
+    # TODO Check for exceptions
+    content, version = self._app.get_file_content(filename)
 
     return {'file':    filename,
-            'vers':    None,
-            'content': self.data}  # XXX TEMP
+            'vers':    version,
+            'content': content}
 
   @cherrypy.expose
   def ws(self):
