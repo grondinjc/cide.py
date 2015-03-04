@@ -199,11 +199,21 @@ class Core(object):
 
     @type path: str
     
-    @param path: The path of the file on which pending modifications will be applied
+    @param path: The path of the file on which modifications will be applied
     """
     with self._project_files_lock:
       if file_path in self._project_files:
         self._project_files[file_path].zt.writeModifications()
+
+        # Get the applied changes
+        changes = []
+        version = 0
+        users_registered = self._project_files[file_path].users
+        notify_f = lambda l: l.notify_file_edit(file_path, 
+                                                changes,
+                                                version,
+                                                users_registered)
+        self._notify_event(notify_f)
 
   def _add_task(self, f):
     """
@@ -246,6 +256,9 @@ class Core(object):
   """
   Observer and Stategy design patterns
   Handle event notifications to registered objects
+
+  The listener will need to implement the following functions :
+   - notify_file_edit(filename, changes, version, users)
   """
 
   def register_application_listener(listener):

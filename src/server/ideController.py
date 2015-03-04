@@ -60,6 +60,12 @@ class IDEController(object):
 
     self._logger.debug("IDEController instance created")
 
+    # To respect observer pattern contract, many function must
+    # be implemented as tasks callbacks. To simplify reading,
+    # required functions will all be aliases to methods
+    self._app.register_application_listener(self)
+    self.notify_file_edit = self._save_callback
+
   @cherrypy.expose
   def index(self):
     """
@@ -326,6 +332,49 @@ class IDEController(object):
   """
   Methods
   """
+
+  def _save_callback(filename, changes, version, users):
+    """
+    Sends updates about a file to registered users
+    This is the call back from /ide/save PUT-method
+
+    Output on the WS will be JSON of the following format:
+      {
+        'file':    '<<Filepath of edited file>>',
+        'vers':    '<<File version>>',
+        'changes': [{
+                     'type':    '<<Type of edit (ins | del)>>',
+                     'pos':     '<<Position of edit>>',
+                     'content': '<<Content of insert | Number of deletes>>'
+                   }]
+      }
+    """
+    from pdb import set_trace as debug
+    debug()
+
+    for user in users:
+      ws = IDEWebSocket.IDEClients.get(user)
+      if ws:
+        try:
+          ws.send(simplejson.dumps({"file":    filename,   # XXX Handle closed WS!
+                                    "vers":    version,
+                                    "changes": changes}))
+        except:
+          self._logger.error("{0} ({1}:{2}) WS transfer failed".format(username,
+                                                                       request.remote.ip,
+                                                                       request.remote.port))
+          # Remove user from file notify list
+          self._app.unregister_user_to_file(user, filename)
+
+      else:
+        self._logger.error("{0} ({1}:{2}) has no WS in server".format(username,
+                                                                      request.remote.ip,
+                                                                      request.remote.port))
+        # Remove user from file notify list
+        self._app.unregister_user_to_file(user, filename)
+
+
+  def notify_file_edit
 
 
 class IDEWebSocket(WebSocket):
