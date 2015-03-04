@@ -1,25 +1,25 @@
 from unittest import TestCase
 
-from libZoneTransit import Fichier
+from libZoneTransit import File
 from pdb import set_trace as dbg
 
 class TestFichier(TestCase):
   def setUp(self):
-    self.fichier = Fichier("test")
+    self.file = File("test")
 
   def tearDown(self):
     pass
 
   def test_getContenu(self):
-    self.assertEqual(self.fichier.contenu, "test")
+    self.assertEqual(self.file.content, "test")
 
   def test_ecrireSurDisque(self):
-    self.fichier.ecrireSurDisque()
+    self.file.writeToDisk()
 
   def test_inserer(self):
-    self.fichier.inserer("Hello World", 0, 11)
-    self.assertEqual(self.fichier.contenu, "Hello Worldtest")
+    self.file.insert("Hello World", 0, 11)
+    self.assertEqual(self.file.content, "Hello Worldtest")
 
   def test_supprimer(self):
-    self.fichier.supprimer(0, 1)
-    self.assertEqual(self.fichier.contenu, "est")
+    self.file.delete(0, 1)
+    self.assertEqual(self.file.content, "est")

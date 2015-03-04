@@ -29,6 +29,8 @@ class Suppression : public Modification
 
       //Avec les mises a jour et les modifications precedentes,
       //il se peut que la taille de la suppression depasse la fin du fichier
+
+      //On met a jour la taille pour eviter de supprimer plus que necessaire
       if(getPosition() + getTaille() > finFichier)
         setTaille(finFichier - getPosition());
 
