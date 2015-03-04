@@ -7,6 +7,9 @@ from collections import namedtuple
 from cide.app.python.utils.nodes import (get_existing_files, 
                                          get_existing_dirs)
 
+# Other stategies will be used but are not required
+from cide.app.python.utils.strategies import (StrategyCallEmpty)
+
 from threadpool import (ThreadPool,
                         makeRequests as create_task)
 
@@ -15,7 +18,7 @@ from libZoneTransit import (ZoneTransit,
                             Suppression as EditRemove)
 
 # Class to hold every change element using a name
-# Data field would be the conent if is_add is True and the count when False
+# Data field would be the content if is_add is True and the count when False
 Change = namedtuple('Change', ['pos', 'data', 'is_add'])
 
 
@@ -68,6 +71,11 @@ class Core(object):
 
     # Lock when interracting with `filesystem` or with `users`
     self._project_files_lock = Lock()
+
+    # Lock when dealing with application listeners
+    self._core_listeners_lock = Lock()
+    self._core_listeners = set()
+    self._core_listeners_strategy = StrategyCallEmpty(self.change_core_strategy)
 
   def stop(self):
     """
@@ -228,3 +236,46 @@ class Core(object):
     Stops the threadpool
     """
     self._threadpool.wait()
+
+
+
+  """
+  Observer and Stategy design patterns
+  Handle event notifications to registered objects
+  """
+
+  def register_application_listener(listener):
+    """
+    Registers the listener to any events of the application
+    
+    @param listener: The observer requesting notifications from the app
+    """
+    with self._core_listeners_lock:
+      if listener not in self._core_listeners:
+        self._core_listeners.add(listener)
+        self._core_listeners_strategy.upgrade_strategy()
+
+  def unregister_application_listener(listener):
+    """
+    Unregisters the listener to stop receiving event notifications from the app
+    
+    @param listener: The observer requesting notifications from the application
+    """
+    with self._core_listeners_lock:
+      if listener in self._core_listeners:
+        self._core_listeners.remove(listener)
+        self._core_listeners_strategy.downgrade_strategy()
+
+  def change_core_strategy(self, strategy):
+    self._core_listeners_strategy = strategy
+
+  def _notify_event(self, f):
+    """
+    Transfers an event to all application listeners using the current strategy
+
+    @type f: callable
+
+    @param f: The CIDE.py logger instance
+    """
+    with self._core_listeners_lock:
+      self._core_listeners_strategy.send(f, self._core_listeners)
