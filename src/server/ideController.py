@@ -8,11 +8,26 @@ import uuid  # XXX Temp for fake session id... Could be used for real?
 
 def is_valid_path(path):
   normalized = os.path.normpath(path)
-  return (normalized == path) and
+  return (normalized == path) and # will catch any '..'
          (not path.endswith('/')) # with means that '/' is illegal
 
+def is_valid_changes(changes):
+  # Check for 'count' or 'content' in keys
+  return all(
+          (('count' in c == 'content' in c) and
+           'pos' in c and
+           'type' in c and
+           c['type'] in (1, -1))
+          for c in changes)
+
 def create_argument_error_msg(arg):
-  return {arg: arg, message: "Invalid argument provided"}
+  return {code: 400, message: "Invalid argument provided : " + arg}
+
+
+def create_file_version_dict(filename, version, content):
+  return {'file':    filename,
+          'vers':    version,
+          'content': content}
 
 class IDEController(object):
   """
@@ -98,15 +113,14 @@ class IDEController(object):
                                                                             request.remote.port,
                                                                             filename))
 
-    # TODO Check parameters if needed
     # TODO Check if we have a WS before subscribing?
-    # TODO Call app
-
-    print "OPEN"
-    print self.data
-    return {'file':    filename,
-            'vers':    None,
-            'content': self.data}  # XXX TEMP
+    if is_valid_path(filename):
+      self._app.register_user_to_file(username, filename)
+      content, version = self._app.get_file_content(filename)
+      result = create_file_version_dict(filename, version, content)
+    else:
+      result = create_argument_error_msg(filename)
+    return result
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -137,8 +151,12 @@ class IDEController(object):
                                                                              request.remote.port,
                                                                              filename))
 
-    # TODO Check parameters if needed
-    self._app.unregister_user_to_file(username, filename)
+    result = None
+    if is_valid_path(filename):
+      self._app.unregister_user_to_file(username, filename)
+    else:
+      result = create_argument_error_msg(filename)
+    return result
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -191,36 +209,16 @@ class IDEController(object):
                                                                             request.remote.port,
                                                                             filename))
 
-    # TODO Check parameters if needed
-    # TODO Call app
-
-    # XXX Temp dummy content for test
-    for change in changes:
-      self.data += change['content']
-
-    fileSubscribers = IDEWebSocket.IDEClients.keys()  # XXX TEMP, ASK APP
-
-    for user in fileSubscribers:
-      ws = IDEWebSocket.IDEClients.get(user)
-      if ws:
-        try:
-          ws.send(simplejson.dumps({"file":    filename,   # XXX Handle closed WS!
-                                    "vers":    None,
-                                    "changes": [{
-                                      "type":    None,
-                                      "pos":     0,
-                                      "content": self.data
-                                    }]}))  # XXX TEMP
-        except:
-          self._logger.error("{0} ({1}:{2}) WS transfer failed".format(username,
-                                                                       request.remote.ip,
-                                                                       request.remote.port))
-
+    result = None
+    if is_valid_path(filename):
+      if is_valid_changes(changes):
+        # Adds changes into a pool of task
+        self._app.file_edit(filename, changes)
       else:
-        self._logger.error("{0} ({1}:{2}) has no WS in server".format(username,
-                                                                      request.remote.ip,
-                                                                      request.remote.port))
-        # TODO remove from subscribers to file?
+        result = create_argument_error_msg(changes)
+    else:
+      result = create_argument_error_msg(filename)
+    return result
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -259,13 +257,16 @@ class IDEController(object):
                                                                            request.remote.ip,
                                                                            request.remote.port,
                                                                            filename))
-    # TODO Check parameters if needed
-    # TODO Check for exceptions
-    content, version = self._app.get_file_content(filename)
+    result = None
+    if is_valid_path(filename):
+      
+      # TODO Check for exceptions
+      content, version = self._app.get_file_content(filename)
+      result = create_file_version_dict(filename, version, content)
+    else:
+      result = create_argument_error_msg(filename)
 
-    return {'file':    filename,
-            'vers':    version,
-            'content': content}
+    return result
 
   @cherrypy.expose
   def ws(self):

@@ -87,7 +87,8 @@ class Core(object):
 
     @return list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
     """
-    return get_existing_nodes(self._project_path)
+    with self._project_files_lock:
+      return get_existing_nodes(self._project_path)
 
   def get_file_content(self, path):
     """
@@ -116,11 +117,12 @@ class Core(object):
     @param changes: Changes to be applied on the file
     """
     with self._project_files_lock:
-      for c in changes:
-        change_class = EditAdd if c.is_add else EditRemove
-        self._project_files[path].zt.add(change_class(c.pos, c.data))
-      # register async task to apply changes
-      self._add_task(lambda: self._task_apply_changes(path))
+      if path in self._project_files:
+        for c in changes:
+          change_class = EditAdd if c.is_add else EditRemove
+          self._project_files[path].zt.add(change_class(c.pos, c.data))
+        # register async task to apply changes
+        self._add_task(lambda: self._task_apply_changes(path))
     
   def add_file(self, path):
     """
@@ -149,7 +151,7 @@ class Core(object):
   def register_user_to_file(self, user, path):
     """
     Register a user to a file in order to receive file modification 
-    notifications
+    notifications. When the file does not exists, it is created
 
     @type user: str
     @type path: str
@@ -158,8 +160,11 @@ class Core(object):
     @param path: The path of the file to be registered to
     """
     with self._project_files_lock:
-      if path in self._project_files:
-        self._project_files[path].users.add(user)
+      if path not in self._project_files:
+        # Create file when does not exists
+        self._project_files[path] = self._create_file_no_lock(path)
+      # Register user
+      self._project_files[path].users.add(user)
 
   def unregister_user_to_file(self, user, path):
     """
