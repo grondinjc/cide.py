@@ -14,8 +14,8 @@ from threadpool import (ThreadPool,
                         makeRequests as create_task)
 
 from libZoneTransit import (ZoneTransit, 
-                            Ajout as EditAdd, 
-                            Suppression as EditRemove)
+                            Addition as EditAdd, 
+                            Removal as EditRemove)
 
 # Class to hold every change element using a name
 # Data field would be the content if is_add is True and the count when False
@@ -115,7 +115,7 @@ class Core(object):
     """
     with self._project_files_lock:
       if path in self._project_files:
-        return (self._project_files[path].zt.contenu,
+        return (self._project_files[path].zt.content,
                 0) # Version
 
   def file_edit(self, path, changes):
@@ -203,7 +203,7 @@ class Core(object):
     """
     with self._project_files_lock:
       if file_path in self._project_files:
-        self._project_files[file_path].zt.ecrireModifications()
+        self._project_files[file_path].zt.writeModifications()
 
   def _add_task(self, f):
     """
