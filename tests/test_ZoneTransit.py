@@ -37,6 +37,16 @@ class TestTransitZone(TestCase):
     self.assertEqual(modifications[0], self.removal1)
     self.assertEqual(modifications[1], self.addition1)
     
+  def test_returnedVectorSameModifications(self):
+    additionSame = Addition(self.addition1)
+    self.assertEqual(additionSame.position, self.addition1.position)
+    self.zone.add(self.addition1)
+    self.zone.add(additionSame)
+    _,modifications = self.zone.writeModifications()
+    self.assertEqual(len(modifications), 2)
+    self.assertEqual(modifications[0].position, 6)
+    self.assertEqual(modifications[1].position, 10)
+    
   def test_writeRemovalEmptyContent(self):
     emptyFileZone = TransitZone("")
     emptyFileZone.add(self.removal1)

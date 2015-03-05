@@ -42,7 +42,7 @@ BOOST_PYTHON_MODULE(libZoneTransit)
     .def("isEmpty", &ZoneTransit::estVide)
     .add_property("content", &ZoneTransit::getContenu);
 
-  //Definit la classe Modification (non instantiable, abstraite) et le type shared_ptr<Modification>
+  //Definit la classe Modification (non instantiable, abstraite) et le type ModificationPtr
   class_<Modification, boost::noncopyable, ModificationPtr>("Modification", no_init)
   //add_property ajoute un attribut, auquel on peut spécifier une fonction get et une fonction set (utilise comme get et set en c#)
   //dans ce cas, je specifie seulement le get, donc les attributs sont publics en read only seulement
@@ -54,10 +54,12 @@ BOOST_PYTHON_MODULE(libZoneTransit)
   //Definit Ajout heritant de Modification
   class_<Ajout, bases<Modification>>("Addition")
     .def(init<pos_t, size_t, const string&>())
-    .def(init<pos_t, const string&>());
+    .def(init<pos_t, const string&>())
+    .def(init<const Ajout&>());
 
   class_<Suppression, bases<Modification>>("Removal")
-    .def(init<pos_t, size_t>());
+    .def(init<pos_t, size_t>())
+    .def(init<const Suppression&>());
 
   class_<std::vector<ModificationPtr> >("Modifications")
     .def(vector_indexing_suite<std::vector<ModificationPtr>, true >());
