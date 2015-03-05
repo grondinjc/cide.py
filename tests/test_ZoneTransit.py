@@ -18,6 +18,7 @@ class TestTransitZone(TestCase):
 
   def test_add(self):
     self.zone.add(self.addition1)
+    self.zone.add(Addition(0, "test"))
     self.assertFalse(self.zone.isEmpty())
 
   def test_writeModificationsComplex(self):
@@ -27,6 +28,14 @@ class TestTransitZone(TestCase):
     self.zone.add(self.addition2)
     self.zone.writeModifications()
     self.assertEqual(self.zone.content, "allomonde")
+    
+  def test_returnedVectorWriteModifications(self):
+    self.zone.add(self.removal1)
+    self.zone.add(self.addition1)
+    _,modifications = self.zone.writeModifications()
+    self.assertEqual(len(modifications), 2)
+    self.assertEqual(modifications[0], self.removal1)
+    self.assertEqual(modifications[1], self.addition1)
     
   def test_writeRemovalEmptyContent(self):
     emptyFileZone = TransitZone("")

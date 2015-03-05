@@ -10,6 +10,7 @@
 namespace types
 {
   using pos_t = int;
+  using vers_t = int;
 };
 
 #endif //TYPES

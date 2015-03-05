@@ -6,11 +6,14 @@
  ****************************************************************************/
 
 #include <boost/python.hpp>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
+#include <boost/python/overloads.hpp>
 #include "ZoneTransit.h"
 #include "SFichier.h"
 #include "Fichier.h"
 #include "Ajout.h"
 #include "Suppression.h"
+#include "Chronometre.h"
 #include <string>
 #include "Types.h"
 
@@ -18,6 +21,8 @@ using namespace boost::python;
 using std::string;
 using boost::shared_ptr;
 using namespace types;
+
+BOOST_PYTHON_FUNCTION_OVERLOADS(minuter_overloads, minuter, 1, 2)
 
 BOOST_PYTHON_MODULE(libZoneTransit)
 {
@@ -38,7 +43,7 @@ BOOST_PYTHON_MODULE(libZoneTransit)
     .add_property("content", &ZoneTransit::getContenu);
 
   //Definit la classe Modification (non instantiable, abstraite) et le type shared_ptr<Modification>
-  class_<Modification, boost::noncopyable, shared_ptr<Modification>>("Modification", no_init)
+  class_<Modification, boost::noncopyable, ModificationPtr>("Modification", no_init)
   //add_property ajoute un attribut, auquel on peut spécifier une fonction get et une fonction set (utilise comme get et set en c#)
   //dans ce cas, je specifie seulement le get, donc les attributs sont publics en read only seulement
     .add_property("position", &Modification::getPosition)
@@ -47,10 +52,19 @@ BOOST_PYTHON_MODULE(libZoneTransit)
     .def("update", &Modification::mettreAJour);
 
   //Definit Ajout heritant de Modification
-  class_<Ajout, bases<Modification>, shared_ptr<Ajout>>("Addition")
+  class_<Ajout, bases<Modification>>("Addition")
     .def(init<pos_t, size_t, const string&>())
     .def(init<pos_t, const string&>());
 
-  class_<Suppression, bases<Modification>, shared_ptr<Suppression>>("Removal")
+  class_<Suppression, bases<Modification>>("Removal")
     .def(init<pos_t, size_t>());
+
+  class_<std::vector<ModificationPtr> >("Modifications")
+    .def(vector_indexing_suite<std::vector<ModificationPtr>, true >());
+/*
+  class_<Chronometre>("Timer")
+    .def("set", &Chronometre::mesurer)
+    .def("reset", &Chronometre::reset)
+    .def("time", &Chronometre::minuter, minuter_overloads())
+    .staticmethod("time");*/
 }
