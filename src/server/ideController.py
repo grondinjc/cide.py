@@ -7,7 +7,7 @@ from genshi.template import TemplateLoader
 import uuid  # XXX Temp for fake session id... Could be used for real?
 
 
-# Will be changed to hhtpErrors
+# Will be changed to httpErrors
 def create_argument_error_msg(arg):
   return {'code': 400, 
           'message': "Invalid argument provided : " + str(arg)}

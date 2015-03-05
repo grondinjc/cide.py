@@ -36,7 +36,7 @@ class Core(object):
   # Not global as it only refers to the application only
   # Tuple to hold const pair (transitZone, user registered to changes)
   FileUserPair = namedtuple('FileUserPair', ['file', 'users'])
-  
+
   def __init__(self, project_name, project_path, logger, num_threads=4):
     """
     Core initialiser
@@ -138,13 +138,13 @@ class Core(object):
           self._project_files[path].file.add(change_object)
         # register async task to apply changes
         self._add_task(lambda: self._task_apply_changes(path))
-    
+
   def add_file(self, path):
     """
     Adds a file to the project tree
 
     @type path: str
-    
+
     @param path: The path of the new file to be added in the project tree
     """
     with self._project_files_lock:
@@ -156,7 +156,7 @@ class Core(object):
     Removes a file to the project tree
 
     @type path: str
-    
+
     @param path: The path of the file to be removed in the project tree
     """
     with self._project_files_lock:
@@ -170,7 +170,7 @@ class Core(object):
 
     @type user: str
     @type path: str
-    
+
     @param user: The user name
     @param path: The path of the file to be registered to
     """
@@ -188,7 +188,7 @@ class Core(object):
 
     @type user: str
     @type path: str
-    
+
     @param user: The user name
     @param path: The path of the file to be unregistrered from
     """
@@ -202,7 +202,7 @@ class Core(object):
     Async task to apply pending modifications on the file
 
     @type path: str
-    
+
     @param path: The path of the file on which modifications will be applied
     """
     with self._project_files_lock:
@@ -225,7 +225,7 @@ class Core(object):
     Execution centralized into a function to hide flaws of external library
 
     @type f: function
-    
+
     @param f: The task wrapped with args inside a callable (function or lambda)
     """
     # Since task needs to receive one parameter as an arg array or receive
@@ -242,7 +242,7 @@ class Core(object):
     This function is unsafe since no locking is done
 
     @type content: str
-    
+
     @param content: The initial content of the file representation
 
     @return FileUserPair namedtuple
@@ -270,7 +270,7 @@ class Core(object):
   def register_application_listener(self, listener):
     """
     Registers the listener to any events of the application
-    
+
     @param listener: The observer requesting notifications from the app
     """
     with self._core_listeners_lock:
@@ -281,7 +281,7 @@ class Core(object):
   def unregister_application_listener(self, listener):
     """
     Unregisters the listener to stop receiving event notifications from the app
-    
+
     @param listener: The observer requesting notifications from the application
     """
     with self._core_listeners_lock:
