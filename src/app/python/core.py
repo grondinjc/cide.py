@@ -13,7 +13,7 @@ from cide.app.python.utils.strategies import (StrategyCallEmpty)
 from threadpool import (ThreadPool,
                         makeRequests as create_task)
 
-from libZoneTransit import (ZoneTransit, 
+from libZoneTransit import (TransitZone as EditBuffer, 
                             Addition as EditAdd, 
                             Removal as EditRemove)
 
@@ -33,8 +33,8 @@ class Core(object):
   """
 
   # Not global as it only refers to the application only
-  # Tuple to hold const pair (zoneTransit, user registered to changes)
-  FileUserPair = namedtuple('FileUserPair', ['zt', 'users'])
+  # Tuple to hold const pair (transitZone, user registered to changes)
+  FileUserPair = namedtuple('FileUserPair', ['file', 'users'])
 
   def __init__(self, project_name, project_path, logger, num_threads=4):
     """
@@ -99,8 +99,8 @@ class Core(object):
     @return list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
     """
     with self._project_files_lock:
-      return [(d, True) for d in get_existing_dirs(self._project_path)] +
-             [(f, False) for f in self._project_files.keys()]
+      return ([(d, True) for d in get_existing_dirs(self._project_path)] +
+              [(f, False) for f in self._project_files.keys()])
 
   def get_file_content(self, path):
     """
@@ -115,7 +115,7 @@ class Core(object):
     """
     with self._project_files_lock:
       if path in self._project_files:
-        return (self._project_files[path].zt.content,
+        return (self._project_files[path].file.content,
                 0) # Version
 
   def file_edit(self, path, changes):
@@ -132,7 +132,7 @@ class Core(object):
       if path in self._project_files:
         for c in changes:
           change_class = EditAdd if c.is_add else EditRemove
-          self._project_files[path].zt.add(change_class(c.pos, c.data))
+          self._project_files[path].file.add(change_class(c.pos, c.data))
         # register async task to apply changes
         self._add_task(lambda: self._task_apply_changes(path))
     
@@ -190,7 +190,8 @@ class Core(object):
     @param path: The path of the file to be unregistrered from
     """
     with self._project_files_lock:
-      if user in self._project_files[path].users:
+      if (path in self._project_files and
+          user in self._project_files[path].users):
         self._project_files[path].users.remove(user)
 
   def _task_apply_changes(self, path):
@@ -201,15 +202,17 @@ class Core(object):
     
     @param path: The path of the file on which modifications will be applied
     """
+    from pdb import set_trace as debug
+    debug()
     with self._project_files_lock:
-      if file_path in self._project_files:
-        self._project_files[file_path].zt.writeModifications()
+      if path in self._project_files:
+        self._project_files[path].file.writeModifications()
 
         # Get the applied changes
         changes = []
         version = 0
-        users_registered = self._project_files[file_path].users
-        notify_f = lambda l: l.notify_file_edit(file_path, 
+        users_registered = self._project_files[path].users
+        notify_f = lambda l: l.notify_file_edit(path, 
                                                 changes,
                                                 version,
                                                 users_registered)
@@ -243,7 +246,7 @@ class Core(object):
 
     @return FileUserPair namedtuple
     """
-    return self.FileUserPair(ZoneTransit(content), set())
+    return self.FileUserPair(EditBuffer(content), set())
 
   def _stop_pool(self):
     """
@@ -261,7 +264,7 @@ class Core(object):
    - notify_file_edit(filename, changes, version, users)
   """
 
-  def register_application_listener(listener):
+  def register_application_listener(self, listener):
     """
     Registers the listener to any events of the application
     
@@ -272,7 +275,7 @@ class Core(object):
         self._core_listeners.add(listener)
         self._core_listeners_strategy.upgrade_strategy()
 
-  def unregister_application_listener(listener):
+  def unregister_application_listener(self, listener):
     """
     Unregisters the listener to stop receiving event notifications from the app
     
@@ -300,5 +303,7 @@ class Core(object):
 
     @param f: The notification callable
     """
+    from pdb import set_trace as debug
+    debug()
     with self._core_listeners_lock:
       self._core_listeners_strategy.send(f, self._core_listeners)

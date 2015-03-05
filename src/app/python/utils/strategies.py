@@ -13,7 +13,6 @@ class _StrategyCall(object):
     @param strategy_setter: The callable used to set new strategy
     """
     self._strategy_setter = strategy_setter
-    self._listener_count = count
 
 class StrategyCallEmpty(_StrategyCall):
   """

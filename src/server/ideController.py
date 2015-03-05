@@ -7,22 +7,28 @@ from genshi.template import TemplateLoader
 import uuid  # XXX Temp for fake session id... Could be used for real?
 
 def is_valid_path(path):
-  normalized = os.path.normpath(path)
   # .. is illegal
   # / is illegal
-  return (normalized == path) and (not path.endswith('/')) 
+  return ((type(path) is str) and
+          (path == os.path.normpath(path.strip() or '/')) and 
+          (path.startswith('/')) and
+          (not path.endswith('/')))
 
 def is_valid_changes(changes):
   # Check for 'count' or 'content' in keys
-  return all(
-          (('count' in c == 'content' in c) and
-           'pos' in c and
-           'type' in c and
-           c['type'] in (1, -1))
-          for c in changes)
+  return (type(changes) is list and
+          all(
+            (type(c) is dict and
+             'type' in c and type(c['type']) is int and
+             ((c['type'] == 1 and 'content' in c and type(c['content']) is str) or
+              (c['type'] == -1 and 'count' in c and type(c['count']) is int)) and
+             'pos' in c and type(c['pos']) is int and c['pos'] >= 0 and
+             len(c.keys()) == 3)
+            for c in changes))
 
 def create_argument_error_msg(arg):
-  return {code: 400, message: "Invalid argument provided : " + arg}
+  return {'code': 400, 
+          'message': "Invalid argument provided : " + str(arg)}
 
 
 def create_file_version_dict(filename, version, content):
@@ -63,8 +69,10 @@ class IDEController(object):
     # To respect observer pattern contract, many function must
     # be implemented as tasks callbacks. To simplify reading,
     # required functions will all be aliases to methods
-    self._app.register_application_listener(self)
     self.notify_file_edit = self._save_callback
+
+    # Register controller to events
+    self._app.register_application_listener(self)
 
   @cherrypy.expose
   def index(self):
@@ -224,7 +232,6 @@ class IDEController(object):
                                                                             request.remote.ip,
                                                                             request.remote.port,
                                                                             filename))
-
     result = None
     if is_valid_path(filename):
       if is_valid_changes(changes):
@@ -372,9 +379,6 @@ class IDEController(object):
                                                                       request.remote.port))
         # Remove user from file notify list
         self._app.unregister_user_to_file(user, filename)
-
-
-  def notify_file_edit
 
 
 class IDEWebSocket(WebSocket):
