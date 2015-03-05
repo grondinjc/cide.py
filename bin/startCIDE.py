@@ -41,6 +41,8 @@ scss_files = ["{0}/{1}".format(preprocessor_dir,filename)
 
 # Process all detected SASS files
 for scss in scss_files:
+  # for more options, check help by doing 
+  # python -c "import sass;help(sass.compile)
   compiled_css = sass.compile(filename=scss)
   compiled_css_path = os.path.join(compiled_dir, 
                                    os.path.basename(scss).replace(PREPROCESSOR_STYLE_EXT, 
