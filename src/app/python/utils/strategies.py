@@ -19,7 +19,7 @@ class StrategyCallEmpty(_StrategyCall):
   Strategy when no listeners are registered
   """
 
-  def send(self, f, listeners):
+  def send(self, f, elements):
     """
     Does nothing since there are no list members
 
@@ -58,7 +58,7 @@ class StrategyCallDirect(_StrategyCall):
     @param f: The callable to apply on every elements
     @param elements: List of one element
     """
-    f(listeners[0])
+    f(elements[0])
 
   def upgrade_strategy(self):
     """
@@ -98,8 +98,8 @@ class StrategyCallLoop(_StrategyCall):
     @param f: The callable to apply on every elements
     @param elements: Many elements to be applied on f
     """
-    for listener in listeners:
-      f(listener)
+    for element in elements:
+      f(element)
 
   def upgrade_strategy(self):
     """

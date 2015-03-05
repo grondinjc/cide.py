@@ -10,6 +10,7 @@ from cide.app.python.utils.nodes import (get_existing_files,
 # Other stategies will be used but are not required
 from cide.app.python.utils.strategies import (StrategyCallEmpty)
 
+from time import sleep # used to patch threadpool termination
 from threadpool import (ThreadPool,
                         makeRequests as create_task)
 
@@ -17,11 +18,7 @@ from libZoneTransit import (TransitZone as EditBuffer,
                             Addition as EditAdd, 
                             Removal as EditRemove)
 
-# Class to hold every change element using a name
-# Data field would be the content if is_add is True and the count when False
-Change = namedtuple('Change', ['pos', 'data', 'is_add'])
-
-
+from pdb import set_trace as debug
 
 Error = namedtuple('Error', ['message'])
 Warning = namedtuple('Warning', ['message'])
@@ -32,10 +29,14 @@ class Core(object):
   Cide.py core app module
   """
 
+  # Class to hold every change element using a name
+  # Data field would be the content if is_add is True and the count when False
+  Change = namedtuple('Change', ['pos', 'data', 'is_add'])
+
   # Not global as it only refers to the application only
   # Tuple to hold const pair (transitZone, user registered to changes)
   FileUserPair = namedtuple('FileUserPair', ['file', 'users'])
-
+  
   def __init__(self, project_name, project_path, logger, num_threads=4):
     """
     Core initialiser
@@ -74,7 +75,7 @@ class Core(object):
 
     # Lock when dealing with application listeners
     self._core_listeners_lock = Lock()
-    self._core_listeners = set()
+    self._core_listeners = list() # List for direct indexing
 
     # Initialize first strategy to null since nobody is registered
     first_strategy = StrategyCallEmpty(self._change_core_strategy_unsafe)
@@ -131,8 +132,10 @@ class Core(object):
     with self._project_files_lock:
       if path in self._project_files:
         for c in changes:
-          change_class = EditAdd if c.is_add else EditRemove
-          self._project_files[path].file.add(change_class(c.pos, c.data))
+          # Encoding required since c++ module requires str type
+          change_object = (EditAdd(c.pos, c.data.encode("utf-8")) if c.is_add 
+                           else EditRemove(c.pos, c.data))
+          self._project_files[path].file.add(change_object)
         # register async task to apply changes
         self._add_task(lambda: self._task_apply_changes(path))
     
@@ -202,9 +205,6 @@ class Core(object):
     
     @param path: The path of the file on which modifications will be applied
     """
-    from pdb import set_trace as debug
-    debug()
-    "_task_apply_changes"
     with self._project_files_lock:
       if path in self._project_files:
         self._project_files[path].file.writeModifications()
@@ -254,6 +254,8 @@ class Core(object):
     Stops the threadpool
     """
     self._threadpool.wait()
+    # Thread pool does not terminate well
+    sleep(1) 
 
 
 
@@ -273,7 +275,7 @@ class Core(object):
     """
     with self._core_listeners_lock:
       if listener not in self._core_listeners:
-        self._core_listeners.add(listener)
+        self._core_listeners.append(listener)
         self._core_listeners_strategy.upgrade_strategy()
 
   def unregister_application_listener(self, listener):
@@ -304,8 +306,5 @@ class Core(object):
 
     @param f: The notification callable
     """
-    from pdb import set_trace as debug
-    debug()
-    "_notify_event"
     with self._core_listeners_lock:
       self._core_listeners_strategy.send(f, self._core_listeners)

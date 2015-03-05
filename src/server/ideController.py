@@ -6,48 +6,21 @@ from ws4py.websocket import WebSocket
 from genshi.template import TemplateLoader
 import uuid  # XXX Temp for fake session id... Could be used for real?
 
-def is_valid_path(path):
-  """
-  Validates a path string
 
-  @type path: str, unicode or else
-
-  @param path: The object to validate as a path
-  """
-  return ((type(path) in (str, unicode)) and
-          (path == os.path.normpath(path.strip() or '/')) and 
-          (path.startswith('/')) and
-          (not path.endswith('/')))
-
-def is_valid_changes(changes):
-  """
-  Validates a change array
-
-  @type changes: list or else
-
-  @param changes: The object to validate as a change array
-  """
-  return (type(changes) is list and
-          all(
-            (type(c) is dict and
-             'type' in c and type(c['type']) is int and
-             ((c['type'] == 1 and 
-              'content' in c and 
-              type(c['content']) in (str, unicode)) or
-              (c['type'] == -1 and 'count' in c and type(c['count']) is int and c['count'] >= 0)) and
-             'pos' in c and type(c['pos']) is int and c['pos'] >= 0 and
-             len(c.keys()) == 3)
-            for c in changes))
-
+# Will be changed to hhtpErrors
 def create_argument_error_msg(arg):
   return {'code': 400, 
           'message': "Invalid argument provided : " + str(arg)}
 
-
-def create_file_version_dict(filename, version, content):
+def create_file_dump_dict(filename, version, content):
   return {'file':    filename,
           'vers':    version,
           'content': content}
+
+def create_file_version_dict(filename, version, changes):
+  return {'file':    filename,
+          'vers':    version,
+          'changes': changes}
 
 def create_tree_nodes_dict(nodes):
   return {'nodes': [{'node': name,
@@ -60,6 +33,8 @@ class IDEController(object):
   """
 
   IDE_HTML_TEMPLATE = 'edit.html'
+  CHANGE_ADD_TYPE = 1
+  CHANGE_REMOVE_TYPE = -1
 
   def __init__(self, app, template_path, logger):
     """
@@ -86,6 +61,46 @@ class IDEController(object):
 
     # Register controller to events
     self._app.register_application_listener(self)
+
+  @staticmethod
+  def is_valid_path(path):
+    """
+    Validates a path string
+
+    @type path: str, unicode or else
+
+    @param path: The object to validate as a path
+    """
+    return ((type(path) in (str, unicode)) and
+            (path == os.path.normpath(path.strip() or '/')) and 
+            (path.startswith('/')) and
+            (not path.endswith('/')))
+
+  @staticmethod
+  def is_valid_changes(changes):
+    """
+    Validates a change array
+
+    @type changes: list or else
+
+    @param changes: The object to validate as a change array
+    """
+    return (type(changes) is list and
+            all(
+              (type(c) is dict and
+
+               'type' in c and type(c['type']) is int and
+               ((c['type'] == IDEController.CHANGE_ADD_TYPE and 
+                'content' in c and 
+                type(c['content']) in (str, unicode)) or
+                (c['type'] == IDEController.CHANGE_REMOVE_TYPE and 
+                'count' in c and 
+                type(c['count']) is int and 
+                c['count'] >= 0)) and
+
+               'pos' in c and type(c['pos']) is int and c['pos'] >= 0 and
+               len(c.keys()) == 3)
+              for c in changes))
 
   @cherrypy.expose
   def index(self):
@@ -151,10 +166,11 @@ class IDEController(object):
                                                                             filename))
 
     # TODO Check if we have a WS before subscribing?
-    if is_valid_path(filename):
+    if self.is_valid_path(filename):
       self._app.register_user_to_file(username, filename)
       content, version = self._app.get_file_content(filename)
-      result = create_file_version_dict(filename, version, content)
+      # Dump content 
+      result = create_file_dump_dict(filename, version, content)
     else:
       result = create_argument_error_msg(filename)
     return result
@@ -189,7 +205,7 @@ class IDEController(object):
                                                                              filename))
 
     result = None
-    if is_valid_path(filename):
+    if self.is_valid_path(filename):
       self._app.unregister_user_to_file(username, filename)
     else:
       result = create_argument_error_msg(filename)
@@ -246,10 +262,15 @@ class IDEController(object):
                                                                             request.remote.port,
                                                                             filename))
     result = None
-    if is_valid_path(filename):
-      if is_valid_changes(changes):
+    if self.is_valid_path(filename):
+      if self.is_valid_changes(changes):
         # Adds changes into a pool of task
-        self._app.file_edit(filename, changes)
+        self._app.file_edit(filename, [self._app.Change(
+                                        c['pos'],
+                                        c.get('content') or c.get('count'),
+                                        c['type'] == IDEController.CHANGE_ADD_TYPE)
+                                      for c in changes])
+
       else:
         result = create_argument_error_msg(changes)
     else:
@@ -294,11 +315,11 @@ class IDEController(object):
                                                                            request.remote.port,
                                                                            filename))
     result = None
-    if is_valid_path(filename):
+    if self.is_valid_path(filename):
       
       # TODO Check for exceptions
       content, version = self._app.get_file_content(filename)
-      result = create_file_version_dict(filename, version, content)
+      result = create_file_dump_dict(filename, version, content)
     else:
       result = create_argument_error_msg(filename)
 
@@ -353,7 +374,7 @@ class IDEController(object):
   Methods
   """
 
-  def _save_callback(filename, changes, version, users):
+  def _save_callback(self, filename, changes, version, users):
     """
     Sends updates about a file to registered users
     This is the call back from /ide/save PUT-method
@@ -369,16 +390,18 @@ class IDEController(object):
                    }]
       }
     """
-    from pdb import set_trace as debug
-    debug()
+
+    temp_message = ("Temp msg from controller until "
+                    "c++ module will return applied modifications")
+    changes = [dict(type=self.CHANGE_ADD_TYPE, pos=0, content=temp_message)]
 
     for user in users:
       ws = IDEWebSocket.IDEClients.get(user)
       if ws:
         try:
-          ws.send(simplejson.dumps({"file":    filename,   # XXX Handle closed WS!
-                                    "vers":    version,
-                                    "changes": changes}))
+          ws.send(simplejson.dumps(create_file_version_dict(filename, 
+                                                            version, 
+                                                            changes)))
         except:
           self._logger.error("{0} ({1}:{2}) WS transfer failed".format(username,
                                                                        request.remote.ip,
