@@ -8,6 +8,7 @@ from cide.server.welcomeController import WelcomeController
 from cide.server.ideController import IDEController
 from cide.server.chatController import ChatController
 from cide.app.python.chat import Chat
+from cide.app.python.core import Core
 
 
 # Read config file name from command parameters
@@ -46,10 +47,11 @@ cherrypy.tools.websocket = WebSocketTool()
 
 # Instanciate App
 chatApp = Chat(logger)
+coreApp = Core("dummyProjectName", "/tmp/test/dummyProjectName", logger, 4)
 
 # Map URI path to controllers
 cherrypy.tree.mount(WelcomeController(logger), "/", welcomeController_conf_file)
-cherrypy.tree.mount(IDEController(templates_dir, logger), "/ide", ideController_conf_file)
+cherrypy.tree.mount(IDEController(coreApp, templates_dir, logger), "/ide", ideController_conf_file)
 cherrypy.tree.mount(ChatController(chatApp, logger), "/chat", chatController_conf_file)
 
 # Start server

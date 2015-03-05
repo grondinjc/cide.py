@@ -1,3 +1,4 @@
+import os
 import cherrypy
 from cherrypy import request
 import simplejson
@@ -6,25 +7,100 @@ from genshi.template import TemplateLoader
 import uuid  # XXX Temp for fake session id... Could be used for real?
 
 
+# Will be changed to httpErrors
+def create_argument_error_msg(arg):
+  return {'code': 400, 
+          'message': "Invalid argument provided : " + str(arg)}
+
+def create_file_dump_dict(filename, version, content):
+  return {'file':    filename,
+          'vers':    version,
+          'content': content}
+
+def create_file_version_dict(filename, version, changes):
+  return {'file':    filename,
+          'vers':    version,
+          'changes': changes}
+
+def create_tree_nodes_dict(nodes):
+  return {'nodes': [{'node': name,
+                     'isDir': is_dir}
+                     for (name, is_dir) in nodes]}
+
 class IDEController(object):
   """
   Controller of the IDE/Editing part
   """
 
-  def __init__(self, template_path, logger):
+  IDE_HTML_TEMPLATE = 'edit.html'
+  CHANGE_ADD_TYPE = 1
+  CHANGE_REMOVE_TYPE = -1
+
+  def __init__(self, app, template_path, logger):
     """
     IDEController initialiser
 
+    @type app: cide.app.python.core
+    @type template_path: str
+    @type logger: logging.Logger
+
+    @param app: The core application
     @param template_path: Path to the template directory
     @param logger: The CIDE.py logger instance
     """
+    self._app = app
     self._loader = TemplateLoader(template_path, auto_reload=True)
     self._logger = logger
 
-    # XXX Temp dummy vars
-    self.data = ""
-
     self._logger.debug("IDEController instance created")
+
+    # To respect observer pattern contract, many function must
+    # be implemented as tasks callbacks. To simplify reading,
+    # required functions will all be aliases to methods
+    self.notify_file_edit = self._save_callback
+
+    # Register controller to events
+    self._app.register_application_listener(self)
+
+  @staticmethod
+  def is_valid_path(path):
+    """
+    Validates a path string
+
+    @type path: str, unicode or else
+
+    @param path: The object to validate as a path
+    """
+    return ((type(path) in (str, unicode)) and
+            (path == os.path.normpath(path.strip() or '/')) and 
+            (path.startswith('/')) and
+            (not path.endswith('/')))
+
+  @staticmethod
+  def is_valid_changes(changes):
+    """
+    Validates a change array
+
+    @type changes: list or else
+
+    @param changes: The object to validate as a change array
+    """
+    return (type(changes) is list and
+            all(
+              (type(c) is dict and
+
+               'type' in c and type(c['type']) is int and
+               ((c['type'] == IDEController.CHANGE_ADD_TYPE and 
+                'content' in c and 
+                type(c['content']) in (str, unicode)) or
+                (c['type'] == IDEController.CHANGE_REMOVE_TYPE and 
+                'count' in c and 
+                type(c['count']) is int and 
+                c['count'] >= 0)) and
+
+               'pos' in c and type(c['pos']) is int and c['pos'] >= 0 and
+               len(c.keys()) == 3)
+              for c in changes))
 
   @cherrypy.expose
   def index(self):
@@ -42,8 +118,9 @@ class IDEController(object):
                                                                 request.remote.ip,
                                                                 request.remote.port))
 
-    tmpl = self._loader.load('edit.html')  # XXX Change for real template
-    stream = tmpl.generate()
+    tmpl = self._loader.load(IDEController.IDE_HTML_TEMPLATE)
+    project_name = self._app.get_project_name()
+    stream = tmpl.generate(title=project_name)
     return stream.render('html')
 
   @cherrypy.expose
@@ -88,15 +165,15 @@ class IDEController(object):
                                                                             request.remote.port,
                                                                             filename))
 
-    # TODO Check parameters if needed
     # TODO Check if we have a WS before subscribing?
-    # TODO Call app
-
-    print "OPEN"
-    print self.data
-    return {'file':    filename,
-            'vers':    None,
-            'content': self.data}  # XXX TEMP
+    if self.is_valid_path(filename):
+      self._app.register_user_to_file(username, filename)
+      content, version = self._app.get_file_content(filename)
+      # Dump content 
+      result = create_file_dump_dict(filename, version, content)
+    else:
+      result = create_argument_error_msg(filename)
+    return result
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -127,8 +204,12 @@ class IDEController(object):
                                                                              request.remote.port,
                                                                              filename))
 
-    # TODO Check parameters if needed
-    # TODO Call app
+    result = None
+    if self.is_valid_path(filename):
+      self._app.unregister_user_to_file(username, filename)
+    else:
+      result = create_argument_error_msg(filename)
+    return result
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -180,37 +261,21 @@ class IDEController(object):
                                                                             request.remote.ip,
                                                                             request.remote.port,
                                                                             filename))
-
-    # TODO Check parameters if needed
-    # TODO Call app
-
-    # XXX Temp dummy content for test
-    for change in changes:
-      self.data += change['content']
-
-    fileSubscribers = IDEWebSocket.IDEClients.keys()  # XXX TEMP, ASK APP
-
-    for user in fileSubscribers:
-      ws = IDEWebSocket.IDEClients.get(user)
-      if ws:
-        try:
-          ws.send(simplejson.dumps({"file":    filename,   # XXX Handle closed WS!
-                                    "vers":    None,
-                                    "changes": [{
-                                      "type":    None,
-                                      "pos":     0,
-                                      "content": self.data
-                                    }]}))  # XXX TEMP
-        except:
-          self._logger.error("{0} ({1}:{2}) WS transfer failed".format(username,
-                                                                       request.remote.ip,
-                                                                       request.remote.port))
+    result = None
+    if self.is_valid_path(filename):
+      if self.is_valid_changes(changes):
+        # Adds changes into a pool of task
+        self._app.file_edit(filename, [self._app.Change(
+                                        c['pos'],
+                                        c.get('content') or c.get('count'),
+                                        c['type'] == IDEController.CHANGE_ADD_TYPE)
+                                      for c in changes])
 
       else:
-        self._logger.error("{0} ({1}:{2}) has no WS in server".format(username,
-                                                                      request.remote.ip,
-                                                                      request.remote.port))
-        # TODO remove from subscribers to file?
+        result = create_argument_error_msg(changes)
+    else:
+      result = create_argument_error_msg(filename)
+    return result
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -249,12 +314,47 @@ class IDEController(object):
                                                                            request.remote.ip,
                                                                            request.remote.port,
                                                                            filename))
-    # TODO Check parameters if needed
-    # TODO Call app
+    result = None
+    if self.is_valid_path(filename):
+      
+      # TODO Check for exceptions
+      content, version = self._app.get_file_content(filename)
+      result = create_file_dump_dict(filename, version, content)
+    else:
+      result = create_argument_error_msg(filename)
 
-    return {'file':    filename,
-            'vers':    None,
-            'content': self.data}  # XXX TEMP
+    return result
+
+  @cherrypy.expose
+  @cherrypy.tools.json_out()
+  def tree(self):
+    """
+    Sends the files and the directories paths included in the project tree
+    Method : GET
+    (Path : /ide/tree)
+
+    @return: JSON of the following format:
+      {
+        'nodes':    [{
+                     'node':    '<<Path of the project node>>',
+                     'isDir':   '<<Flag to diffenciate directories from file>>'
+                    }]
+      }
+    """
+    if not cherrypy.session.get('username'):
+      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
+
+    self._logger.debug("Tree dump by {0} ({1}:{2})".format(cherrypy.session['username'],
+                                                                    request.remote.ip,
+                                                                    request.remote.port))
+
+    username = cherrypy.session['username']
+    self._logger.info("Tree dump requested by {0} ({1}:{2})".format(username,
+                                                                    request.remote.ip,
+                                                                    request.remote.port))
+    
+    nodes = self._app.get_project_nodes()
+    return create_tree_nodes_dict(nodes)
 
   @cherrypy.expose
   def ws(self):
@@ -269,6 +369,52 @@ class IDEController(object):
     self._logger.info("WS creation request from {0} ({1}:{2})".format(username,
                                                                       request.remote.ip,
                                                                       request.remote.port))
+
+  """
+  Methods
+  """
+
+  def _save_callback(self, filename, changes, version, users):
+    """
+    Sends updates about a file to registered users
+    This is the call back from /ide/save PUT-method
+
+    Output on the WS will be JSON of the following format:
+      {
+        'file':    '<<Filepath of edited file>>',
+        'vers':    '<<File version>>',
+        'changes': [{
+                     'type':    '<<Type of edit (ins | del)>>',
+                     'pos':     '<<Position of edit>>',
+                     'content': '<<Content of insert | Number of deletes>>'
+                   }]
+      }
+    """
+
+    temp_message = ("Temp msg from controller until "
+                    "c++ module will return applied modifications")
+    changes = [dict(type=self.CHANGE_ADD_TYPE, pos=0, content=temp_message)]
+
+    for user in users:
+      ws = IDEWebSocket.IDEClients.get(user)
+      if ws:
+        try:
+          ws.send(simplejson.dumps(create_file_version_dict(filename, 
+                                                            version, 
+                                                            changes)))
+        except:
+          self._logger.error("{0} ({1}:{2}) WS transfer failed".format(username,
+                                                                       request.remote.ip,
+                                                                       request.remote.port))
+          # Remove user from file notify list
+          self._app.unregister_user_to_file(user, filename)
+
+      else:
+        self._logger.error("{0} ({1}:{2}) has no WS in server".format(username,
+                                                                      request.remote.ip,
+                                                                      request.remote.port))
+        # Remove user from file notify list
+        self._app.unregister_user_to_file(user, filename)
 
 
 class IDEWebSocket(WebSocket):
