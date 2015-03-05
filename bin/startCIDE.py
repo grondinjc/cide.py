@@ -58,7 +58,7 @@ cherrypy.tools.auth = cherrypy.Tool('before_handler', check_identify)
 cherrypy.tree.mount(WelcomeController(logger), "/", welcomeController_conf_file)
 cherrypy.tree.mount(IDEController(coreApp, templates_dir, logger), "/ide", ideController_conf_file)
 cherrypy.tree.mount(ChatController(chatApp, logger), "/chat", chatController_conf_file)
-cherrypy.tree.mount(IdentifyController(identifyApp, templates_dir, logger), "/identify",
+cherrypy.tree.mount(IdentifyController(templates_dir, logger), "/identify",
                     identifyController_conf_file)
 
 # Start server
