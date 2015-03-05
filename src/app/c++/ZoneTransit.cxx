@@ -55,7 +55,8 @@ BOOST_PYTHON_MODULE(libZoneTransit)
   class_<Ajout, bases<Modification>>("Addition")
     .def(init<pos_t, size_t, const string&>())
     .def(init<pos_t, const string&>())
-    .def(init<const Ajout&>());
+    .def(init<const Ajout&>())
+    .add_property("data", &Ajout::getData);
 
   class_<Suppression, bases<Modification>>("Removal")
     .def(init<pos_t, size_t>())
