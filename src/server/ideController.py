@@ -7,21 +7,34 @@ from genshi.template import TemplateLoader
 import uuid  # XXX Temp for fake session id... Could be used for real?
 
 def is_valid_path(path):
-  # .. is illegal
-  # / is illegal
-  return ((type(path) is str) and
+  """
+  Validates a path string
+
+  @type path: str, unicode or else
+
+  @param path: The object to validate as a path
+  """
+  return ((type(path) in (str, unicode)) and
           (path == os.path.normpath(path.strip() or '/')) and 
           (path.startswith('/')) and
           (not path.endswith('/')))
 
 def is_valid_changes(changes):
-  # Check for 'count' or 'content' in keys
+  """
+  Validates a change array
+
+  @type changes: list or else
+
+  @param changes: The object to validate as a change array
+  """
   return (type(changes) is list and
           all(
             (type(c) is dict and
              'type' in c and type(c['type']) is int and
-             ((c['type'] == 1 and 'content' in c and type(c['content']) is str) or
-              (c['type'] == -1 and 'count' in c and type(c['count']) is int)) and
+             ((c['type'] == 1 and 
+              'content' in c and 
+              type(c['content']) in (str, unicode)) or
+              (c['type'] == -1 and 'count' in c and type(c['count']) is int and c['count'] >= 0)) and
              'pos' in c and type(c['pos']) is int and c['pos'] >= 0 and
              len(c.keys()) == 3)
             for c in changes))

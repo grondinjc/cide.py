@@ -204,6 +204,7 @@ class Core(object):
     """
     from pdb import set_trace as debug
     debug()
+    "_task_apply_changes"
     with self._project_files_lock:
       if path in self._project_files:
         self._project_files[path].file.writeModifications()
@@ -305,5 +306,6 @@ class Core(object):
     """
     from pdb import set_trace as debug
     debug()
+    "_notify_event"
     with self._core_listeners_lock:
       self._core_listeners_strategy.send(f, self._core_listeners)

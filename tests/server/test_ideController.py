@@ -7,6 +7,27 @@ from pdb import set_trace as dbg
 
 class TestIdeControllerPathValidator(TestCase):
 
+  # Valid tests
+
+  def test_file_with_root(self):
+    path = "/node"
+    self.assertTrue(is_valid_path(path))
+
+  def test_file_with_dot_with_root(self):
+    path = "/node.py"
+    self.assertTrue(is_valid_path(path))
+
+  def test_file_with_root_unicode(self):
+    path = u"/node"
+    self.assertTrue(is_valid_path(path))
+
+  def test_file_with_dot_with_root_unicode(self):
+    path = u"/node.py"
+    self.assertTrue(is_valid_path(path))
+
+
+  # Invalid tests
+
   def test_bad_type(self):
     path = 0
     self.assertFalse(is_valid_path(path))
@@ -67,14 +88,6 @@ class TestIdeControllerPathValidator(TestCase):
     path = "/.."
     self.assertFalse(is_valid_path(path))
 
-  def test_file_with_root(self):
-    path = "/node"
-    self.assertTrue(is_valid_path(path))
-
-  def test_file_with_dot_with_root(self):
-    path = "/node.py"
-    self.assertTrue(is_valid_path(path))
-
   def test_with_root_ending_slash(self):
     path = "/node/"
     self.assertFalse(is_valid_path(path))
@@ -125,6 +138,22 @@ class TestIdeControllerChangesValidator(TestCase):
     changes = [dict(content='abc', count=1, pos=0, type=1)]
     self.assertFalse(is_valid_changes(changes))
 
+  def test_both_content_count_keys_2(self):
+    changes = [dict(content='abc', count=1, pos=0, type=-1)]
+    self.assertFalse(is_valid_changes(changes))
+
+  def test_bad_content_type(self):
+    changes = [dict(content=0, pos=0, type=1)]
+    self.assertFalse(is_valid_changes(changes))
+
+  def test_bad_count_type(self):
+    changes = [dict(count="0", pos=0, type=-1)]
+    self.assertFalse(is_valid_changes(changes))
+
+  def test_bad_count_value(self):
+    changes = [dict(count=-1, pos=0, type=-1)]
+    self.assertFalse(is_valid_changes(changes))
+
 
   # Type parameter verification tests
 
@@ -160,6 +189,10 @@ class TestIdeControllerChangesValidator(TestCase):
 
   def test_valid_add(self):
     changes = [dict(content='abc', pos=0, type=1)]
+    self.assertTrue(is_valid_changes(changes))
+
+  def test_valid_add_unicode(self):
+    changes = [dict(content=u'abc', pos=0, type=1)]
     self.assertTrue(is_valid_changes(changes))
 
   def test_valid_remove(self):
