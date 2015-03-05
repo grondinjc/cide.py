@@ -13,7 +13,6 @@
 #include "Fichier.h"
 #include "Ajout.h"
 #include "Suppression.h"
-#include "Chronometre.h"
 #include <string>
 #include "Types.h"
 
@@ -21,8 +20,6 @@ using namespace boost::python;
 using std::string;
 using boost::shared_ptr;
 using namespace types;
-
-BOOST_PYTHON_FUNCTION_OVERLOADS(minuter_overloads, minuter, 1, 2)
 
 BOOST_PYTHON_MODULE(libZoneTransit)
 {
@@ -64,10 +61,4 @@ BOOST_PYTHON_MODULE(libZoneTransit)
 
   class_<std::vector<ModificationPtr> >("Modifications")
     .def(vector_indexing_suite<std::vector<ModificationPtr>, true >());
-/*
-  class_<Chronometre>("Timer")
-    .def("set", &Chronometre::mesurer)
-    .def("reset", &Chronometre::reset)
-    .def("time", &Chronometre::minuter, minuter_overloads())
-    .staticmethod("time");*/
 }
