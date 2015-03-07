@@ -163,7 +163,7 @@ function Communicator(pushInterval) {
     msg +=    "Unittest infrastructure will be comming next.\n\n";
     msg +=    "No messages are sent to the controller.\n";
     msg +=    "To reactivate that, look for <<debug>> in source code.\n";
-    alert(msg);
+    //alert(msg);
   };
 
   this._handleInputEvent = function(evt) {
@@ -669,6 +669,25 @@ function ProjectTreeView() {
     e.stopPropagation();
   };
 }
+
+
+function ProjectInstantChatView() {
+
+}
+ProjectInstantChatView.prototype.connect = function(){
+
+};
+ProjectInstantChatView.prototype.disconnect = function(){
+
+};
+ProjectInstantChatView.prototype.send = function(){
+
+};
+ProjectInstantChatView.prototype.addText = function(text){
+
+};
+
+
 
 
 // ##########################################

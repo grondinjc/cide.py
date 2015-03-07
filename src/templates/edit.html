@@ -19,12 +19,12 @@
         <tr class="ide">
 
           <!-- Project explorer -->
-          <td style="vertical-align:top;">
+          <td class="side-section">
 
             <!-- Editing zone impl -->
             <div id="tree" class="tree well">  </div>
 
-            <!-- Editing zone impl -->
+            <!-- Editing zone tests -->
             <div>
               <h3>Test</h3>
               <label>add Node</label><input type="text" id="textNode"/>
@@ -34,8 +34,44 @@
             </div>
           </td>
 
+          <!-- Chat section -->
+          <td class="side-section">
+
+            <!-- Chat zone impl -->
+            <div class="chat">
+
+              <div class="chat-container-header">
+                <b class="chat-title"><span py:content="title"></span>'s Instant Chat</b>
+                <p class="logout"><a id="exit" href="#">Exit Chat</a></p>
+              </div>
+
+              <div class="chat-container-body">
+                
+                <div class="chat-log-display">
+                  <textarea></textarea>
+                </div>
+
+                <hr/>
+
+                <div class="chat-user-msg">
+                  <textarea></textarea>
+                  <button>Send</button>
+                </div>
+
+              </div> <!-- Chat body -->
+            </div> <!-- Chat wrapper -->
+
+
+            <!-- Chat zone tests -->
+            <div>
+              <h3>Test</h3>
+              <button onClick="test_chat_connect();">Chat connect</button>
+              <button onClick="test_chat_disconnect();">Chat disconnect</button><br/><br/>
+            </div>
+          </td>
+
           <!-- Editing zone -->
-          <td style="width: 75%;">
+          <td style="width: 50%;">
             <!-- Editing zone impl -->
             <h1>Editing display</h1>
             <!-- Container of all lines -->
