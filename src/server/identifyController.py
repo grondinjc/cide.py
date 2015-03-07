@@ -40,6 +40,8 @@ def require_identify():
 
 class IdentifyController(object):
 
+  IDENTIFY_LOGIN_PAGE = "login.html"
+
   def __init__(self, template_path, logger):
     """
     IdentifyController initialiser
@@ -73,14 +75,10 @@ class IdentifyController(object):
       if sess[0].get('username') == username:
         return "Username already used"
 
-  def get_loginform(self, username, msg="Enter login information", from_page=DEFAULT_REDIRECT):
-    return """<html><body>
-      <form method="post" action="/identify/login">
-      <input type="hidden" name="from_page" value="%(from_page)s" />
-      %(msg)s<br />
-      Username: <input type="text" name="username" value="%(username)s" /><br />
-      <input type="submit" value="Log in" />
-    </body></html>""" % locals()
+  def get_loginform(self, username, msg=None, from_page=DEFAULT_REDIRECT):
+    tmpl = self._loader.load(IdentifyController.IDENTIFY_LOGIN_PAGE)
+    stream = tmpl.generate(username=username, msg=msg, from_page=from_page)
+    return stream.render('html')
 
   @cherrypy.expose
   def login(self, username=None, from_page=DEFAULT_REDIRECT):
