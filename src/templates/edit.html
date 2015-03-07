@@ -7,6 +7,7 @@
     <link rel="stylesheet" type="text/css" href="static/css/style.css" />
 
     <!-- Bootstrap CSS -->
+    <link rel="stylesheet" type="text/css" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" />
     <link rel="stylesheet" type="text/css" href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.min.css" />
   </head>
   <body>
@@ -36,42 +37,52 @@
 
           <!-- Chat section -->
           <td class="side-section">
-
-            <!-- Chat zone impl -->
-            <div class="chat">
-
-              <div class="chat-container-header">
-                <b class="chat-title"><span py:content="title"></span>'s Instant Chat</b>
-                <p class="logout"><a id="exit" href="#">Exit Chat</a></p>
+            <div class="panel panel-primary">
+              <div class="panel-heading">
+                  <span class="glyphicon glyphicon-comment"></span>
+                  <span py:content="title"></span>'s Instant Chat
               </div>
 
-              <div class="chat-container-body">
-                
-                <div class="chat-log-display">
-                  <textarea></textarea>
-                </div>
+              <div class="panel-body">
+                <ul class="chat-logbox">
 
-                <hr/>
+                  <li class="left clearfix">
+                    <div class="chat-message-element clearfix">
+                      <div class="chat-message-header">
+                        <strong class="primary-font">Jack Sparrow</strong> <small class="pull-right text-muted"><span class="glyphicon glyphicon-time"></span>12 mins ago</small>
+                      </div>
+                      <p>Message 1</p>
+                    </div>
+                  </li>
 
-                <div class="chat-user-msg">
-                  <textarea></textarea>
-                  <button>Send</button>
-                </div>
+                  <li class="right clearfix">
+                    <div class="chat-message-element clearfix">
+                        <div class="chat-message-header">
+                            <small class="text-muted"><span class="glyphicon glyphicon-time"></span>13 mins ago</small>
+                            <strong class="pull-right primary-font">Bhaumik Patel</strong>
+                        </div>
+                        <p>Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2Message 2</p>
+                    </div>
+                  </li>
+                    
+                </ul>
+              </div>
 
-              </div> <!-- Chat body -->
-            </div> <!-- Chat wrapper -->
-
-
-            <!-- Chat zone tests -->
-            <div>
-              <h3>Test</h3>
-              <button onClick="test_chat_connect();">Chat connect</button>
-              <button onClick="test_chat_disconnect();">Chat disconnect</button><br/><br/>
+              <div class="panel-footer">
+                  <div class="input-group">
+                      <input id="btn-input" type="text" class="form-control input-sm" placeholder="Type your message here..."/>
+                      <span class="input-group-btn">
+                          <button class="btn" id="btn-chat">
+                              Send</button>
+                      </span>
+                  </div>
+              </div>
             </div>
           </td>
 
+
           <!-- Editing zone -->
-          <td style="width: 50%;">
+          <td class="side-section" style="width: 50%;">
             <!-- Editing zone impl -->
             <h1>Editing display</h1>
             <!-- Container of all lines -->
