@@ -1,10 +1,8 @@
 import cherrypy
-import urllib
 from genshi.template import TemplateLoader
 from threading import Lock
 
 SESSION_KEY = 'username'
-DEFAULT_REDIRECT = '/'
 
 
 def check_identify(*args, **kwargs):
@@ -19,8 +17,7 @@ def check_identify(*args, **kwargs):
       cherrypy.request.login = username
 
     else:
-      from_page = urllib.quote(cherrypy.request.request_line.split()[1])
-      raise cherrypy.HTTPRedirect("/identify/login?from_page=%s" % from_page)
+      raise cherrypy.HTTPRedirect("/identify/login")
 
 
 def require_identify():
@@ -41,6 +38,8 @@ def require_identify():
 class IdentifyController(object):
 
   IDENTIFY_LOGIN_PAGE = "login.html"
+  LOGIN_REDIRECT = '/ide'
+  LOGOUT_REDIRECT = '/'
 
   def __init__(self, template_path, logger):
     """
@@ -73,45 +72,45 @@ class IdentifyController(object):
 
     for _, sess in cherrypy.session.cache.items():
       if sess[0].get('username') == username:
-        return "Username already used"
+        return "Username '{0}' already used".format(username)
 
-  def get_loginform(self, username, msg=None, from_page=DEFAULT_REDIRECT):
+  def get_loginform(self, username=None, msg=None):
     tmpl = self._loader.load(IdentifyController.IDENTIFY_LOGIN_PAGE)
-    stream = tmpl.generate(username=username, msg=msg, from_page=from_page)
+    stream = tmpl.generate(username=username, msg=msg)
     return stream.render('html')
 
   @cherrypy.expose
-  def login(self, username=None, from_page=DEFAULT_REDIRECT):
+  def login(self, username=None):
     """
     Attempt to log in new user
 
     @param username: Username to log in
 
-    @return: Log in form, or the page the login was requested from if log in is successfull
+    @return: Log in form, or the page the '/ide' if login is successfull
     """
     self._logger.info("Login for username '{0}'.".format(username))
     if username is None or username == '':
-      return self.get_loginform("", from_page=from_page)
+      return self.get_loginform()
 
     with self._newUsernameLock:
       error_msg = self.check_username(username)
       if error_msg:
         self._logger.warning("Login failed for username '{0}'.".format(username))
-        return self.get_loginform(username, error_msg, from_page)
+        return self.get_loginform(username, error_msg)
 
       else:
         self._logger.info("Login succeded for username '{0}'.".format(username))
         cherrypy.session[SESSION_KEY] = cherrypy.request.login = username
-        raise cherrypy.HTTPRedirect(from_page or DEFAULT_REDIRECT)
+        raise cherrypy.HTTPRedirect(IdentifyController.LOGIN_REDIRECT)
 
   @cherrypy.expose
-  def logout(self, from_page=DEFAULT_REDIRECT):
+  def logout(self):
     """
     Log out a user
 
     @param username: Username to log out
 
-    @return: Page the log out was requested from, or '/' page
+    @return: '/' page
     """
     sess = cherrypy.session
     username = sess.get(SESSION_KEY, None)
@@ -122,4 +121,5 @@ class IdentifyController(object):
       cherrypy.request.login = None
       self._app.removeUsername(username)
 
-    raise cherrypy.HTTPRedirect(from_page or DEFAULT_REDIRECT)
+    raise cherrypy.HTTPRedirect(IdentifyController.LOGOUT_REDIRECT)
+
