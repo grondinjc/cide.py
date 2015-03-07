@@ -4,6 +4,10 @@ tr.ide td:first-child {
     padding-right: 23px;
 } 
 
+td.side-section {
+    width: 450px;
+}
+
 .codeInput {
     background-color: transparent;
     border: 0px;
@@ -105,3 +109,43 @@ tr.ide td:first-child {
     border:1px solid #94a0b4;
     color:#000
 }
+
+/*##############################################
+####                                        ####
+####     ProjectInstantChatView classes     ####
+####                                        ####
+##############################################*/
+
+.chat-container, #loginform {
+    margin:0 auto;
+    padding-bottom:25px;
+    background:#f5f5f5;
+    width:504px;
+    border:1px solid #e3e3e3; }
+  
+.chat-logbox {
+    text-align:left;
+    margin:0 auto;
+    margin-bottom:25px;
+    padding:10px;
+    background:#fff;
+    height:270px;
+    width:430px;
+    border:1px solid #ACD8F0;
+    overflow:auto; }
+  
+#usermsg {
+    width:395px;
+    border:1px solid #ACD8F0; }
+  
+#submit { width: 60px; }
+  
+.error { color: #ff0000; }
+  
+#menu { padding:12.5px 25px 12.5px 25px; }
+  
+.chat-header { float:left; }
+  
+.logout { float:right; }
+  
+.msgln { margin:0 0 2px 0; }

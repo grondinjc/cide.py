@@ -3,6 +3,9 @@
 *~
 src/app/c++/build
 
+# SASS compiled stylesheets
+src/static/css/*.css
+
 # Non-example conf file
 bin/*.conf
 bin/configs/*.conf
