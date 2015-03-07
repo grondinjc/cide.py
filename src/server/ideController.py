@@ -4,28 +4,32 @@ from cherrypy import request
 import simplejson
 from ws4py.websocket import WebSocket
 from genshi.template import TemplateLoader
-import uuid  # XXX Temp for fake session id... Could be used for real?
+from cide.server.identifyController import require_identify
 
 
 # Will be changed to httpErrors
 def create_argument_error_msg(arg):
-  return {'code': 400, 
+  return {'code': 400,
           'message': "Invalid argument provided : " + str(arg)}
+
 
 def create_file_dump_dict(filename, version, content):
   return {'file':    filename,
           'vers':    version,
           'content': content}
 
+
 def create_file_version_dict(filename, version, changes):
   return {'file':    filename,
           'vers':    version,
           'changes': changes}
 
+
 def create_tree_nodes_dict(nodes):
   return {'nodes': [{'node': name,
                      'isDir': is_dir}
-                     for (name, is_dir) in nodes]}
+                    for (name, is_dir) in nodes]}
+
 
 class IDEController(object):
   """
@@ -72,7 +76,7 @@ class IDEController(object):
     @param path: The object to validate as a path
     """
     return ((type(path) in (str, unicode)) and
-            (path == os.path.normpath(path.strip() or '/')) and 
+            (path == os.path.normpath(path.strip() or '/')) and
             (path.startswith('/')) and
             (not path.endswith('/')))
 
@@ -90,19 +94,20 @@ class IDEController(object):
               (type(c) is dict and
 
                'type' in c and type(c['type']) is int and
-               ((c['type'] == IDEController.CHANGE_ADD_TYPE and 
-                'content' in c and 
-                type(c['content']) in (str, unicode)) or
-                (c['type'] == IDEController.CHANGE_REMOVE_TYPE and 
-                'count' in c and 
-                type(c['count']) is int and 
-                c['count'] >= 0)) and
+               ((c['type'] == IDEController.CHANGE_ADD_TYPE and
+                'content' in c and
+                 type(c['content']) in (str, unicode)) or
+                (c['type'] == IDEController.CHANGE_REMOVE_TYPE and
+                'count' in c and
+                 type(c['count']) is int and
+                 c['count'] >= 0)) and
 
                'pos' in c and type(c['pos']) is int and c['pos'] >= 0 and
                len(c.keys()) == 3)
               for c in changes))
 
   @cherrypy.expose
+  @require_identify()
   def index(self):
     """
     IDEController index page generator
@@ -110,9 +115,6 @@ class IDEController(object):
 
     @return: Template HTML render
     """
-    if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
-
     username = cherrypy.session['username']
     self._logger.info("index requested by {0} ({1}:{2})".format(username,
                                                                 request.remote.ip,
@@ -126,6 +128,7 @@ class IDEController(object):
   @cherrypy.expose
   @cherrypy.tools.json_out()
   @cherrypy.tools.json_in()
+  @require_identify()
   def open(self):
     """
     Subscribe a client to updates for a given file and send a dump of the file
@@ -150,9 +153,6 @@ class IDEController(object):
         'content': '<<Content of the requested file>>'
       }
     """
-    if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
-
     self._logger.debug("Open by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                 request.remote.ip,
                                                                 request.remote.port,
@@ -169,7 +169,7 @@ class IDEController(object):
     if self.is_valid_path(filename):
       self._app.register_user_to_file(username, filename)
       content, version = self._app.get_file_content(filename)
-      # Dump content 
+      # Dump content
       result = create_file_dump_dict(filename, version, content)
     else:
       result = create_argument_error_msg(filename)
@@ -178,6 +178,7 @@ class IDEController(object):
   @cherrypy.expose
   @cherrypy.tools.json_out()
   @cherrypy.tools.json_in()
+  @require_identify()
   def close(self):
     """
     Unsubscribe a client to updates for a given file
@@ -189,9 +190,6 @@ class IDEController(object):
         'file':    '<<Filepath of file to close>>'
       }
     """
-    if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
-
     self._logger.debug("Close by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                  request.remote.ip,
                                                                  request.remote.port,
@@ -214,6 +212,7 @@ class IDEController(object):
   @cherrypy.expose
   @cherrypy.tools.json_out()
   @cherrypy.tools.json_in()
+  @require_identify()
   def save(self):
     """
     Receive changes to a file from the client
@@ -246,9 +245,6 @@ class IDEController(object):
              File doesn't exist: Nothing + (404 - Not found)
              Version is too old: Nothing + (410 - Gone)
     """
-    if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
-
     self._logger.debug("Save by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                 request.remote.ip,
                                                                 request.remote.port,
@@ -265,11 +261,10 @@ class IDEController(object):
     if self.is_valid_path(filename):
       if self.is_valid_changes(changes):
         # Adds changes into a pool of task
-        self._app.file_edit(filename, [self._app.Change(
-                                        c['pos'],
-                                        c.get('content') or c.get('count'),
-                                        c['type'] == IDEController.CHANGE_ADD_TYPE)
-                                      for c in changes])
+        self._app.file_edit(filename, [self._app.Change(c['pos'],
+                                                        c.get('content') or c.get('count'),
+                                                        c['type'] == IDEController.CHANGE_ADD_TYPE)
+                                       for c in changes])
 
       else:
         result = create_argument_error_msg(changes)
@@ -279,6 +274,7 @@ class IDEController(object):
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
+  @require_identify()
   def dump(self, filename):
     """
     Sends the current content of a given file
@@ -301,9 +297,6 @@ class IDEController(object):
       OR
       File doesn't exist: Nothing + (404 Not found)
     """
-    if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
-
     self._logger.debug("Dump by {0} ({1}:{2}) filename: {3}".format(cherrypy.session['username'],
                                                                     request.remote.ip,
                                                                     request.remote.port,
@@ -316,7 +309,6 @@ class IDEController(object):
                                                                            filename))
     result = None
     if self.is_valid_path(filename):
-      
       # TODO Check for exceptions
       content, version = self._app.get_file_content(filename)
       result = create_file_dump_dict(filename, version, content)
@@ -327,6 +319,7 @@ class IDEController(object):
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
+  @require_identify()
   def tree(self):
     """
     Sends the files and the directories paths included in the project tree
@@ -341,30 +334,26 @@ class IDEController(object):
                     }]
       }
     """
-    if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
-
     self._logger.debug("Tree dump by {0} ({1}:{2})".format(cherrypy.session['username'],
-                                                                    request.remote.ip,
-                                                                    request.remote.port))
+                                                           request.remote.ip,
+                                                           request.remote.port))
 
     username = cherrypy.session['username']
     self._logger.info("Tree dump requested by {0} ({1}:{2})".format(username,
                                                                     request.remote.ip,
                                                                     request.remote.port))
-    
+
     nodes = self._app.get_project_nodes()
     return create_tree_nodes_dict(nodes)
 
   @cherrypy.expose
+  @require_identify()
   def ws(self):
     """
     Method must exist to serve as a exposed hook for the websocket
     (Path : /ide/ws)
     """
-    if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = uuid.uuid4()  # XXX Session should be set by the id/auth module
-
+    # TODO do not create 2 ws for same session?
     username = cherrypy.session['username']
     self._logger.info("WS creation request from {0} ({1}:{2})".format(username,
                                                                       request.remote.ip,
@@ -399,20 +388,18 @@ class IDEController(object):
       ws = IDEWebSocket.IDEClients.get(user)
       if ws:
         try:
-          ws.send(simplejson.dumps(create_file_version_dict(filename, 
-                                                            version, 
+          ws.send(simplejson.dumps(create_file_version_dict(filename,
+                                                            version,
                                                             changes)))
         except:
-          self._logger.error("{0} ({1}:{2}) WS transfer failed".format(username,
-                                                                       request.remote.ip,
-                                                                       request.remote.port))
+          self._logger.error("{0} ({1}:{2}) WS transfer failed".format(user,
+                                                                       ws.peer_address[0],
+                                                                       ws.peer_address[1]))
           # Remove user from file notify list
           self._app.unregister_user_to_file(user, filename)
 
       else:
-        self._logger.error("{0} ({1}:{2}) has no WS in server".format(username,
-                                                                      request.remote.ip,
-                                                                      request.remote.port))
+        self._logger.error("{0} has no WS in server".format(user))
         # Remove user from file notify list
         self._app.unregister_user_to_file(user, filename)
 
@@ -433,6 +420,13 @@ class IDEWebSocket(WebSocket):
     cherrypy.log("User {0} ({1}) WS connected".format(self.username, self.peer_address))
 
   def closed(self, code, reason=None):
-    del self.IDEClients[self.username]
+    # XXX May raise Key Error, but I don't get why...double dc?
+    # FIXME Browser doing shenanigans when checking suggestions in URL bar...
+    # FIXME Opening a 2nd WS for same users, and triggers 2 closing...hurray.
+    try:
+      del self.IDEClients[self.username]
+    except:
+      cherrypy.log("ERROR: WS for {0} was not in dict.".format(self.username))
+
     cherrypy.log("User {0} ({1}) WS disconnected".format(self.username, self.peer_address))
 

@@ -1,0 +1,18 @@
+# IdentifyController config file
+[DEFAULT]
+# -- Variable path and elements to set --
+PRJ = "<<PRJ>>"
+SRC = %(PRJ)s + "/src"
+
+# -- Static content config --
+# Set root (/) of static dir/file to src
+# Just a shortcut for further config. Does not give static access to src folder
+[/]
+tools.staticdir.root = %(SRC)s
+tools.staticfile.root = %(SRC)s
+
+# Maps domain.com/identify/static to src/static
+[/static]
+tools.staticdir.on = True
+tools.staticdir.dir = "static"
+

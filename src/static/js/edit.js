@@ -477,10 +477,10 @@ function RequestHandler(host, recvCallback) {
   };
 
   this._connect = function() {
-    this._socket = new WebSocket(this._hostws);
-    this._socket.onopen = this._socket_onopen;
-    this._socket.onmessage = this._socket_onmessage;
-    this._socket.onclose = this._socket_onclose;
+    obj._socket = new WebSocket(obj._hostws);
+    obj._socket.onopen = obj._socket_onopen;
+    obj._socket.onmessage = obj._socket_onmessage;
+    obj._socket.onclose = obj._socket_onclose;
   };
 
   this._socket_onopen = function(){
