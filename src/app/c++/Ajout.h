@@ -46,6 +46,8 @@ class Ajout : public Modification
       if(getPosition() <= posAutre)
           autre.setPosition(posAutre + getTaille());
     }
+
+    string getData() const {return _data;}
 };
 
 #endif //AJOUT

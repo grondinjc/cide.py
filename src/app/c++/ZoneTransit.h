@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <mutex>
+#include <boost/python/tuple.hpp>
 #include "Modification.h"
 #include "Fichier.h"
 #include "Types.h"
@@ -19,12 +20,16 @@ using std::mutex;
 using std::lock_guard;
 using std::string;
 using boost::shared_ptr;
+
 using namespace types;
+
+namespace types
+{
+  using ModificationPtr = shared_ptr<Modification>;
+};
 
 class ZoneTransit
 {
-  public:
-    using ModificationPtr = shared_ptr<Modification>;
   private:
     vector<ModificationPtr> _modifications;
     Fichier _fichier;
@@ -39,7 +44,7 @@ class ZoneTransit
       , _mutex{}
     {}
 
-    //ajoute les Modifications par ordre croissant de leur position
+    //ajoute la modification a la liste
     void add(const ModificationPtr& m)
     {
       lock_guard<mutex> lock{_mutex};
@@ -49,7 +54,7 @@ class ZoneTransit
     }
 
     //effectue les modifications
-    void ecrireModifications()
+    boost::python::tuple ecrireModifications()
     {
       lock_guard<mutex> lock{_mutex};
 
@@ -59,7 +64,11 @@ class ZoneTransit
         mettreAJourModifications(it);
       }
 
+      boost::python::tuple modifications = boost::python::make_tuple(0,_modifications);
+
       _modifications.clear();
+
+      return modifications;
     }
 
     string getContenu() const {return _fichier.getContenu();}

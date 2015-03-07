@@ -27,3 +27,6 @@ class TestAjout(TestCase):
     modification = Removal(0,3)
     self.addition.update(modification)
     self.assertEqual(self.addition.position, 0)
+    
+  def test_getData(self):
+    self.assertEqual(self.addition.data, "allo")
