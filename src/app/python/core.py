@@ -223,11 +223,11 @@ class Core(object):
         changes = []
         version = 0
         users_registered = self._project_files[path].users
-        notify_f = lambda l: l.notify_file_edit(path,
-                                                changes,
-                                                version,
-                                                users_registered)
-        self._notify_event(notify_f)
+
+        self._notify_event(lambda l: l.notify_file_edit(path,
+                                                        changes,
+                                                        version,
+                                                        users_registered))
 
   def _add_task(self, f):
     """
