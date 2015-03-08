@@ -16,8 +16,6 @@ $(document).ready(init);
 $(window).on("beforeunload", terminate);
 
 function init() {
-  tree = new ProjectTreeView();
-  tree.initRoot("tree", "ProjectName");
 
   // Application Chat
   chatApplication = new AppChat("chat-display", "chat-user-text-input", "chat-user-text-btn");
@@ -134,6 +132,7 @@ function AppIDE(pushInterval) {
     this._changeMemory = new LocalChanges();
     this._zoneLastVersion = new LastVersionZone(nodeLastVersion);
     this._zoneDisplay = new DisplayZone(this._nodeDisplay);
+    this._tree = new ProjectTreeView();
 
     // Handle ways of sending and receiving data from/to server
     this._requestHandler = new RequestHandler('ide', this.receive);
@@ -165,6 +164,16 @@ function AppIDE(pushInterval) {
 
     // Local and display sync handler
     this._nodeDisplay.bind(this._TEXT_EVENTS, this._handleInputEvent);
+
+    // XXX Initialise Tree root. Should be done in template
+    this._tree.initRoot("tree", "dummyProjectName");
+
+    // Load TreeView content
+    this._requestHandler.get("tree", {}, function(response){
+      response.nodes.forEach(function(elem){
+        obj._tree.addNode(elem.node, elem.isDir);
+      });
+    });
   };
 
   this._handleInputEvent = function(evt) {
@@ -559,21 +568,13 @@ function ProjectTreeView() {
     );
   };
 
-  this.addNode = function(nodepath) {
+  this.addNode = function(nodepath, isDir) {
     nodepath = this._setAbsolute(nodepath).trim();
-    if(this._isDir(nodepath)){
-      // Create directory
-      var parts = nodepath.split("/");
-      var parentDir = parts.slice(0, -2).join("/") + "/";
-      // The size-1 is necessary empty, size-2 contains the name
-      this._addDir(parts[parts.length-2]+"/", parentDir);
-    }
-    else {
-      // Create file
-      var parts = nodepath.split("/");
-      var parentDir = parts.slice(0, -1).join("/") + "/";
-      this._addFile(parts[parts.length-1], parentDir);
-    }
+    var parts = nodepath.split("/");
+    var parentDir = parts.slice(0, -1).join("/") + "/";
+    // Size-1 contains the name
+    var name = isDir ? parts[parts.length-1] + "/" : parts[parts.length-1];
+    this._addDir(name, parentDir);
   };
 
   this.removeNode = function(nodepath){
