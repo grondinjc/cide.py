@@ -97,8 +97,10 @@ class Core(object):
     @return list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
     """
     with self._project_files_lock:
-      return ([(d, True) for d in get_existing_dirs(self._project_path)] +
-              [(f, False) for f in self._project_files.keys()])
+      sorted_nodes = ([(d, True) for d in get_existing_dirs(self._project_path)] +
+                      [(f, False) for f in self._project_files.keys()])
+      sorted_nodes.sort()
+      return sorted_nodes
 
   def get_file_content(self, path):
     """

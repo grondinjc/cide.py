@@ -268,7 +268,7 @@ class IDEController(object):
   @cherrypy.expose
   @cherrypy.tools.json_out()
   @require_identify()
-  def dump(self, filename):
+  def dump(self, filename, **kw):
     """
     Sends the current content of a given file
     Method : GET
@@ -312,7 +312,7 @@ class IDEController(object):
   @cherrypy.expose
   @cherrypy.tools.json_out()
   @require_identify()
-  def tree(self):
+  def tree(self, **kw):
     """
     Sends the files and the directories paths included in the project tree
     Method : GET
