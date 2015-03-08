@@ -16,8 +16,6 @@ $(document).ready(init);
 $(window).on("beforeunload", terminate);
 
 function init() {
-  tree = new ProjectTreeView();
-  tree.initRoot("tree", "ProjectName");
 
   // Application Chat
   chatApplication = new AppChat("chat-display", "chat-user-text-input", "chat-user-text-btn");
@@ -108,7 +106,7 @@ function AppIDE(pushInterval) {
   // wait to receive projet tree
   // wait for user to select file
   // Suppose user selected main.py
-  this._openedFile = "main.py";
+  this._openedFile = "/main.py";
 
   // Handle null value
   this._pushInterval = pushInterval || DEFAULT_PUSH_INTERVAL;
@@ -134,6 +132,7 @@ function AppIDE(pushInterval) {
     this._changeMemory = new LocalChanges();
     this._zoneLastVersion = new LastVersionZone(nodeLastVersion);
     this._zoneDisplay = new DisplayZone(this._nodeDisplay);
+    this._tree = new ProjectTreeView();
 
     // Handle ways of sending and receiving data from/to server
     this._requestHandler = new RequestHandler('ide', this.receive);
@@ -165,6 +164,16 @@ function AppIDE(pushInterval) {
 
     // Local and display sync handler
     this._nodeDisplay.bind(this._TEXT_EVENTS, this._handleInputEvent);
+
+    // Initialise Tree root.
+    this._tree.initRoot("tree");
+
+    // Load TreeView content
+    this._requestHandler.get("tree", {}, function(response){
+      response.nodes.forEach(function(elem){
+        obj._tree.addNode(elem.node, elem.isDir);
+      });
+    });
   };
 
   this._handleInputEvent = function(evt) {
@@ -540,38 +549,19 @@ of the project */
 function ProjectTreeView() {
   this._ID_PREFIX = "tree-node";
 
-  this.initRoot = function(treeID, rootNodeName){
-    $("#"+treeID).append(
-      $('<ul>').append(
-        $('<li>').attr("class", "parent_li").append(
-          $('<span>').attr("class", "tree-node-dir glyphicon glyphicon-folder-open")
-                     .on("click", this._dirClick)
-                     .append(
-            $('<span>').attr("class", "tree-node-name")
-                       .append(
-              rootNodeName
-            )
-          )
-        ).append(
-          $('<ul>').attr("id", this._ID_PREFIX+'/')
-        )
-      )
-    );
+  this.initRoot = function(treeID){
+    $("#" + treeID + ">ul>li>span").on("click", this._dirClick);
   };
 
-  this.addNode = function(nodepath) {
+  this.addNode = function(nodepath, isDir) {
     nodepath = this._setAbsolute(nodepath).trim();
-    if(this._isDir(nodepath)){
-      // Create directory
-      var parts = nodepath.split("/");
-      var parentDir = parts.slice(0, -2).join("/") + "/";
-      // The size-1 is necessary empty, size-2 contains the name
-      this._addDir(parts[parts.length-2]+"/", parentDir);
+    var parts = nodepath.split("/");
+    var parentDir = parts.slice(0, -1).join("/") + "/";
+    // Size-1 contains the name
+    if(isDir){
+      this._addDir(parts[parts.length-1] + "/" , parentDir);
     }
-    else {
-      // Create file
-      var parts = nodepath.split("/");
-      var parentDir = parts.slice(0, -1).join("/") + "/";
+    else{
       this._addFile(parts[parts.length-1], parentDir);
     }
   };
