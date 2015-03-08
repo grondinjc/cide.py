@@ -17,6 +17,30 @@ $side-section-border-radius: 5px;
   word-wrap: break-word;
 }
 
+/*##############################
+####                        ####
+####     Layout classes     ####
+####                        ####
+##############################*/
+
+.row.full-row {
+  position: relative;
+  height: 100%;
+  border: 1px solid red;
+  overflow: hidden;
+
+  > [class*="col-"] {
+    position: relative;
+    height: 100%;
+  }
+}
+
+
+/*###############################
+####                         ####
+####     IDEView classes     ####
+####                         ####
+###############################*/
 
 .codeInput {
   background-color: transparent;
@@ -34,6 +58,7 @@ $side-section-border-radius: 5px;
 .codeInputDebug {
   width: 100%;
   height: 50px;
+  resize: none;
 }
 
 .codeDisplay {
@@ -120,11 +145,11 @@ $side-section-border-radius: 5px;
   margin-left:10px;
 }
 
-/*##############################################
-####                                        ####
+/*###############################
+####                         ####
 ####     AppChat classes     ####
-####                                        ####
-##############################################*/
+####                         ####
+###############################*/
 
 #chat.panel {
   border: $side-section-border;
@@ -137,22 +162,24 @@ $side-section-border-radius: 5px;
   }
 }
 
-#chat-logbox {
-  
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.chat-logbox.panel-body {
+  overflow-y: scroll;
 
-  .panel-body { overflow-y: scroll; }
-  .glyphicon { margin-right: 5px; }
+  > ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
 
-  > li.chat-message-element {
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px dotted #B3A9A9;
+    .glyphicon { margin-right: 5px; }
 
-    .chat-message-header { margin-bottom: 5px; }
-    .chat-message-body { @include mixin-wordwrap(); }
+    > li.chat-message-element {
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px dotted #B3A9A9;
+
+      .chat-message-header { margin-bottom: 5px; }
+      .chat-message-body { @include mixin-wordwrap(); }
+    }
   }
 }
 

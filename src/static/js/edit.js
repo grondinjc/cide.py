@@ -27,7 +27,7 @@ function init() {
   tree.initRoot("tree", "ProjectName");
 
   // Application Chat
-  chatApplication = new AppChat("chat-logbox", "chat-user-text-input", "chat-user-text-btn");
+  chatApplication = new AppChat("chat-display", "chat-user-text-input", "chat-user-text-btn");
 
   // Application IDE
   ideApplication = new AppIDE();

@@ -10,77 +10,114 @@
     <link rel="stylesheet" type="text/css" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" />
   </head>
   <body>
-    
-    <!-- Very basic representation ... for now -->
-    <!-- Editing zone impl -->
-    <div id="tree" class="tree well">  </div>
+    <div class="container-fluid">
 
-    <!-- Editing zone tests -->
-    <div>
-      <h3>Test</h3>
-      <label>add Node</label><input type="text" id="textNode"/>
-      <button onClick="test_AddNode();">Add node</button>
-      <button onClick="test_RemoveNode();">Remove node</button><br/><br/>
-      <button onClick="test_ManyAddNode();">Send Many</button>
-    </div>
+      <!-- Top menu -->
+      <div class="row"></div><!-- top menu -->
 
+      <!-- Side sections and IDE sections -->
+      <div class="row">
 
-    <div id="chat" class="panel">
-      <div class="panel-heading">
-          <span class="glyphicon glyphicon-comment"></span>
-          <span py:content="title"></span>'s Instant Chat
-      </div>
+        <!-- Side sections -->
+        <div class="col-md-3">
+          <div class="row">
 
-      <div class="panel-body">
-        <ul id="chat-logbox"></ul>
-      </div>
+            <!-- Side section menus -->
+            <div class="col-md-12">
+              <ul class="nav nav-pills nav-justified">
+                <li class="active"><a href="#side-section-tab-treeview" data-toggle="pill">Project Tree</a></li>
+                <li><a href="#side-section-tab-chat" data-toggle="pill">Project Chat</a></li>
+              </ul>
+            </div>
 
-      <div class="panel-footer">
-        <div class="chat-user-text input-group">
-          <input id="chat-user-text-input" type="text" class="form-control" placeholder="Type your message here..."/>
-          <span class="input-group-btn">
-            <button id="chat-user-text-btn" class="btn">Send</button>
-          </span>
-        </div>
-      </div>
-    </div>
+            <!-- Side section containers -->
+            <div class="col-md-12">
+              <div class="tab-content">
+
+                <!-- TreeView panel container -->
+                <div class="tab-pane active" id="side-section-tab-treeview">
+                  <div id="tree" class="tree well"></div>
+                </div>
+
+                <!-- Chat panel container -->
+                <div class="tab-pane" id="side-section-tab-chat">
+                  <div id="chat" class="panel">
+                    <div class="panel-heading">
+                        <span class="glyphicon glyphicon-comment"></span>
+                        <span py:content="title"></span>'s Instant Chat
+                    </div>
+
+                    <div class="chat-logbox panel-body">
+                      <ul id="chat-display"></ul>
+                    </div>
+
+                    <div class="panel-footer">
+                      <div class="chat-user-text input-group">
+                        <input id="chat-user-text-input" type="text" class="form-control" placeholder="Type your message here..."/>
+                        <span class="input-group-btn">
+                          <button id="chat-user-text-btn" class="btn">Send</button>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div><!-- tab content -->
+        </div><!-- side sections -->
+
+        <!-- IDE sections -->
+        <div class="col-md-9">
+          <!-- Editing zone impl -->
+          <h1>Editing display</h1>
+          <!-- Container of all lines -->
+          <h4>Display</h4>
+          <div id="editorWidget">
+            <pre id="editorDisplay" class="codeDisplay" contenteditable="true"></pre>
+          </div>
+          <h4>Last version from server</h4>
+          <textarea id="editorLastVersion" class="codeInputDebug"></textarea>
+        </div><!-- ide sections -->
+
+      </div><!-- side sections and ide -->
+    </div><!-- container-fluid -->
+
  
-
-
-    <!-- Editing zone -->
-    <div>
-      <!-- Editing zone impl -->
-      <h1>Editing display</h1>
-      <!-- Container of all lines -->
-      <h4>Display</h4>
-      <div id="editorWidget">
-        <pre id="editorDisplay" class="codeDisplay" contenteditable="true"></pre>
+    <!-- Editing zone tests -->
+    <br/><br/><br/><br/><br/><br/>
+    <div style="display:none;">
+      <div>
+        <h3>Test</h3>
+        <label>add Node</label><input type="text" id="textNode"/>
+        <button onClick="test_AddNode();">Add node</button>
+        <button onClick="test_RemoveNode();">Remove node</button><br/><br/>
+        <button onClick="test_ManyAddNode();">Send Many</button>
       </div>
-      <h4>Last version from server</h4>
-      <textarea id="editorLastVersion" class="codeInputDebug"></textarea>
 
+      <!-- Editing zone -->
+      <div>
+        <!-- Tests -->
+        <h3>Test</h3>
+        <table>
+          <tbody>
+            <tr>
 
-      <!-- Tests -->
-      <h3>Test</h3>
-      <table>
-        <tbody>
-          <tr>
+              <td>
+                <label>add text</label><textarea id="addText"></textarea><br/>
+                <label>at</label><input type="text" id="addAt"/><br/>
+                <button onClick="addNewTextAt();">Send</button><br/>
+              </td>
 
-            <td>
-              <label>add text</label><textarea id="addText"></textarea><br/>
-              <label>at</label><input type="text" id="addAt"/><br/>
-              <button onClick="addNewTextAt();">Send</button><br/>
-            </td>
+              <td>
+                <label>remove count</label><input type="text" id="rmCountText"/><br/>
+                <label>at</label><input type="text" id="rmAt"/><br/>
+                <button onClick="removeTextAt();">Send</button><br/>
+              </td>
 
-            <td>
-              <label>remove count</label><input type="text" id="rmCountText"/><br/>
-              <label>at</label><input type="text" id="rmAt"/><br/>
-              <button onClick="removeTextAt();">Send</button><br/>
-            </td>
-
-          </tr>
-        </tbody>
-      </table>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- JQuery -->
