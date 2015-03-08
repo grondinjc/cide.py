@@ -1,16 +1,10 @@
 import os
 import cherrypy
-from cherrypy import request
+from cherrypy import request, response
 import simplejson
 from ws4py.websocket import WebSocket
 from genshi.template import TemplateLoader
 from cide.server.identifyController import require_identify
-
-
-# Will be changed to httpErrors
-def create_argument_error_msg(arg):
-  return {'code': 400,
-          'message': "Invalid argument provided : " + str(arg)}
 
 
 def create_file_dump_dict(filename, version, content):
@@ -44,7 +38,7 @@ class IDEController(object):
     """
     IDEController initialiser
 
-    @type app: cide.app.python.core
+    @type app: cide.app.python.core.Core
     @type template_path: str
     @type logger: logging.Logger
 
@@ -152,6 +146,8 @@ class IDEController(object):
         'vers':    '<<File version>>',
         'content': '<<Content of the requested file>>'
       }
+      OR
+      Invalid path: None + (400 - Invalid Path)
     """
     self._logger.debug("Open by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                 request.remote.ip,
@@ -160,6 +156,7 @@ class IDEController(object):
 
     filename = request.json['file']
     username = cherrypy.session['username']
+    result = None
     self._logger.info("Open for file {3} requested by {0} ({1}:{2})".format(username,
                                                                             request.remote.ip,
                                                                             request.remote.port,
@@ -172,7 +169,8 @@ class IDEController(object):
       # Dump content
       result = create_file_dump_dict(filename, version, content)
     else:
-      result = create_argument_error_msg(filename)
+      response.status = "400 Invalid path"
+
     return result
 
   @cherrypy.expose
@@ -189,6 +187,9 @@ class IDEController(object):
       {
         'file':    '<<Filepath of file to close>>'
       }
+
+    @return: ok: None
+             Invalid path: None + (400 - Invalid path)
     """
     self._logger.debug("Close by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                  request.remote.ip,
@@ -202,12 +203,12 @@ class IDEController(object):
                                                                              request.remote.port,
                                                                              filename))
 
-    result = None
     if self.is_valid_path(filename):
       self._app.unregister_user_to_file(username, filename)
     else:
-      result = create_argument_error_msg(filename)
-    return result
+      response.status = "400 Invalid path"
+
+    return None
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -241,9 +242,11 @@ class IDEController(object):
                    }]
       }
 
-    @return: ok: Nothing + (200)
-             File doesn't exist: Nothing + (404 - Not found)
-             Version is too old: Nothing + (410 - Gone)
+    @return: ok: None
+             Changes are invalid: None + (400 - Invalid changes)
+             Invalid path: None + (400 - Invalid path)
+             ---TODO : File doesn't exist: None + (404 - Not found)
+             ---TODO : Version is too old: None + (410 - Gone)
     """
     self._logger.debug("Save by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                 request.remote.ip,
@@ -267,9 +270,10 @@ class IDEController(object):
                                        for c in changes])
 
       else:
-        result = create_argument_error_msg(changes)
+        response.status = "400 Invalid changes"
     else:
-      result = create_argument_error_msg(filename)
+      response.status = "400 Invalid path"
+
     return result
 
   @cherrypy.expose
@@ -295,6 +299,7 @@ class IDEController(object):
         'content': '<<Content of the requested file>>'
       }
       OR
+      Invalid path: None + (400 - Invalid path)
       File doesn't exist: Nothing + (404 Not found)
     """
     self._logger.debug("Dump by {0} ({1}:{2}) filename: {3}".format(cherrypy.session['username'],
@@ -313,7 +318,7 @@ class IDEController(object):
       content, version = self._app.get_file_content(filename)
       result = create_file_dump_dict(filename, version, content)
     else:
-      result = create_argument_error_msg(filename)
+      response.status = "400 Invalid path"
 
     return result
 
@@ -353,7 +358,6 @@ class IDEController(object):
     Method must exist to serve as a exposed hook for the websocket
     (Path : /ide/ws)
     """
-    # TODO do not create 2 ws for same session?
     username = cherrypy.session['username']
     self._logger.info("WS creation request from {0} ({1}:{2})".format(username,
                                                                       request.remote.ip,
@@ -395,13 +399,15 @@ class IDEController(object):
           self._logger.error("{0} ({1}:{2}) WS transfer failed".format(user,
                                                                        ws.peer_address[0],
                                                                        ws.peer_address[1]))
-          # Remove user from file notify list
+          # Remove user from every file notify list
           self._app.unregister_user_to_file(user, filename)
+          # Close websocket
+          ws.close(reason='Failed to send update for file {0}'.format(filename))
 
       else:
         self._logger.error("{0} has no WS in server".format(user))
-        # Remove user from file notify list
-        self._app.unregister_user_to_file(user, filename)
+        # Remove user from every file notify list
+        self._app.unregister_user_to_all_files(user)
 
 
 class IDEWebSocket(WebSocket):
@@ -423,10 +429,13 @@ class IDEWebSocket(WebSocket):
     # XXX May raise Key Error, but I don't get why...double dc?
     # FIXME Browser doing shenanigans when checking suggestions in URL bar...
     # FIXME Opening a 2nd WS for same users, and triggers 2 closing...hurray.
+    # TODO do not create 2 ws for same session?
     try:
       del self.IDEClients[self.username]
     except:
       cherrypy.log("ERROR: WS for {0} was not in dict.".format(self.username))
 
-    cherrypy.log("User {0} ({1}) WS disconnected".format(self.username, self.peer_address))
+    cherrypy.log("User {0} ({1}) WS disconnected. Reason: {2}".format(self.username,
+                                                                      self.peer_address,
+                                                                      reason))
 
