@@ -11,7 +11,7 @@ bin/*.conf
 bin/configs/*.conf
 
 # Logs
-logs/
+logs/*.log
 
 # Compiled Object files
 *.slo
