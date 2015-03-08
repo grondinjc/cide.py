@@ -43,7 +43,7 @@ class Chat(object):
         users = []
         self._logger.warning("{0} was already in chat users.".format(username))
 
-    return ("system", str(username) + " connected to the chat.", users, message_time)
+    return ("system", username + " connected to the chat.", users, message_time)
 
   def removeUser(self, username):
     """
@@ -65,7 +65,7 @@ class Chat(object):
         users = []
         self._logger.warning("{0} was not in chat users.".format(username))
 
-    return ("system", str(username) + " disconnected from the chat.", users, message_time)
+    return ("system", username + " disconnected from the chat.", users, message_time)
 
   def handleMessage(self, author, message):
     """
