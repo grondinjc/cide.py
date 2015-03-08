@@ -31,7 +31,16 @@
           <div class="tab-content full-size">
             <!-- TreeView panel container -->
             <div class="tab-pane active" id="side-section-tab-treeview">
-              <div id="tree" class="tree well full-size"></div>
+              <div id="tree" class="tree well full-size">
+                <ul>
+                  <li class="parent_li">
+                    <span class="tree-node-dir glyphicon glyphicon-folder-open">
+                      <span py:content="title" class="tree-node-name"></span>
+                    </span>
+                    <ul id='tree-node/'></ul>
+                  </li>
+                </ul>
+              </div>
             </div>
             <!-- Chat panel container -->
             <div class="tab-pane" id="side-section-tab-chat">

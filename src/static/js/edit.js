@@ -165,8 +165,8 @@ function AppIDE(pushInterval) {
     // Local and display sync handler
     this._nodeDisplay.bind(this._TEXT_EVENTS, this._handleInputEvent);
 
-    // XXX Initialise Tree root. Should be done in template
-    this._tree.initRoot("tree", "dummyProjectName");
+    // Initialise Tree root.
+    this._tree.initRoot("tree");
 
     // Load TreeView content
     this._requestHandler.get("tree", {}, function(response){
@@ -549,23 +549,8 @@ of the project */
 function ProjectTreeView() {
   this._ID_PREFIX = "tree-node";
 
-  this.initRoot = function(treeID, rootNodeName){
-    $("#"+treeID).append(
-      $('<ul>').append(
-        $('<li>').attr("class", "parent_li").append(
-          $('<span>').attr("class", "tree-node-dir glyphicon glyphicon-folder-open")
-                     .on("click", this._dirClick)
-                     .append(
-            $('<span>').attr("class", "tree-node-name")
-                       .append(
-              rootNodeName
-            )
-          )
-        ).append(
-          $('<ul>').attr("id", this._ID_PREFIX+'/')
-        )
-      )
-    );
+  this.initRoot = function(treeID){
+    $("#" + treeID + ">ul>li>span").on("click", this._dirClick);
   };
 
   this.addNode = function(nodepath, isDir) {
