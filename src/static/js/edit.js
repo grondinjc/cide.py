@@ -17,7 +17,7 @@ function init() {
 
   // Clean termination
   $(window).on("beforeunload", function () {
-    chatApplication.disconnect();
+    chatApplication.close();
   });
 
 
@@ -562,10 +562,19 @@ function ProjectTreeView() {
     $("#"+treeID).append(
       $('<ul>').append(
         $('<li>').attr("class", "parent_li").append(
-          $('<span>').attr("class", "tree-node-dir").on("click", this._dirClick).append(
-            $('<i>').attr("class", "icon-folder-open")).append(
-            rootNodeName)).append(
-          $('<ul>').attr("id", this._ID_PREFIX+'/'))));
+          $('<span>').attr("class", "tree-node-dir glyphicon glyphicon-folder-open")
+                     .on("click", this._dirClick)
+                     .append(
+            $('<span>').attr("class", "tree-node-name")
+                       .append(
+              rootNodeName
+            )
+          )
+        ).append(
+          $('<ul>').attr("id", this._ID_PREFIX+'/')
+        )
+      )
+    );
   };
 
   this.addNode = function(nodepath) {
@@ -632,12 +641,16 @@ function ProjectTreeView() {
     this._getDirNode(parentId).append(
       $('<li>').attr("class", "parent_li")
                .append(
-        $('<span>').attr("class", "tree-node-dir")
-                   .on("click", this._dirClick)
-                   .append($('<i>').attr("class", "icon-folder-open"))
-                   .append(dirname))
-               .append(
-        $('<ul>').attr("id", nodeId)));
+        $('<span>').attr("class", "tree-node-dir glyphicon glyphicon-folder-open")
+                   .on("click", this._dirClick).append(
+          $('<span>').attr("class", "tree-node-name").append(
+            dirname
+          )
+        )
+      ).append(
+        $('<ul>').attr("id", nodeId)
+      )
+    );
   };
 
   this._addFile = function(filename, parentDir) {
@@ -653,12 +666,17 @@ function ProjectTreeView() {
       $('<li>').attr("class", "parent_li")
                .attr("id", nodeId)
                .append(
-        $('<span>').attr("class", "tree-node-file")
+        $('<span>').attr("class", "tree-node-file glyphicon glyphicon-file")
                    .attr("title", parentDir+filename)
-                   .on("click", this._fileClick)
-                   .append($('<i>').attr("class", "icon-file"))
-               .append(filename)));
+                   .on("click", this._fileClick).append(
+          $('<span>').attr("class", "tree-node-name").append(
+            filename
+          )
+        )
+      )
+    );
   };
+
 
   this._fileClick = function(e) {
     // 'this' is now the treeview node element
@@ -697,8 +715,8 @@ function AppChat(displayId, userInputId, userSendBtnId) {
 
   // Bind events
   var obj = this; // For closure
-  this._userInputNode.keyup(function (e) { if (e.which == 13)  obj.send(); });
-  this._userSendBtnNode.click(function(e){ obj.send(); })
+  this._userInputNode.keyup(function (e) { if (e.which == 13)  obj._send(); });
+  this._userSendBtnNode.click(function(e){ obj._send(); })
 
   var receiveFn = function(opCode, jsonObj){
     // Check if opCode means new member to chat
@@ -711,15 +729,16 @@ function AppChat(displayId, userInputId, userSendBtnId) {
   this._rqh.init();
   this._connect();
 }
-
+AppChat.prototype.close = function(){
+  this._disconnect();
+};
 AppChat.prototype._connect = function(){
   this._rqh.put(this.URL_CONNECT, {});
 };
-AppChat.prototype.disconnect = function(){
+AppChat.prototype._disconnect = function(){
   this._rqh.put(this.URL_DISCONNECT, {});
 };
-
-AppChat.prototype.send = function(){
+AppChat.prototype._send = function(){
   var msg = this._userInputNode.val().trim();
   if(msg) {
     this._rqh.put(this.URL_SEND, createChatMessage(msg), function(){}, function(e){
@@ -728,15 +747,6 @@ AppChat.prototype.send = function(){
     this._userInputNode.val(''); // Clear
   }
 };
-
-AppChat.prototype._addConnectedMember = function(){
-
-};
-AppChat.prototype._removeConnectedMember = function(){
-
-};
-
-
 AppChat.prototype.addUserMessage = function(text, name, time){
   this._logDisplayNode.append(
     $('<li>').attr("class", "chat-message-element clearfix").append(
