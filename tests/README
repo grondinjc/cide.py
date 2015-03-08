@@ -4,4 +4,7 @@ Install the required packages for unittests
 
 ### Running unit tests
 In the tests directory execute the following command to run all tests :
-`nosetests`
+`python runner.py`
+
+### Running unit tests from a directory only
+`cd <test_directory> && nosetests`
