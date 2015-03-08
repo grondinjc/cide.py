@@ -136,7 +136,6 @@ function AppIDE(pushInterval) {
 
     // Handle ways of sending and receiving data from/to server
     this._requestHandler = new RequestHandler('ide', this.receive);
-    this._requestHandler.init();
 
     // Diff lib to compare two texts
     this._difftool = new diff_match_patch();
@@ -471,9 +470,8 @@ LocalChangeRemoveState.prototype.update = function(delta) {
 This will allow to change only internal representation
 easily when needed */
 function RequestHandler(controller, recvCallback) {
-
-  // For closure
-  var obj = this;
+  this.EMPTY_CALLBACK = function(){};
+  
 
   this._hostws = "ws://"+ window.location.host +"/" + controller + "/ws";
   this._controller = controller;
@@ -481,24 +479,20 @@ function RequestHandler(controller, recvCallback) {
   this._socket = null;
 
   this._recv = recvCallback;
-  this._emptyCallback = function(){};
+  this._connect();
+}
 
-  this.init = function() {
-    this._connect();
-  };
+RequestHandler.prototype._connect = function() {
+  this._socket = new WebSocket(this._hostws);
 
-  this._connect = function() {
-    obj._socket = new WebSocket(obj._hostws);
-    obj._socket.onopen = obj._socket_onopen;
-    obj._socket.onmessage = obj._socket_onmessage;
-    obj._socket.onclose = obj._socket_onclose;
-  };
+  // For closure
+  var obj = this;
 
-  this._socket_onopen = function(){
+  this._socket.onopen = function(){
     clearTimeout(obj._retryTimeout);
   };
 
-  this._socket_onmessage = function(msg){
+  this._socket.onmessage = function(msg){
     var json_obj = $.parseJSON(msg.data);
     if('opCode' in json_obj) {
       // json_obj is in two parts ... opCode and data
@@ -511,46 +505,47 @@ function RequestHandler(controller, recvCallback) {
     }
   };
 
-  this._socket_onclose = function(){
+  this._socket.onclose = function(){
     clearTimeout(obj._retryTimeout);
     obj._retryTimeout = setTimeout(obj._connect, RETRY_CONNECT_TIMEOUT);
   };
+};
 
-  this._send = function(type, url, requestData, successCallback, errorCallback) {
-    successCallback = successCallback || this._emptyCallback;
-    errorCallback = errorCallback || this._emptyCallback;
+RequestHandler.prototype._send = function(type, url, requestData, successCallback, errorCallback) {
+  successCallback = successCallback || this.EMPTY_CALLBACK;
+  errorCallback = errorCallback || this.EMPTY_CALLBACK;
 
-    $.ajax({
-      type: type,
-      url: url,
-      data: requestData,
-      cache: false,
-      contentType: 'application/json',
-      dataType: "json",
-      success: function(response, text) { 
-        successCallback(response, text);
-      },
-      error: function(request, status, error) {  
-        errorCallback(request, status, error);
-      }
-    });
-  };
+  $.ajax({
+    type: type,
+    url: url,
+    data: requestData,
+    cache: false,
+    contentType: 'application/json',
+    dataType: "json",
+    success: function(response, text) { 
+      successCallback(response, text);
+    },
+    error: function(request, status, error) {  
+      errorCallback(request, status, error);
+    }
+  });
+};
 
-  // Send a POST ; data is in payload
-  this.post = function(url, data, successCallback, errorCallback) {
-    this._send("POST", url, JSON.stringify(data), successCallback, errorCallback);
-  };
+// Send a POST ; data is in payload
+RequestHandler.prototype.post = function(url, data, successCallback, errorCallback) {
+  this._send("POST", url, JSON.stringify(data), successCallback, errorCallback);
+};
 
-  // Send a PUT ; data is in payload
-  this.put = function(url, data, successCallback, errorCallback) {
-    this._send("PUT", url, JSON.stringify(data), successCallback, errorCallback);
-  };
+// Send a PUT ; data is in payload
+RequestHandler.prototype.put = function(url, data, successCallback, errorCallback) {
+  this._send("PUT", url, JSON.stringify(data), successCallback, errorCallback);
+};
 
-  // Send a GET ; data is in query string
-  this.get = function(url, data, successCallback, errorCallback) {
-    this._send("GET", url, $.param(data), successCallback, errorCallback);
-  };
-}
+// Send a GET ; data is in query string
+RequestHandler.prototype.get = function(url, data, successCallback, errorCallback) {
+  this._send("GET", url, $.param(data), successCallback, errorCallback);
+};
+
 
 
 /* Class to encapsulate tree view representation 
@@ -699,7 +694,8 @@ function ProjectTreeView() {
   };
 }
 
-
+/* Class to encapsulate all communication and view of the 
+instant chat of the project */
 function AppChat(displayId, userInputId, userSendBtnId) {
   this.DEFAULT_LOCAL_USERNAME = 'Me';
   this.DEFAULT_MEMBER_USERNAME = 'Member';
@@ -726,7 +722,6 @@ function AppChat(displayId, userInputId, userSendBtnId) {
   };
 
   this._rqh = new RequestHandler('chat', receiveFn);
-  this._rqh.init();
   this._connect();
 }
 AppChat.prototype.close = function(){
