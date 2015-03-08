@@ -1,46 +1,66 @@
+$side-section-border-color: #e3e3e3;
+$side-section-border: 3px solid $side-section-border-color;
 
-/* Add spacing between sections */
-tr.ide td:first-child {
-    padding-right: 23px;
-} 
+$side-section-header-background-color: #f5f5f5;
+$side-section-header-text-color: black;
 
-td.side-section {
-    width: 450px;
+$side-section-background-color: #f5f5f5;
+$side-section-foreground-color: #fff;
+$side-section-border-radius: 5px;
+
+
+@mixin mixin-wordwrap () {
+  white-space: pre-wrap;
+  white-space: -moz-pre-wrap; /* Firefox */    
+  white-space: -pre-wrap;     /* Opera <7 */   
+  white-space: -o-pre-wrap;   /* Opera 7 */    
+  word-wrap: break-word;
 }
 
+/*##############################
+####                        ####
+####     Layout classes     ####
+####                        ####
+##############################*/
+
+#tree.full-size,  
+.chat-logbox.full-size {
+    min-height: 75%;
+    max-height: 75%;
+}
+
+
+/*###############################
+####                         ####
+####     IDEView classes     ####
+####                         ####
+###############################*/
+
 .codeInput {
-    background-color: transparent;
-    border: 0px;
-    outline: none;
-    -webkit-box-shadow: none;
-    -moz-box-shadow: none;
-    box-shadow: none;
-    color:transparent;
-    cursor:default;
-    width: 0px;
-    height: 0px;
+  background-color: transparent;
+  border: 0px;
+  outline: none;
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+  box-shadow: none;
+  color:transparent;
+  cursor:default;
+  width: 0px;
+  height: 0px;
 }
 
 .codeInputDebug {
-    width: 100%;
-    height: 50px;
+  width: 100%;
+  height: 50px;
+  resize: none;
 }
 
 .codeDisplay {
-    border-style: solid;
-    border-width: 1px;
-    padding-left: 1px; 
+  border-style: solid;
+  border-width: 1px;
+  padding-left: 1px; 
 }
 
-.line {
-    list-style-type: none;
-    padding-left: 0px; 
-    margin-left: 5px; 
-}
-
-.emptyLine {
-    display:none;
-}
 
 /*#######################################
 ####                                 ####
@@ -49,103 +69,142 @@ td.side-section {
 #######################################*/
 
 .tree {
-    min-height:20px;
-    padding:19px;
-    margin-bottom:20px;
-    background-color:#fbfbfb;
-    border:1px solid #999;
-    -webkit-border-radius:4px;
-    -moz-border-radius:4px;
-    border-radius:4px;
-    -webkit-box-shadow:inset 0 1px 1px rgba(0, 0, 0, 0.05);
-    -moz-box-shadow:inset 0 1px 1px rgba(0, 0, 0, 0.05);
-    box-shadow:inset 0 1px 1px rgba(0, 0, 0, 0.05)
+  min-height:20px;
+  padding:19px;
+  margin-bottom:20px;
+  background-color:#fbfbfb;
+  border:1px solid #999;
+  -webkit-border-radius:4px;
+  -moz-border-radius:4px;
+  border-radius:4px;
+  -webkit-box-shadow:inset 0 1px 1px rgba(0, 0, 0, 0.05);
+  -moz-box-shadow:inset 0 1px 1px rgba(0, 0, 0, 0.05);
+  box-shadow:inset 0 1px 1px rgba(0, 0, 0, 0.05);
 }
 .tree li {
-    list-style-type:none;
-    margin:0;
-    padding:10px 5px 0 5px;
-    position:relative
+  list-style-type:none;
+  margin:0;
+  padding:10px 5px 0 5px;
+  position:relative;
 }
 .tree li::before, .tree li::after {
-    content:'';
-    left:-20px;
-    position:absolute;
-    right:auto
+  content:'';
+  left:-20px;
+  position:absolute;
+  right:auto;
 }
+
+// Vertical line from a parent to its child nodes
 .tree li::before {
-    border-left:1px solid #999;
-    bottom:50px;
-    height:100%;
-    top:0;
-    width:1px
+  border-left:1px solid #999;
+  bottom:50px;
+  height:100%;
+  top:0;
+  width:1px;
 }
+
+// Horizontal lines for each child
 .tree li::after {
-    border-top:1px solid #999;
-    height:20px;
-    top:25px;
-    width:25px
+  border-top:1px solid #999;
+  height:20px;
+  top:25px;
+  width:25px;
 }
 .tree li span {
-    -moz-border-radius:5px;
-    -webkit-border-radius:5px;
-    border:1px solid #999;
-    border-radius:5px;
-    display:inline-block;
-    padding:3px 8px;
-    text-decoration:none
+  -moz-border-radius:5px;
+  -webkit-border-radius:5px;
+  border:1px solid #999;
+  border-radius:5px;
+  display:inline-block;
+  padding:3px 8px;
+  text-decoration:none;
 }
 .tree li.parent_li>span {
-    cursor:pointer
+  background: $side-section-foreground-color;
+  cursor:pointer;
 }
 .tree>ul>li::before, .tree>ul>li::after {
-    border:0
+  border:0;
 }
 .tree li:last-child::before {
-    height:30px
+  height:30px;
 }
 .tree li.parent_li>span:hover, .tree li.parent_li>span:hover+ul li span {
-    background:#eee;
-    border:1px solid #94a0b4;
-    color:#000
+  background:#eee;
+  border:1px solid #94a0b4;
+  color:#000;
 }
 
-/*##############################################
-####                                        ####
-####     ProjectInstantChatView classes     ####
-####                                        ####
-##############################################*/
+.tree-node-name {
+  margin-left:10px;
+}
 
-.chat-container, #loginform {
-    margin:0 auto;
-    padding-bottom:25px;
-    background:#f5f5f5;
-    width:504px;
-    border:1px solid #e3e3e3; }
-  
-.chat-logbox {
-    text-align:left;
-    margin:0 auto;
-    margin-bottom:25px;
-    padding:10px;
-    background:#fff;
-    height:270px;
-    width:430px;
-    border:1px solid #ACD8F0;
-    overflow:auto; }
-  
-#usermsg {
-    width:395px;
-    border:1px solid #ACD8F0; }
-  
-#submit { width: 60px; }
-  
-.error { color: #ff0000; }
-  
-#menu { padding:12.5px 25px 12.5px 25px; }
-  
-.chat-header { float:left; }
-  
-.logout { float:right; }
-  
-.msgln { margin:0 0 2px 0; }
+/*###############################
+####                         ####
+####     AppChat classes     ####
+####                         ####
+###############################*/
+
+#chat.panel {
+  border: $side-section-border;
+  margin-bottom: 0px;
+
+  > .panel-heading {
+    color: $side-section-header-text-color;
+    background-color: $side-section-header-background-color;
+    border-color: $side-section-border-color;
+  }
+}
+
+.chat-logbox.panel-body {
+  overflow-y: scroll;
+
+  > ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    .glyphicon { margin-right: 5px; }
+
+    > li.chat-message-element {
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px dotted #B3A9A9;
+
+      .chat-message-header { margin-bottom: 5px; }
+      .chat-message-body { @include mixin-wordwrap(); }
+    }
+  }
+}
+
+.chat-user-text.input-group {
+  > input {
+    height:100%;
+  }
+}
+
+
+/*###############################
+###                          ####
+####     Toolkit classes     ####
+####                         ####
+#################################*/
+
+
+::-webkit-scrollbar-track
+{
+  -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+  background-color: #F5F5F5;
+}
+
+::-webkit-scrollbar
+{
+  width: 12px;
+  background-color: #F5F5F5;
+}
+
+::-webkit-scrollbar-thumb
+{
+  -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+  background-color: #555;
+}

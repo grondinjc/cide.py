@@ -26,6 +26,7 @@ class ChatController(object):
     self._logger.debug("ChatController instance created")
 
   @cherrypy.expose
+  @cherrypy.tools.json_out()
   def connect(self):
     """
     Subscribe a client to the chat, to receive new messages
@@ -46,6 +47,7 @@ class ChatController(object):
     self.sendTo(*result)
 
   @cherrypy.expose
+  @cherrypy.tools.json_out()
   def disconnect(self):
     """
     Unsubscribe a client from the chat, stop sending new messages
@@ -65,6 +67,7 @@ class ChatController(object):
 
   @cherrypy.expose
   @cherrypy.tools.json_in()
+  @cherrypy.tools.json_out()
   def send(self):
     """
     Receive new message from the client
@@ -91,7 +94,7 @@ class ChatController(object):
                                                                 request.json))
 
     username = cherrypy.session['username']
-    message = request.json['message']
+    message = request.json['message'].encode("utf-8")
     self._logger.info("Send message '{3}' requested by {0} ({1}:{2})".format(username,
                                                                              request.remote.ip,
                                                                              request.remote.port,
@@ -114,15 +117,16 @@ class ChatController(object):
                                                                       request.remote.ip,
                                                                       request.remote.port))
 
-  def sendTo(self, author, message, users):
+  def sendTo(self, author, message, users, timestamp):
     """
     Send data to list of user
 
     @param author: The author of the message
     @param message: The message to send
     @param users: The set of users to send to
+    @param timestamp: The server-side timestamp of the message
     """
-    data = {"author": author, "message": message}
+    data = {"author": author, "message": message, "timestamp": timestamp}
     for user in users:
       ws = ChatWebSocket.ChatClients.get(user)
       if ws:
@@ -154,7 +158,7 @@ class ChatWebSocket(WebSocket):
 
   def closed(self, code, reason=None):
     del self.ChatClients[self.username]
-    cherrypy.log("User {0} ({1}) ChatWS disconnected. Reason: {3}".format(self.username,
+    cherrypy.log("User {0} ({1}) ChatWS disconnected. Reason: {2}".format(self.username,
                                                                           self.peer_address,
                                                                           reason))
 

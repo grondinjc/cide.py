@@ -7,79 +7,117 @@
     <link rel="stylesheet" type="text/css" href="static/css/style.css" />
 
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" type="text/css" href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.min.css" />
+    <link rel="stylesheet" type="text/css" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" />
   </head>
   <body>
+    <div class="container-fluid">
 
+      <!-- Top menu -->
+      <!--<div class="row"></div> top menu -->
 
+      <!-- Side sections and IDE sections -->
+      <div class="row">
 
-    <!-- Very basic representation ... for now -->
-    <table>
-      <tbody>
-        <tr class="ide">
+        <!-- Side sections -->
 
-          <!-- Project explorer -->
-          <td style="vertical-align:top;">
+        <div class="col-md-3">
+          <!-- Side section menus -->
+          <ul class="nav nav-pills nav-justified">
+            <li class="active"><a href="#side-section-tab-treeview" data-toggle="pill">Project Tree</a></li>
+            <li><a href="#side-section-tab-chat" data-toggle="pill">Project Chat</a></li>
+          </ul>
 
-            <!-- Editing zone impl -->
-            <div id="tree" class="tree well">  </div>
-
-            <!-- Editing zone impl -->
-            <div>
-              <h3>Test</h3>
-              <label>add Node</label><input type="text" id="textNode"/>
-              <button onClick="test_AddNode();">Add node</button>
-              <button onClick="test_RemoveNode();">Remove node</button><br/><br/>
-              <button onClick="test_ManyAddNode();">Send Many</button>
+          <!-- Side section containers -->
+          <div class="tab-content full-size">
+            <!-- TreeView panel container -->
+            <div class="tab-pane active" id="side-section-tab-treeview">
+              <div id="tree" class="tree well full-size"></div>
             </div>
-          </td>
+            <!-- Chat panel container -->
+            <div class="tab-pane" id="side-section-tab-chat">
+              <div id="chat" class="panel">
+                <div class="panel-heading">
+                    <span class="glyphicon glyphicon-comment"></span>
+                    <span py:content="title"></span>'s Instant Chat
+                </div>
 
-          <!-- Editing zone -->
-          <td style="width: 75%;">
-            <!-- Editing zone impl -->
-            <h1>Editing display</h1>
-            <!-- Container of all lines -->
-            <h4>Display</h4>
-            <div id="editorWidget">
-              <pre id="editorDisplay" class="codeDisplay" contenteditable="true"></pre>
+                <div class="chat-logbox panel-body full-size">
+                  <ul id="chat-display"></ul>
+                </div>
+
+                <div class="panel-footer">
+                  <div class="chat-user-text input-group">
+                    <input id="chat-user-text-input" type="text" class="form-control" placeholder="Type your message here..."/>
+                    <span class="input-group-btn">
+                      <button id="chat-user-text-btn" class="btn">Send</button>
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <h4>Last version from server</h4>
-            <textarea id="editorLastVersion" class="codeInputDebug"></textarea>
+          </div>
+        </div><!-- tab content --><!-- side sections -->
 
+        <!-- IDE sections -->
+        <div class="col-md-9">
+          <!-- Editing zone impl -->
+          <h1>Editing display</h1>
+          <!-- Container of all lines -->
+          <h4>Display</h4>
+          <div id="editorWidget">
+            <pre id="editorDisplay" class="codeDisplay" contenteditable="true"></pre>
+          </div>
+          <h4>Last version from server</h4>
+          <textarea id="editorLastVersion" class="codeInputDebug"></textarea>
+        </div><!-- ide sections -->
 
-            <!-- Tests -->
-            <h3>Test</h3>
-            <table>
-              <tbody>
-                <tr>
+      </div><!-- side sections and ide -->
+    </div><!-- container-fluid -->
 
-                  <td>
-                    <label>add text</label><textarea id="addText"></textarea><br/>
-                    <label>at</label><input type="text" id="addAt"/><br/>
-                    <button onClick="addNewTextAt();">Send</button><br/>
-                  </td>
+ 
+    <!-- Editing zone tests -->
+    <div style="display:none;">
+      <br/><br/><br/><br/><br/><br/>
+      <div>
+        <h3>Test</h3>
+        <label>add Node</label><input type="text" id="textNode"/>
+        <button onClick="test_AddNode();">Add node</button>
+        <button onClick="test_RemoveNode();">Remove node</button><br/><br/>
+        <button onClick="test_ManyAddNode();">Send Many</button>
+      </div>
 
-                  <td>
-                    <label>remove count</label><input type="text" id="rmCountText"/><br/>
-                    <label>at</label><input type="text" id="rmAt"/><br/>
-                    <button onClick="removeTextAt();">Send</button><br/>
-                  </td>
+      <!-- Editing zone -->
+      <div>
+        <!-- Tests -->
+        <h3>Test</h3>
+        <table>
+          <tbody>
+            <tr>
 
-                </tr>
-              </tbody>
-            </table>
+              <td>
+                <label>add text</label><textarea id="addText"></textarea><br/>
+                <label>at</label><input type="text" id="addAt"/><br/>
+                <button onClick="addNewTextAt();">Send</button><br/>
+              </td>
 
-          </td>
-        </tr>
-      </tbody>
-    </table>
+              <td>
+                <label>remove count</label><input type="text" id="rmCountText"/><br/>
+                <label>at</label><input type="text" id="rmAt"/><br/>
+                <button onClick="removeTextAt();">Send</button><br/>
+              </td>
+
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
     <!-- JQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <!-- JS -->
     <script src="static/js/edit.js" type="text/javascript" charset="utf-8"></script>
     <!-- Bootstrap JS -->
-    <script type="text/javascript" src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>   
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>   
     <!-- Diff match patch JS -->
     <script src="static/js/diff_match_patch.js" type="text/javascript" charset="utf-8"></script>
     

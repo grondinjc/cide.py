@@ -1,6 +1,5 @@
 import sys
 import os
-import sass
 import logging
 import cherrypy
 from configobj import ConfigObj
@@ -12,8 +11,7 @@ from cide.server.identifyController import IdentifyController, check_identify
 from cide.app.python.chat import Chat
 from cide.app.python.core import Core
 
-PREPROCESSOR_STYLE_EXT = '.scss'
-COMPILED_STYLE_EXT = '.css'
+from cide.preprocessor.compile import compile as sass_compiler
 
 # Read config file name from command parameters
 if len(sys.argv) != 2:
@@ -37,22 +35,8 @@ chatController_conf_file = configs['DEFAULT']['chatController']
 identifyController_conf_file = configs['DEFAULT']['identifyController']
 cide_log_file = configs['DEFAULT']['log_file']
 
-# Detect all SASS files
-scss_files = ["{0}/{1}".format(preprocessor_dir,filename) 
-              for filename in os.listdir(preprocessor_dir) 
-              if filename.endswith(PREPROCESSOR_STYLE_EXT)]
-
-# Process all detected SASS files
-for scss in scss_files:
-  # for more options, check help by doing 
-  # python -c "import sass;help(sass.compile)
-  compiled_css = sass.compile(filename=scss)
-  compiled_css_path = os.path.join(compiled_dir, 
-                                   os.path.basename(scss).replace(PREPROCESSOR_STYLE_EXT, 
-                                                                  COMPILED_STYLE_EXT))
-  # Open file in write mode to override any existing content
-  with open(compiled_css_path, 'w') as compiled_file:
-    compiled_file.write(compiled_css)
+# Compile all sass stylesheets
+sass_compiler(preprocessor_dir, compiled_dir)
 
 # Setup Log
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(module)s - %(message)s')

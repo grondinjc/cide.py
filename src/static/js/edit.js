@@ -1,28 +1,39 @@
 // Central point of interractions
 DEFAULT_PUSH_INTERVAL = 2000; // ms
-communicator = null;
+ideApplication = null;
 tree = null;
+chatApplication = null;
 
 // 
 CHANGE_RM_TYPE = -1;
 CHANGE_ADD_TYPE = 1; 
 
 // Requests
-HOST = window.location.host;
 RETRY_CONNECT_TIMEOUT = 2000; // ms
 
 // Initialize content when ready
 $(document).ready(init);
+$(window).on("beforeunload", terminate);
+
 function init() {
   tree = new ProjectTreeView();
   tree.initRoot("tree", "ProjectName");
 
-  // Classes
-  communicator = new Communicator();
-  communicator.init('editorLastVersion', 'editorDisplay');
+  // Application Chat
+  chatApplication = new AppChat("chat-display", "chat-user-text-input", "chat-user-text-btn");
+
+  // Application IDE
+  ideApplication = new AppIDE();
+  ideApplication.init('editorLastVersion', 'editorDisplay');
 
   // Quick hack
-  communicator.showFileContent(communicator._openedFile);
+  ideApplication.showFileContent(ideApplication._openedFile);
+}
+
+function terminate(){
+  if(chatApplication)
+    chatApplication.close();
+  // ide.close would send a stopNotify request
 }
 
 
@@ -31,22 +42,22 @@ function addNewTextAt(){
   var content = $('#addText').val();
   var at = parseInt($('#addAt').val());
   var modA = createAddModif(content, at);
-  communicator.notifySoft(createModifGroup([modA], "fileName", 0));
+  ideApplication.notifySoft(createModifGroup([modA], "fileName", 0));
 }
 
 function removeTextAt() {
   var count = parseInt($('#rmCountText').val());
   var at = parseInt($('#rmAt').val());
   var modA = createRemoveModif(count, at);
-  communicator.notifySoft(createModifGroup([modA], "fileName", 0));
+  ideApplication.notifySoft(createModifGroup([modA], "fileName", 0));
 }
 
 function test_ajax() {
   var modObject = createModif("abc", 0);
   var modifObject = createModifGroup([modObject], "fileName", 0);
-  communicator._requestHandler.post("save", modifObject, function(){
+  ideApplication._requestHandler.post("save", modifObject, function(){
     console.log("Success reveived comm");
-    communicator._changeMemory.clear();
+    ideApplication._changeMemory.clear();
   });
 }
 
@@ -76,7 +87,7 @@ function test_ManyAddNode() {
 // #####################################
 
 /* Central class that will interact will all other classes. */
-function Communicator(pushInterval) {
+function AppIDE(pushInterval) {
 
   // Setup event handlers
   var obj = this; // For closure
@@ -125,8 +136,7 @@ function Communicator(pushInterval) {
     this._zoneDisplay = new DisplayZone(this._nodeDisplay);
 
     // Handle ways of sending and receiving data from/to server
-    this._requestHandler = new RequestHandler(HOST, this.receive);
-    this._requestHandler.init();
+    this._requestHandler = new RequestHandler('ide', this.receive);
 
     // Diff lib to compare two texts
     this._difftool = new diff_match_patch();
@@ -137,7 +147,6 @@ function Communicator(pushInterval) {
     // Push changes handler 
     this._pushIntervalHandle = setInterval( 
       function() {
-        return; //<<debug>> ... remove this line to send changes to controller
         // try push
         var changes = obj._changeMemory.get();
         if(changes.length == 0) 
@@ -156,14 +165,6 @@ function Communicator(pushInterval) {
 
     // Local and display sync handler
     this._nodeDisplay.bind(this._TEXT_EVENTS, this._handleInputEvent);
-
-    var msg = "DEBUG MODE :\n";
-    msg +=    "Add and remove feature works locally.\n";
-    msg +=    "They are not robust (garbage in, garbage out).\n";
-    msg +=    "Unittest infrastructure will be comming next.\n\n";
-    msg +=    "No messages are sent to the controller.\n";
-    msg +=    "To reactivate that, look for <<debug>> in source code.\n";
-    alert(msg);
   };
 
   this._handleInputEvent = function(evt) {
@@ -460,34 +461,29 @@ LocalChangeRemoveState.prototype.update = function(delta) {
 /* Class to encapsulate how communications are done.
 This will allow to change only internal representation
 easily when needed */
-function RequestHandler(host, recvCallback) {
+function RequestHandler(controller, recvCallback) {
+  this.EMPTY_CALLBACK = function(){};
+  
 
-  // For closure
-  var obj = this;
-
-  this._hostws = "ws://"+ host +"/ide/ws";
+  this._hostws = "ws://"+ window.location.host +"/" + controller + "/ws";
+  this._controller = controller;
   this._retryTimeout = null;
   this._socket = null;
 
   this._recv = recvCallback;
-  this._emptyCallback = function(){};
+  this._connect();
+}
+RequestHandler.prototype._connect = function() {
+  this._socket = new WebSocket(this._hostws);
 
-  this.init = function() {
-    this._connect();
-  };
+  // For closure
+  var obj = this;
 
-  this._connect = function() {
-    obj._socket = new WebSocket(obj._hostws);
-    obj._socket.onopen = obj._socket_onopen;
-    obj._socket.onmessage = obj._socket_onmessage;
-    obj._socket.onclose = obj._socket_onclose;
-  };
-
-  this._socket_onopen = function(){
+  this._socket.onopen = function(){
     clearTimeout(obj._retryTimeout);
   };
 
-  this._socket_onmessage = function(msg){
+  this._socket.onmessage = function(msg){
     var json_obj = $.parseJSON(msg.data);
     if('opCode' in json_obj) {
       // json_obj is in two parts ... opCode and data
@@ -500,46 +496,43 @@ function RequestHandler(host, recvCallback) {
     }
   };
 
-  this._socket_onclose = function(){
+  this._socket.onclose = function(){
     clearTimeout(obj._retryTimeout);
     obj._retryTimeout = setTimeout(obj._connect, RETRY_CONNECT_TIMEOUT);
   };
+};
+RequestHandler.prototype._send = function(type, url, requestData, successCallback, errorCallback) {
+  successCallback = successCallback || this.EMPTY_CALLBACK;
+  errorCallback = errorCallback || this.EMPTY_CALLBACK;
 
-  this._send = function(type, controller, requestData, successCallback, errorCallback) {
-    successCallback = successCallback || this._emptyCallback;
-    errorCallback = errorCallback || this._emptyCallback;
+  $.ajax({
+    type: type,
+    url: url,
+    data: requestData,
+    cache: false,
+    contentType: 'application/json',
+    dataType: "json",
+    success: function(response, text) { 
+      successCallback(response, text);
+    },
+    error: function(request, status, error) {  
+      errorCallback(request, status, error);
+    }
+  });
+};
+// Send a POST ; data is in payload
+RequestHandler.prototype.post = function(url, data, successCallback, errorCallback) {
+  this._send("POST", url, JSON.stringify(data), successCallback, errorCallback);
+};
+// Send a PUT ; data is in payload
+RequestHandler.prototype.put = function(url, data, successCallback, errorCallback) {
+  this._send("PUT", url, JSON.stringify(data), successCallback, errorCallback);
+};
+// Send a GET ; data is in query string
+RequestHandler.prototype.get = function(url, data, successCallback, errorCallback) {
+  this._send("GET", url, $.param(data), successCallback, errorCallback);
+};
 
-    $.ajax({
-      type: type,
-      url: controller,
-      data: requestData,
-      cache: false,
-      contentType: 'application/json',
-      dataType: "json",
-      success: function(response, text) { 
-        successCallback(response, text);
-      },
-      error: function(request, status, error) {  
-        errorCallback(request, status, error);
-      }
-    });
-  };
-
-  // Send a POST ; data is in payload
-  this.post = function(controller, data, successCallback, errorCallback) {
-    this._send("POST", controller, JSON.stringify(data), successCallback, errorCallback);
-  };
-
-  // Send a PUT ; data is in payload
-  this.put = function(controller, data, successCallback, errorCallback) {
-    this._send("PUT", controller, JSON.stringify(data), successCallback, errorCallback);
-  };
-
-  // Send a GET ; data is in query string
-  this.get = function(controller, data, successCallback, errorCallback) {
-    this._send("GET", controller, $.param(data), successCallback, errorCallback);
-  };
-}
 
 
 /* Class to encapsulate tree view representation 
@@ -551,10 +544,19 @@ function ProjectTreeView() {
     $("#"+treeID).append(
       $('<ul>').append(
         $('<li>').attr("class", "parent_li").append(
-          $('<span>').attr("class", "tree-node-dir").on("click", this._dirClick).append(
-            $('<i>').attr("class", "icon-folder-open")).append(
-            rootNodeName)).append(
-          $('<ul>').attr("id", this._ID_PREFIX+'/'))));
+          $('<span>').attr("class", "tree-node-dir glyphicon glyphicon-folder-open")
+                     .on("click", this._dirClick)
+                     .append(
+            $('<span>').attr("class", "tree-node-name")
+                       .append(
+              rootNodeName
+            )
+          )
+        ).append(
+          $('<ul>').attr("id", this._ID_PREFIX+'/')
+        )
+      )
+    );
   };
 
   this.addNode = function(nodepath) {
@@ -621,12 +623,16 @@ function ProjectTreeView() {
     this._getDirNode(parentId).append(
       $('<li>').attr("class", "parent_li")
                .append(
-        $('<span>').attr("class", "tree-node-dir")
-                   .on("click", this._dirClick)
-                   .append($('<i>').attr("class", "icon-folder-open"))
-                   .append(dirname))
-               .append(
-        $('<ul>').attr("id", nodeId)));
+        $('<span>').attr("class", "tree-node-dir glyphicon glyphicon-folder-open")
+                   .on("click", this._dirClick).append(
+          $('<span>').attr("class", "tree-node-name").append(
+            dirname
+          )
+        )
+      ).append(
+        $('<ul>').attr("id", nodeId)
+      )
+    );
   };
 
   this._addFile = function(filename, parentDir) {
@@ -642,17 +648,22 @@ function ProjectTreeView() {
       $('<li>').attr("class", "parent_li")
                .attr("id", nodeId)
                .append(
-        $('<span>').attr("class", "tree-node-file")
+        $('<span>').attr("class", "tree-node-file glyphicon glyphicon-file")
                    .attr("title", parentDir+filename)
-                   .on("click", this._fileClick)
-                   .append($('<i>').attr("class", "icon-file"))
-               .append(filename)));
+                   .on("click", this._fileClick).append(
+          $('<span>').attr("class", "tree-node-name").append(
+            filename
+          )
+        )
+      )
+    );
   };
+
 
   this._fileClick = function(e) {
     // 'this' is now the treeview node element
     alert("TODO: Switch to file " + this.title);
-    //communicator.showFileContent(this.title);
+    //ideApplication.showFileContent(this.title);
     e.stopPropagation();
   };
 
@@ -670,6 +681,110 @@ function ProjectTreeView() {
   };
 }
 
+/* Class to encapsulate all communication and view of the 
+instant chat of the project */
+function AppChat(displayId, userInputId, userSendBtnId) {
+  this.DEFAULT_LOCAL_USERNAME = 'Me';
+  this.DEFAULT_MEMBER_USERNAME = 'Member';
+
+  // Declare to avoid alway combining strings
+  this.URL_CONNECT = window.location.origin + '/chat/connect';
+  this.URL_DISCONNECT = window.location.origin + '/chat/disconnect';
+  this.URL_SEND = window.location.origin + '/chat/send';
+
+  this._logDisplayNode = $("#"+displayId);
+  this._userInputNode = $("#"+userInputId);
+  this._userSendBtnNode = $("#"+userSendBtnId);
+
+  // Bind events
+  var obj = this; // For closure
+  this._userInputNode.keyup(function (e) { if (e.which == 13)  obj._send(); });
+  this._userSendBtnNode.click(function(e){ obj._send(); })
+
+  var receiveFn = function(opCode, jsonObj){
+    // Check if opCode means new member to chat
+
+    // opCode is chat message
+    obj.addProjectMemberMessage(jsonObj.message, jsonObj.author, jsonObj.timestamp);
+  };
+
+  this._rqh = new RequestHandler('chat', receiveFn);
+  this._connect();
+}
+AppChat.prototype.close = function(){
+  this._disconnect();
+};
+AppChat.prototype._connect = function(){
+  this._rqh.put(this.URL_CONNECT, {});
+};
+AppChat.prototype._disconnect = function(){
+  this._rqh.put(this.URL_DISCONNECT, {});
+};
+AppChat.prototype._send = function(){
+  var msg = this._userInputNode.val().trim();
+  if(msg) {
+    this._rqh.put(this.URL_SEND, createChatMessage(msg), function(){}, function(e){
+      alert(e); 
+    });
+    this._userInputNode.val(''); // Clear
+  }
+};
+AppChat.prototype.addUserMessage = function(text, name, time){
+  this._logDisplayNode.append(
+    $('<li>').attr("class", "chat-message-element clearfix").append(
+      $('<div>').attr("class", "chat-message-header").append(
+        $('<strong>').attr("class", "primary-font").append(
+          name
+        )
+      ).append(
+        $('<small>').attr("class", "text-muted pull-right").append(
+          $('<span>').attr("class", "glyphicon glyphicon-time")
+        ).append(
+          time
+        )
+      )
+    ).append(
+      $('<div>').attr("class", "chat-message-body").append(
+        text
+      )
+    )
+  );
+
+  // Make sure to see last message
+  this._lowerScrollView();
+};
+
+AppChat.prototype.addProjectMemberMessage = function(text, name, time){
+  this._logDisplayNode.append(
+    $('<li>').attr("class", "chat-message-element clearfix").append(
+      $('<div>').attr("class", "chat-message-header").append(
+        $('<small>').attr("class", "text-muted").append(
+          $('<span>').attr("class", "glyphicon glyphicon-time")
+        ).append(
+          time
+        )
+      ).append(
+        $('<strong>').attr("class", "primary-font pull-right").append(
+          name
+        )
+      )
+    ).append(
+      $('<div>').attr("class", "chat-message-body").append(
+        text
+      )
+    )
+  );
+
+  // Make sure to see last message
+  this._lowerScrollView();
+};
+AppChat.prototype._lowerScrollView = function() {
+  var parent = this._logDisplayNode.parent();
+  parent.scrollTop(parent[0].scrollHeight);
+};
+
+
+
 
 // ##########################################
 // #####                                #####
@@ -685,6 +800,9 @@ function createRemoveModif(count, pos) { return { count: count, pos: pos, type: 
 
 // used for /ide/open
 function createOpen(filename) { return { file: filename}; }
+
+// used for /chat/send
+function createChatMessage(msg) { return { message: msg}; }
 
 // ###################################
 // #####                         #####
