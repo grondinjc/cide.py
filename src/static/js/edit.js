@@ -17,7 +17,9 @@ function init() {
 
   // Clean termination
   $(window).on("beforeunload", function () {
-    chatApplication.close();
+    if(chatApplication)
+      chatApplication.close();
+    // ide.close would send a stopNotify request
   });
 
 
@@ -29,10 +31,10 @@ function init() {
 
   // Application IDE
   ideApplication = new AppIDE();
-  //ideApplication.init('editorLastVersion', 'editorDisplay');
+  ideApplication.init('editorLastVersion', 'editorDisplay');
 
   // Quick hack
-  //ideApplication.showFileContent(ideApplication._openedFile);
+  ideApplication.showFileContent(ideApplication._openedFile);
 }
 
 
@@ -146,7 +148,6 @@ function AppIDE(pushInterval) {
     // Push changes handler 
     this._pushIntervalHandle = setInterval( 
       function() {
-        return; //<<debug>> ... remove this line to send changes to controller
         // try push
         var changes = obj._changeMemory.get();
         if(changes.length == 0) 
@@ -165,14 +166,6 @@ function AppIDE(pushInterval) {
 
     // Local and display sync handler
     this._nodeDisplay.bind(this._TEXT_EVENTS, this._handleInputEvent);
-
-    var msg = "DEBUG MODE :\n";
-    msg +=    "Add and remove feature works locally.\n";
-    msg +=    "They are not robust (garbage in, garbage out).\n";
-    msg +=    "Unittest infrastructure will be comming next.\n\n";
-    msg +=    "No messages are sent to the controller.\n";
-    msg +=    "To reactivate that, look for <<debug>> in source code.\n";
-    //alert(msg);
   };
 
   this._handleInputEvent = function(evt) {
@@ -481,7 +474,6 @@ function RequestHandler(controller, recvCallback) {
   this._recv = recvCallback;
   this._connect();
 }
-
 RequestHandler.prototype._connect = function() {
   this._socket = new WebSocket(this._hostws);
 
@@ -510,7 +502,6 @@ RequestHandler.prototype._connect = function() {
     obj._retryTimeout = setTimeout(obj._connect, RETRY_CONNECT_TIMEOUT);
   };
 };
-
 RequestHandler.prototype._send = function(type, url, requestData, successCallback, errorCallback) {
   successCallback = successCallback || this.EMPTY_CALLBACK;
   errorCallback = errorCallback || this.EMPTY_CALLBACK;
@@ -530,17 +521,14 @@ RequestHandler.prototype._send = function(type, url, requestData, successCallbac
     }
   });
 };
-
 // Send a POST ; data is in payload
 RequestHandler.prototype.post = function(url, data, successCallback, errorCallback) {
   this._send("POST", url, JSON.stringify(data), successCallback, errorCallback);
 };
-
 // Send a PUT ; data is in payload
 RequestHandler.prototype.put = function(url, data, successCallback, errorCallback) {
   this._send("PUT", url, JSON.stringify(data), successCallback, errorCallback);
 };
-
 // Send a GET ; data is in query string
 RequestHandler.prototype.get = function(url, data, successCallback, errorCallback) {
   this._send("GET", url, $.param(data), successCallback, errorCallback);
