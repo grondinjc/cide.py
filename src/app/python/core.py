@@ -1,24 +1,21 @@
 import os
-from sys import argv
-from pdb import set_trace as dbg
 from threading import Lock
 from collections import namedtuple
 
-from cide.app.python.utils.nodes import (get_existing_files, 
+from cide.app.python.utils.nodes import (get_existing_files,
                                          get_existing_dirs)
 
 # Other stategies will be used but are not required
 from cide.app.python.utils.strategies import (StrategyCallEmpty)
 
-from time import sleep # used to patch threadpool termination
+from time import sleep  # used to patch threadpool termination
 from threadpool import (ThreadPool,
                         makeRequests as create_task)
 
-from libZoneTransit import (TransitZone as EditBuffer, 
-                            Addition as EditAdd, 
+from libZoneTransit import (TransitZone as EditBuffer,
+                            Addition as EditAdd,
                             Removal as EditRemove)
 
-from pdb import set_trace as debug
 
 Error = namedtuple('Error', ['message'])
 Warning = namedtuple('Warning', ['message'])
@@ -53,7 +50,7 @@ class Core(object):
     """
 
     self._project_name = project_name
-    self._project_path = project_path # considered as /
+    self._project_path = project_path  # considered as /
     self._logger = logger
     self._threadpool = ThreadPool(num_threads)
 
@@ -75,7 +72,7 @@ class Core(object):
 
     # Lock when dealing with application listeners
     self._core_listeners_lock = Lock()
-    self._core_listeners = list() # List for direct indexing
+    self._core_listeners = list()  # List for direct indexing
 
     # Initialize first strategy to null since nobody is registered
     first_strategy = StrategyCallEmpty(self._change_core_strategy_unsafe)
@@ -95,7 +92,7 @@ class Core(object):
 
   def get_project_nodes(self):
     """
-    Get all files and directories from project 
+    Get all files and directories from project
 
     @return list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
     """
@@ -117,7 +114,7 @@ class Core(object):
     with self._project_files_lock:
       if path in self._project_files:
         return (self._project_files[path].file.content,
-                0) # Version
+                0)  # Version
 
   def file_edit(self, path, changes):
     """
@@ -133,7 +130,7 @@ class Core(object):
       if path in self._project_files:
         for c in changes:
           # Encoding required since c++ module requires str type
-          change_object = (EditAdd(c.pos, c.data.encode("utf-8")) if c.is_add 
+          change_object = (EditAdd(c.pos, c.data.encode("utf-8")) if c.is_add
                            else EditRemove(c.pos, c.data))
           self._project_files[path].file.add(change_object)
         # register async task to apply changes
@@ -165,7 +162,7 @@ class Core(object):
 
   def register_user_to_file(self, user, path):
     """
-    Register a user to a file in order to receive file modification 
+    Register a user to a file in order to receive file modification
     notifications. When the file does not exists, it is created
 
     @type user: str
@@ -183,7 +180,7 @@ class Core(object):
 
   def unregister_user_to_file(self, user, path):
     """
-    Unregister a user to a file in order to stop receiving file modification 
+    Unregister a user to a file in order to stop receiving file modification
     notifications
 
     @type user: str
@@ -196,6 +193,19 @@ class Core(object):
       if (path in self._project_files and
           user in self._project_files[path].users):
         self._project_files[path].users.remove(user)
+
+  def unregister_user_to_all_files(self, user):
+    """
+    Unregister a user from all files in order to stop receiving file modification
+    notifications
+
+    @type user: str
+
+    @param user: The user name
+    """
+    with self._project_files_lock:
+      for f in self._project_files:
+        f.users.discard(user)
 
   def _task_apply_changes(self, path):
     """
@@ -213,11 +223,11 @@ class Core(object):
         changes = []
         version = 0
         users_registered = self._project_files[path].users
-        notify_f = lambda l: l.notify_file_edit(path, 
-                                                changes,
-                                                version,
-                                                users_registered)
-        self._notify_event(notify_f)
+
+        self._notify_event(lambda l: l.notify_file_edit(path,
+                                                        changes,
+                                                        version,
+                                                        users_registered))
 
   def _add_task(self, f):
     """
@@ -232,7 +242,7 @@ class Core(object):
     # two argument a dummy lambda is needed to hides this.
 
     # Creates an array with one request since one tuple of args was provided
-    rq = create_task(lambda *a: f(), [(None, None,)]) 
+    rq = create_task(lambda *a: f(), [(None, None,)])
     self._threadpool.putRequest(rq[0])
 
   def _create_file_unsafe(self, content=""):
@@ -255,9 +265,7 @@ class Core(object):
     """
     self._threadpool.wait()
     # Thread pool does not terminate well
-    sleep(1) 
-
-
+    sleep(1)
 
   """
   Observer and Stategy design patterns
@@ -291,7 +299,7 @@ class Core(object):
 
   def _change_core_strategy_unsafe(self, strategy):
     """
-    Change the current strategy 
+    Change the current strategy
     This function is unsafe since no locking is done
 
     @param strategy: The new strategy to use
