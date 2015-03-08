@@ -13,16 +13,9 @@ RETRY_CONNECT_TIMEOUT = 2000; // ms
 
 // Initialize content when ready
 $(document).ready(init);
+$(window).on("beforeunload", terminate);
+
 function init() {
-
-  // Clean termination
-  $(window).on("beforeunload", function () {
-    if(chatApplication)
-      chatApplication.close();
-    // ide.close would send a stopNotify request
-  });
-
-
   tree = new ProjectTreeView();
   tree.initRoot("tree", "ProjectName");
 
@@ -35,6 +28,12 @@ function init() {
 
   // Quick hack
   ideApplication.showFileContent(ideApplication._openedFile);
+}
+
+function terminate(){
+  if(chatApplication)
+    chatApplication.close();
+  // ide.close would send a stopNotify request
 }
 
 
@@ -749,7 +748,10 @@ AppChat.prototype.addUserMessage = function(text, name, time){
         text
       )
     )
-  );  
+  );
+
+  // Make sure to see last message
+  this._lowerScrollView();
 };
 
 AppChat.prototype.addProjectMemberMessage = function(text, name, time){
@@ -771,7 +773,14 @@ AppChat.prototype.addProjectMemberMessage = function(text, name, time){
         text
       )
     )
-  );  
+  );
+
+  // Make sure to see last message
+  this._lowerScrollView();
+};
+AppChat.prototype._lowerScrollView = function() {
+  var parent = this._logDisplayNode.parent();
+  parent.scrollTop(parent[0].scrollHeight);
 };
 
 

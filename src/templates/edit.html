@@ -13,58 +13,50 @@
     <div class="container-fluid">
 
       <!-- Top menu -->
-      <div class="row"></div><!-- top menu -->
+      <!--<div class="row"></div> top menu -->
 
       <!-- Side sections and IDE sections -->
       <div class="row">
 
         <!-- Side sections -->
+
         <div class="col-md-3">
-          <div class="row">
+          <!-- Side section menus -->
+          <ul class="nav nav-pills nav-justified">
+            <li class="active"><a href="#side-section-tab-treeview" data-toggle="pill">Project Tree</a></li>
+            <li><a href="#side-section-tab-chat" data-toggle="pill">Project Chat</a></li>
+          </ul>
 
-            <!-- Side section menus -->
-            <div class="col-md-12">
-              <ul class="nav nav-pills nav-justified">
-                <li class="active"><a href="#side-section-tab-treeview" data-toggle="pill">Project Tree</a></li>
-                <li><a href="#side-section-tab-chat" data-toggle="pill">Project Chat</a></li>
-              </ul>
+          <!-- Side section containers -->
+          <div class="tab-content full-size">
+            <!-- TreeView panel container -->
+            <div class="tab-pane active" id="side-section-tab-treeview">
+              <div id="tree" class="tree well full-size"></div>
             </div>
-
-            <!-- Side section containers -->
-            <div class="col-md-12">
-              <div class="tab-content">
-
-                <!-- TreeView panel container -->
-                <div class="tab-pane active" id="side-section-tab-treeview">
-                  <div id="tree" class="tree well"></div>
+            <!-- Chat panel container -->
+            <div class="tab-pane" id="side-section-tab-chat">
+              <div id="chat" class="panel">
+                <div class="panel-heading">
+                    <span class="glyphicon glyphicon-comment"></span>
+                    <span py:content="title"></span>'s Instant Chat
                 </div>
 
-                <!-- Chat panel container -->
-                <div class="tab-pane" id="side-section-tab-chat">
-                  <div id="chat" class="panel">
-                    <div class="panel-heading">
-                        <span class="glyphicon glyphicon-comment"></span>
-                        <span py:content="title"></span>'s Instant Chat
-                    </div>
+                <div id="tototo" class="chat-logbox panel-body full-size">
+                  <ul id="chat-display"></ul>
+                </div>
 
-                    <div class="chat-logbox panel-body">
-                      <ul id="chat-display"></ul>
-                    </div>
-
-                    <div class="panel-footer">
-                      <div class="chat-user-text input-group">
-                        <input id="chat-user-text-input" type="text" class="form-control" placeholder="Type your message here..."/>
-                        <span class="input-group-btn">
-                          <button id="chat-user-text-btn" class="btn">Send</button>
-                        </span>
-                      </div>
-                    </div>
+                <div class="panel-footer">
+                  <div class="chat-user-text input-group">
+                    <input id="chat-user-text-input" type="text" class="form-control" placeholder="Type your message here..."/>
+                    <span class="input-group-btn">
+                      <button id="chat-user-text-btn" class="btn">Send</button>
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
-          </div><!-- tab content -->
-        </div><!-- side sections -->
+          </div>
+        </div><!-- tab content --><!-- side sections -->
 
         <!-- IDE sections -->
         <div class="col-md-9">
@@ -84,8 +76,8 @@
 
  
     <!-- Editing zone tests -->
-    <br/><br/><br/><br/><br/><br/>
-    <div style="display:visible;">
+    <div style="display:none;">
+      <br/><br/><br/><br/><br/><br/>
       <div>
         <h3>Test</h3>
         <label>add Node</label><input type="text" id="textNode"/>
