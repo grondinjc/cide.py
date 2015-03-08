@@ -1,6 +1,6 @@
 import os
 import cherrypy
-from cherrypy import request, response
+from cherrypy import request, HTTPError
 import simplejson
 from ws4py.websocket import WebSocket
 from genshi.template import TemplateLoader
@@ -146,8 +146,6 @@ class IDEController(object):
         'vers':    '<<File version>>',
         'content': '<<Content of the requested file>>'
       }
-      OR
-      Invalid path: None + (400 - Invalid Path)
     """
     self._logger.debug("Open by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                 request.remote.ip,
@@ -156,7 +154,6 @@ class IDEController(object):
 
     filename = request.json['file']
     username = cherrypy.session['username']
-    result = None
     self._logger.info("Open for file {3} requested by {0} ({1}:{2})".format(username,
                                                                             request.remote.ip,
                                                                             request.remote.port,
@@ -167,11 +164,9 @@ class IDEController(object):
       self._app.register_user_to_file(username, filename)
       content, version = self._app.get_file_content(filename)
       # Dump content
-      result = create_file_dump_dict(filename, version, content)
+      return create_file_dump_dict(filename, version, content)
     else:
-      response.status = "400 Invalid path"
-
-    return result
+      raise HTTPError(400, "Invalid path")
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -188,8 +183,7 @@ class IDEController(object):
         'file':    '<<Filepath of file to close>>'
       }
 
-    @return: ok: None
-             Invalid path: None + (400 - Invalid path)
+    @return: None
     """
     self._logger.debug("Close by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                  request.remote.ip,
@@ -206,7 +200,7 @@ class IDEController(object):
     if self.is_valid_path(filename):
       self._app.unregister_user_to_file(username, filename)
     else:
-      response.status = "400 Invalid path"
+      raise HTTPError(400, "Invalid path")
 
     return None
 
@@ -242,11 +236,7 @@ class IDEController(object):
                    }]
       }
 
-    @return: ok: None
-             Changes are invalid: None + (400 - Invalid changes)
-             Invalid path: None + (400 - Invalid path)
-             ---TODO : File doesn't exist: None + (404 - Not found)
-             ---TODO : Version is too old: None + (410 - Gone)
+    @return: None
     """
     self._logger.debug("Save by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                 request.remote.ip,
@@ -260,7 +250,6 @@ class IDEController(object):
                                                                             request.remote.ip,
                                                                             request.remote.port,
                                                                             filename))
-    result = None
     if self.is_valid_path(filename):
       if self.is_valid_changes(changes):
         # Adds changes into a pool of task
@@ -270,11 +259,11 @@ class IDEController(object):
                                        for c in changes])
 
       else:
-        response.status = "400 Invalid changes"
+        raise HTTPError(400, "Invalid changes")
     else:
-      response.status = "400 Invalid path"
+      raise HTTPError(400, "Invalid path")
 
-    return result
+    return None
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -312,15 +301,13 @@ class IDEController(object):
                                                                            request.remote.ip,
                                                                            request.remote.port,
                                                                            filename))
-    result = None
+
     if self.is_valid_path(filename):
       # TODO Check for exceptions
       content, version = self._app.get_file_content(filename)
-      result = create_file_dump_dict(filename, version, content)
+      return create_file_dump_dict(filename, version, content)
     else:
-      response.status = "400 Invalid path"
-
-    return result
+      raise HTTPError(400, "Invalid path")
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
