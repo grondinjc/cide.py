@@ -1,10 +1,12 @@
 from threading import Lock
-
+from datetime import datetime
 
 class Chat(object):
   """
   Chat app module
   """
+
+  TIMESTAMP_FMT = "%H:%M"
 
   def __init__(self, logger):
     """
@@ -27,9 +29,10 @@ class Chat(object):
 
     @param username: Username of the user to add
 
-    @return tuple (<<Data to send>>, <<Users to send to>>)
+    @return tuple (<<Data to send>>, <<Users to send to>>, <<Timestamp of the message>>)
     """
     self._logger.info("Adding {0} to chat users".format(username))
+    message_time = datetime.now().strftime(Chat.TIMESTAMP_FMT)
 
     with self._usersLock:
       if username not in self._users:
@@ -40,7 +43,7 @@ class Chat(object):
         users = []
         self._logger.warning("{0} was already in chat users.".format(username))
 
-    return ("system", username + " connected to the chat.", users)
+    return ("system", str(username) + " connected to the chat.", users, message_time)
 
   def removeUser(self, username):
     """
@@ -48,9 +51,10 @@ class Chat(object):
 
     @param username: Username of the user to remove
 
-    @return tuple (<<Data to send>>, <<Users to send to>>)
+    @return tuple (<<Data to send>>, <<Users to send to>>, <<Timestamp of the message>>)
     """
     self._logger.info("Removing {0} from chat users".format(username))
+    message_time = datetime.now().strftime(Chat.TIMESTAMP_FMT)
 
     with self._usersLock:
       if username in self._users:
@@ -61,7 +65,7 @@ class Chat(object):
         users = []
         self._logger.warning("{0} was not in chat users.".format(username))
 
-    return ("system", username + " disconnected from the chat.", users)
+    return ("system", str(username) + " disconnected from the chat.", users, message_time)
 
   def handleMessage(self, author, message):
     """
@@ -70,10 +74,11 @@ class Chat(object):
     @param author: The author of the message
     @param message: The message received
 
-    @return tuple (<<Data to send>>, <<Users to send to>>)
+    @return tuple (<<Data to send>>, <<Users to send to>>, <<Timestamp of the message>>)
     """
     self._logger.debug("Handling message from {0}, message: {1}".format(author, message))
     message = message.strip()
+    message_time = datetime.now().strftime("%H:%M")
 
     if message:
       with self._usersLock:
@@ -83,5 +88,5 @@ class Chat(object):
       users = []
       self._logger.warning("Message from user {0} was empty. Not re-sending.".format(author))
 
-    return (author, message, users)
+    return (author, message, users, message_time)
 

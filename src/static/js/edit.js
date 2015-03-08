@@ -1,28 +1,38 @@
 // Central point of interractions
 DEFAULT_PUSH_INTERVAL = 2000; // ms
-communicator = null;
+ideApplication = null;
 tree = null;
+chatApplication = null;
 
 // 
 CHANGE_RM_TYPE = -1;
 CHANGE_ADD_TYPE = 1; 
 
 // Requests
-HOST = window.location.host;
 RETRY_CONNECT_TIMEOUT = 2000; // ms
 
 // Initialize content when ready
 $(document).ready(init);
 function init() {
+
+  // Clean termination
+  $(window).on("beforeunload", function () {
+    chatApplication.disconnect();
+  });
+
+
   tree = new ProjectTreeView();
   tree.initRoot("tree", "ProjectName");
 
-  // Classes
-  communicator = new Communicator();
-  communicator.init('editorLastVersion', 'editorDisplay');
+  // Application Chat
+  chatApplication = new AppChat("chat-logbox", "chat-user-text-input", "chat-user-text-btn");
+
+  // Application IDE
+  ideApplication = new AppIDE();
+  //ideApplication.init('editorLastVersion', 'editorDisplay');
 
   // Quick hack
-  communicator.showFileContent(communicator._openedFile);
+  //ideApplication.showFileContent(ideApplication._openedFile);
 }
 
 
@@ -31,22 +41,22 @@ function addNewTextAt(){
   var content = $('#addText').val();
   var at = parseInt($('#addAt').val());
   var modA = createAddModif(content, at);
-  communicator.notifySoft(createModifGroup([modA], "fileName", 0));
+  ideApplication.notifySoft(createModifGroup([modA], "fileName", 0));
 }
 
 function removeTextAt() {
   var count = parseInt($('#rmCountText').val());
   var at = parseInt($('#rmAt').val());
   var modA = createRemoveModif(count, at);
-  communicator.notifySoft(createModifGroup([modA], "fileName", 0));
+  ideApplication.notifySoft(createModifGroup([modA], "fileName", 0));
 }
 
 function test_ajax() {
   var modObject = createModif("abc", 0);
   var modifObject = createModifGroup([modObject], "fileName", 0);
-  communicator._requestHandler.post("save", modifObject, function(){
+  ideApplication._requestHandler.post("save", modifObject, function(){
     console.log("Success reveived comm");
-    communicator._changeMemory.clear();
+    ideApplication._changeMemory.clear();
   });
 }
 
@@ -76,7 +86,7 @@ function test_ManyAddNode() {
 // #####################################
 
 /* Central class that will interact will all other classes. */
-function Communicator(pushInterval) {
+function AppIDE(pushInterval) {
 
   // Setup event handlers
   var obj = this; // For closure
@@ -125,7 +135,7 @@ function Communicator(pushInterval) {
     this._zoneDisplay = new DisplayZone(this._nodeDisplay);
 
     // Handle ways of sending and receiving data from/to server
-    this._requestHandler = new RequestHandler(HOST, this.receive);
+    this._requestHandler = new RequestHandler('ide', this.receive);
     this._requestHandler.init();
 
     // Diff lib to compare two texts
@@ -460,12 +470,13 @@ LocalChangeRemoveState.prototype.update = function(delta) {
 /* Class to encapsulate how communications are done.
 This will allow to change only internal representation
 easily when needed */
-function RequestHandler(host, recvCallback) {
+function RequestHandler(controller, recvCallback) {
 
   // For closure
   var obj = this;
 
-  this._hostws = "ws://"+ host +"/ide/ws";
+  this._hostws = "ws://"+ window.location.host +"/" + controller + "/ws";
+  this._controller = controller;
   this._retryTimeout = null;
   this._socket = null;
 
@@ -505,13 +516,13 @@ function RequestHandler(host, recvCallback) {
     obj._retryTimeout = setTimeout(obj._connect, RETRY_CONNECT_TIMEOUT);
   };
 
-  this._send = function(type, controller, requestData, successCallback, errorCallback) {
+  this._send = function(type, url, requestData, successCallback, errorCallback) {
     successCallback = successCallback || this._emptyCallback;
     errorCallback = errorCallback || this._emptyCallback;
 
     $.ajax({
       type: type,
-      url: controller,
+      url: url,
       data: requestData,
       cache: false,
       contentType: 'application/json',
@@ -526,18 +537,18 @@ function RequestHandler(host, recvCallback) {
   };
 
   // Send a POST ; data is in payload
-  this.post = function(controller, data, successCallback, errorCallback) {
-    this._send("POST", controller, JSON.stringify(data), successCallback, errorCallback);
+  this.post = function(url, data, successCallback, errorCallback) {
+    this._send("POST", url, JSON.stringify(data), successCallback, errorCallback);
   };
 
   // Send a PUT ; data is in payload
-  this.put = function(controller, data, successCallback, errorCallback) {
-    this._send("PUT", controller, JSON.stringify(data), successCallback, errorCallback);
+  this.put = function(url, data, successCallback, errorCallback) {
+    this._send("PUT", url, JSON.stringify(data), successCallback, errorCallback);
   };
 
   // Send a GET ; data is in query string
-  this.get = function(controller, data, successCallback, errorCallback) {
-    this._send("GET", controller, $.param(data), successCallback, errorCallback);
+  this.get = function(url, data, successCallback, errorCallback) {
+    this._send("GET", url, $.param(data), successCallback, errorCallback);
   };
 }
 
@@ -652,7 +663,7 @@ function ProjectTreeView() {
   this._fileClick = function(e) {
     // 'this' is now the treeview node element
     alert("TODO: Switch to file " + this.title);
-    //communicator.showFileContent(this.title);
+    //ideApplication.showFileContent(this.title);
     e.stopPropagation();
   };
 
@@ -671,20 +682,103 @@ function ProjectTreeView() {
 }
 
 
-function ProjectInstantChatView() {
+function AppChat(displayId, userInputId, userSendBtnId) {
+  this.DEFAULT_LOCAL_USERNAME = 'Me';
+  this.DEFAULT_MEMBER_USERNAME = 'Member';
 
+  // Declare to avoid alway combining strings
+  this.URL_CONNECT = window.location.origin + '/chat/connect';
+  this.URL_DISCONNECT = window.location.origin + '/chat/disconnect';
+  this.URL_SEND = window.location.origin + '/chat/send';
+
+  this._logDisplayNode = $("#"+displayId);
+  this._userInputNode = $("#"+userInputId);
+  this._userSendBtnNode = $("#"+userSendBtnId);
+
+  // Bind events
+  var obj = this; // For closure
+  this._userInputNode.keyup(function (e) { if (e.which == 13)  obj.send(); });
+  this._userSendBtnNode.click(function(e){ obj.send(); })
+
+  var receiveFn = function(opCode, jsonObj){
+    // Check if opCode means new member to chat
+
+    // opCode is chat message
+    obj.addProjectMemberMessage(jsonObj.message, jsonObj.author, jsonObj.timestamp);
+  };
+
+  this._rqh = new RequestHandler('chat', receiveFn);
+  this._rqh.init();
+  this._connect();
 }
-ProjectInstantChatView.prototype.connect = function(){
+
+AppChat.prototype._connect = function(){
+  this._rqh.put(this.URL_CONNECT, {});
+};
+AppChat.prototype.disconnect = function(){
+  this._rqh.put(this.URL_DISCONNECT, {});
+};
+
+AppChat.prototype.send = function(){
+  var msg = this._userInputNode.val().trim();
+  if(msg) {
+    this._rqh.put(this.URL_SEND, createChatMessage(msg), function(){}, function(e){
+      alert(e); 
+    });
+    this._userInputNode.val(''); // Clear
+  }
+};
+
+AppChat.prototype._addConnectedMember = function(){
 
 };
-ProjectInstantChatView.prototype.disconnect = function(){
+AppChat.prototype._removeConnectedMember = function(){
 
 };
-ProjectInstantChatView.prototype.send = function(){
 
+
+AppChat.prototype.addUserMessage = function(text, name, time){
+  this._logDisplayNode.append(
+    $('<li>').attr("class", "chat-message-element clearfix").append(
+      $('<div>').attr("class", "chat-message-header").append(
+        $('<strong>').attr("class", "primary-font").append(
+          name
+        )
+      ).append(
+        $('<small>').attr("class", "text-muted pull-right").append(
+          $('<span>').attr("class", "glyphicon glyphicon-time")
+        ).append(
+          time
+        )
+      )
+    ).append(
+      $('<div>').attr("class", "chat-message-body").append(
+        text
+      )
+    )
+  );  
 };
-ProjectInstantChatView.prototype.addText = function(text){
 
+AppChat.prototype.addProjectMemberMessage = function(text, name, time){
+  this._logDisplayNode.append(
+    $('<li>').attr("class", "chat-message-element clearfix").append(
+      $('<div>').attr("class", "chat-message-header").append(
+        $('<small>').attr("class", "text-muted").append(
+          $('<span>').attr("class", "glyphicon glyphicon-time")
+        ).append(
+          time
+        )
+      ).append(
+        $('<strong>').attr("class", "primary-font pull-right").append(
+          name
+        )
+      )
+    ).append(
+      $('<div>').attr("class", "chat-message-body").append(
+        text
+      )
+    )
+  );  
 };
 
 
@@ -704,6 +798,9 @@ function createRemoveModif(count, pos) { return { count: count, pos: pos, type: 
 
 // used for /ide/open
 function createOpen(filename) { return { file: filename}; }
+
+// used for /chat/send
+function createChatMessage(msg) { return { message: msg}; }
 
 // ###################################
 // #####                         #####
