@@ -573,8 +573,12 @@ function ProjectTreeView() {
     var parts = nodepath.split("/");
     var parentDir = parts.slice(0, -1).join("/") + "/";
     // Size-1 contains the name
-    var name = isDir ? parts[parts.length-1] + "/" : parts[parts.length-1];
-    this._addDir(name, parentDir);
+    if(isDir){
+      this._addDir(parts[parts.length-1] + "/" , parentDir);
+    }
+    else{
+      this._addFile(parts[parts.length-1], parentDir);
+    }
   };
 
   this.removeNode = function(nodepath){

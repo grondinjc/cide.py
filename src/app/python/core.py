@@ -64,7 +64,7 @@ class Core(object):
     self._project_files = dict()
     existing_files_path = get_existing_files(self._project_path)
     for path in existing_files_path:
-      with open(os.path.join(self._project_path, path), 'r') as f:
+      with open(os.path.join(self._project_path, path.lstrip('/')), 'r') as f:
         self._project_files[path] = self._create_file_unsafe(f.read())
 
     # Lock when interracting with `filesystem` or with `users`
