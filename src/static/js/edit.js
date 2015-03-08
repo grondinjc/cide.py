@@ -106,7 +106,7 @@ function AppIDE(pushInterval) {
   // wait to receive projet tree
   // wait for user to select file
   // Suppose user selected main.py
-  this._openedFile = "main.py";
+  this._openedFile = "/main.py";
 
   // Handle null value
   this._pushInterval = pushInterval || DEFAULT_PUSH_INTERVAL;
