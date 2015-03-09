@@ -136,6 +136,7 @@ function AppIDE(pushInterval) {
 
     // Handle ways of sending and receiving data from/to server
     this._requestHandler = new RequestHandler('ide', this.receive);
+    // TODO block / wait for the WS to be open before allowing ws-based stuff
 
     // Diff lib to compare two texts
     this._difftool = new diff_match_patch();
@@ -470,7 +471,8 @@ LocalChangeRemoveState.prototype.update = function(delta) {
 /* Class to encapsulate how communications are done.
 This will allow to change only internal representation
 easily when needed */
-function RequestHandler(controller, recvCallback) {
+function RequestHandler(controller, recvCallback,
+                        onopenCallback, oncloseCallback) {
   this.EMPTY_CALLBACK = function(){};
   
 
@@ -480,9 +482,11 @@ function RequestHandler(controller, recvCallback) {
   this._socket = null;
 
   this._recv = recvCallback;
-  this._connect();
+  this._onopen = onopenCallback || this.EMPTY_CALLBACK;
+  this._onclose = oncloseCallback || this.EMPTY_CALLBACK;
+  this._connectWS();
 }
-RequestHandler.prototype._connect = function() {
+RequestHandler.prototype._connectWS = function() {
   this._socket = new WebSocket(this._hostws);
 
   // For closure
@@ -490,6 +494,7 @@ RequestHandler.prototype._connect = function() {
 
   this._socket.onopen = function(){
     clearTimeout(obj._retryTimeout);
+    obj._onopen();
   };
 
   this._socket.onmessage = function(msg){
@@ -507,8 +512,14 @@ RequestHandler.prototype._connect = function() {
 
   this._socket.onclose = function(){
     clearTimeout(obj._retryTimeout);
+    obj._onclose();
     obj._retryTimeout = setTimeout(obj._connect, RETRY_CONNECT_TIMEOUT);
   };
+};
+RequestHandler.prototype.close = function() {
+  if(this._socket){
+    this._socket.close();
+  }
 };
 RequestHandler.prototype._send = function(type, url, requestData, successCallback, errorCallback) {
   successCallback = successCallback || this.EMPTY_CALLBACK;
@@ -698,17 +709,12 @@ function AppChat(displayId, userInputId, userSendBtnId) {
     obj.addProjectMemberMessage(jsonObj.message, jsonObj.author, jsonObj.timestamp);
   };
 
-  this._rqh = new RequestHandler('chat', receiveFn);
-  this._connect();
+  var onopen = function(){ obj._rqh.put(obj.URL_CONNECT, {}); };
+  var onclose = function(){ obj._rqh.put(obj.URL_DISCONNECT, {}); };
+  this._rqh = new RequestHandler('chat', receiveFn, onopen, onclose);
 }
 AppChat.prototype.close = function(){
-  this._disconnect();
-};
-AppChat.prototype._connect = function(){
-  this._rqh.put(this.URL_CONNECT, {});
-};
-AppChat.prototype._disconnect = function(){
-  this._rqh.put(this.URL_DISCONNECT, {});
+  this._rqh.close();
 };
 AppChat.prototype._send = function(){
   var msg = this._userInputNode.val().trim();

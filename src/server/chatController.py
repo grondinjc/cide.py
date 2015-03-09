@@ -2,7 +2,7 @@ import cherrypy
 from cherrypy import request
 import simplejson
 from ws4py.websocket import WebSocket
-import uuid  # XXX Temp for fake session id... Could be used for real?
+from cide.server.identifyController import require_identify
 
 
 class ChatController(object):
@@ -27,6 +27,7 @@ class ChatController(object):
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
+  @require_identify()
   def connect(self):
     """
     Subscribe a client to the chat, to receive new messages
@@ -35,9 +36,6 @@ class ChatController(object):
 
     The user may start to receive messages before he gets the response for this request.
     """
-    if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = str(uuid.uuid4())  # XXX Session should be set by the id module
-
     username = cherrypy.session['username']
     self._logger.info("Connect to chat requested by {0} ({1}:{2})".format(username,
                                                                           request.remote.ip,
@@ -48,15 +46,13 @@ class ChatController(object):
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
+  @require_identify()
   def disconnect(self):
     """
     Unsubscribe a client from the chat, stop sending new messages
     Method : PUT
     (Path : /chat/disconnect)
     """
-    if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = str(uuid.uuid4())  # XXX Session should be set by the id module
-
     username = cherrypy.session['username']
     self._logger.info("Disconnect from chat requested by {0} ({1}:{2})".format(username,
                                                                                request.remote.ip,
@@ -68,6 +64,7 @@ class ChatController(object):
   @cherrypy.expose
   @cherrypy.tools.json_in()
   @cherrypy.tools.json_out()
+  @require_identify()
   def send(self):
     """
     Receive new message from the client
@@ -85,9 +82,6 @@ class ChatController(object):
         'message': '<<Content of the message>>'
       }
     """
-    if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = str(uuid.uuid4())  # XXX Session should be set by the id module
-
     self._logger.debug("Send by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                 request.remote.ip,
                                                                 request.remote.port,
@@ -104,14 +98,12 @@ class ChatController(object):
     self.sendTo(*result)
 
   @cherrypy.expose
+  @require_identify()
   def ws(self):
     """
     Method must exist to serve as a exposed hook for the websocket
     (Path : /chat/ws)
     """
-    if not cherrypy.session.get('username'):
-      cherrypy.session['username'] = str(uuid.uuid4())  # XXX Session should be set by the id module
-
     username = cherrypy.session['username']
     self._logger.info("WS creation request from {0} ({1}:{2})".format(username,
                                                                       request.remote.ip,
@@ -136,7 +128,7 @@ class ChatController(object):
           self._logger.error("{0} ({1}) WS transfer failed".format(user, ws.peer_address))
 
       else:
-        self._logger.error("{0} has no WS in server".format(user))
+        self._logger.warning("{0} has no WS in server".format(user))
         result = self._app.removeUser(user)
         self.sendTo(*result)
 
