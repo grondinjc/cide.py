@@ -470,7 +470,7 @@ LocalChangeRemoveState.prototype.update = function(delta) {
 /* Class to encapsulate how communications are done.
 This will allow to change only internal representation
 easily when needed */
-function RequestHandler(controller, recvCallback) {
+function RequestHandler(controller, recvCallback, onopenCallback) {
   this.EMPTY_CALLBACK = function(){};
   
 
@@ -479,6 +479,7 @@ function RequestHandler(controller, recvCallback) {
   this._retryTimeout = null;
   this._socket = null;
 
+  this._onopen = onopenCallback || this.EMPTY_CALLBACK;
   this._recv = recvCallback;
   this._connect();
 }
@@ -490,6 +491,7 @@ RequestHandler.prototype._connect = function() {
 
   this._socket.onopen = function(){
     clearTimeout(obj._retryTimeout);
+    obj._onopen();
   };
 
   this._socket.onmessage = function(msg){
