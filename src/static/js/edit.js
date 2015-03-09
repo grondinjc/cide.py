@@ -136,6 +136,7 @@ function AppIDE(pushInterval) {
 
     // Handle ways of sending and receiving data from/to server
     this._requestHandler = new RequestHandler('ide', this.receive);
+    // TODO block / wait for the WS to be open before allowing ws-based stuff
 
     // Diff lib to compare two texts
     this._difftool = new diff_match_patch();
