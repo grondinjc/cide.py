@@ -53,16 +53,47 @@ QUnit.test( "testUpdate_Overlaps2", function( assert ) {
   assert.equal(stringResult, "Hell12World3oHello ");
 });
 
-QUnit.test( "testUpdate_NegativePosAdd", function( assert ) {
+QUnit.skip( "testUpdate_NegativePosAdd", function( assert ) {
   var negAdd = createAddModif("Minus", -1);
   this.lvz.update([negAdd]);
   stringResult = this.mock.val();
   assert.equal(stringResult, "Hello ", "Negative position should never happen. If they happen, content should not be changed.");
 });
 
-QUnit.test( "testUpdate_AfterEndOfFileAdd", function( assert ) {
+QUnit.skip( "testUpdate_AfterEndOfFileAdd", function( assert ) {
   var tooBigAdd = createAddModif("Too big", 100);
   this.lvz.update([tooBigAdd]);
   stringResult = this.mock.val();
   assert.equal(stringResult, "Hello ", "Position after end of file should never happen. If they happen, content should not be changed.");
 });
+
+QUnit.test( "testUpdate_SamePositions0", function( assert ) {
+  //write modifications at same position
+  this.lvz.update([this.add3, this.add4]);
+  stringResult = this.mock.val();
+  assert.equal(stringResult, "Hello mondeWorld", "Passed!");
+});
+
+QUnit.test( "testUpdate_SamePositions1", function( assert ) {
+  //write modifications at same position
+  this.lvz.update([this.add4, this.add3]);
+  stringResult = this.mock.val();
+  assert.equal(stringResult, "Hello Worldmonde", "Passed!");
+});
+
+QUnit.test( "testUpdate_BeforeAfter", function( assert ) {
+  //The position of the next modification is after the previous's
+  //(no overlaps)
+  this.lvz.update([this.add1, this.add3]);
+  stringResult = this.mock.val();
+  assert.equal(stringResult, "HelloHWorldello ", "Passed!");
+});
+
+QUnit.test( "testUpdate_AfterBefore", function( assert ) {
+  //The position of the next modification is before the previous's
+  //(reordering of 4_0)
+  this.lvz.update([this.add3, this.add1]);
+  stringResult = this.mock.val();
+  assert.equal(stringResult, "HelloHello World", "Passed!");
+});
+
