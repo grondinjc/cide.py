@@ -4,10 +4,6 @@ ideApplication = null;
 tree = null;
 chatApplication = null;
 
-// 
-CHANGE_RM_TYPE = -1;
-CHANGE_ADD_TYPE = 1; 
-
 // Requests
 RETRY_CONNECT_TIMEOUT = 2000; // ms
 

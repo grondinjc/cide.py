@@ -4,6 +4,8 @@ function LastVersionZone(node) {
   this._zone = node;
 
   this.update = function(modifications) {
+	  //modifications are applied as received (same order)
+    //no indexing are applied to the modifications
     var changedContent = this._zone.val();
     modifications.map(function(mod) {
       changedContent = mod.type == CHANGE_RM_TYPE ?

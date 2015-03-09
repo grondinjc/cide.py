@@ -1,3 +1,7 @@
+// 
+CHANGE_RM_TYPE = -1;
+CHANGE_ADD_TYPE = 1; 
+
 // used for /ide/save
 function createModifGroup(changes, file, vers) { return { file: file, vers: vers, changes: changes}; }
 
