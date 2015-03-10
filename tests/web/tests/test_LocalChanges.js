@@ -9,6 +9,7 @@ QUnit.module( "test_LocalChanges", {
 });
 
 
+
 QUnit.test("testGet :: empty array", function(assert) {
   var changes = this.lc.get();
   assert.ok(changes.length == 0, "Default has no modification");
@@ -32,6 +33,8 @@ QUnit.test("testGet :: no char ; invalid position", function(assert) {
   var changes = this.lc.get();
   assert.ok(changes.length == 0, "An invalid position should not happen in pratice");
 });
+
+
 
 QUnit.test("testClear :: empty array", function(assert) {
   this.lc.clear();
