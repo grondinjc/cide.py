@@ -24,7 +24,7 @@ LocalChanges.prototype.update = function(deltas) {
   deltas.map(function(delta) {
     // For stored change
     this._modifications.map(function(mod) {
-      if(delta.pos < mod.pos) {
+      if(delta.pos <= mod.pos) {
         mod.pos += delta.type == CHANGE_RM_TYPE ?
           -delta.count :
           delta.content.length;
