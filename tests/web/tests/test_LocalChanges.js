@@ -2,7 +2,7 @@
 CHANGE_RM_TYPE = -1;
 CHANGE_ADD_TYPE = 1; 
 
-QUnit.module( "test_localChanges", {
+QUnit.module( "test_LocalChanges", {
   beforeEach: function() {
     this.lc = new LocalChanges();
   },
@@ -57,12 +57,12 @@ QUnit.test("testAddChange :: contiguous char", function(assert) {
 
 QUnit.test("testAddChange :: spaced char", function(assert) {
   this.lc.addChange(0, "1");
-  this.lc.addChange(1, "2");
-  this.lc.addChange(2, "3");
+  this.lc.addChange(10, "2");
   var changes = this.lc.get();
-  var expected = [createAddModif("123", 0)];
-  assert.ok(changes.length == 1, "There should only be one element");
-  assert.deepEqual(changes, expected, "Should be type add of '123' at 0");
+  var expected = [createAddModif("1", 0),
+                  createAddModif("2", 10)];
+  assert.ok(changes.length == 2, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be type add of '1' at 0 and '2' at 10");
 });
 
 QUnit.test("testAddChange :: one block", function(assert) {
@@ -83,3 +83,12 @@ QUnit.test("testAddChange :: contiguous block", function(assert) {
   assert.deepEqual(changes, expected, "Should be type add of '123456789' at 0");
 });
 
+QUnit.test("testAddChange :: spaced block", function(assert) {
+  this.lc.addChange(0, "123");
+  this.lc.addChange(10, "456");
+  var changes = this.lc.get();
+  var expected = [createAddModif("123", 0),
+                  createAddModif("456", 10)];
+  assert.ok(changes.length == 2, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be type add of '123' at 0 and '456' at 10");
+});

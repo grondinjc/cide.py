@@ -71,20 +71,23 @@ LocalChanges.prototype.saveChange = function(change) {
 
 function LocalChangeAddState(mem){
   this._mem = mem;
-  this._startAddedPos = undefined;
   this._addedData = undefined;
+
+  this._posUnknownState = new PositionUnknownState(this);
+  this._posKnownState = new PositionKnownState(this, 0);
+  this._posState = this._posUnknownState;
 }
 LocalChangeAddState.prototype.add = function(at, val){
   // Set when cursor was not set before
-  this._startAddedPos = this._startAddedPos || at;
+  this._posState.trySet(at);
   
-  var theoricalAt = this._startAddedPos + this._addedData.length;
+  var theoricalAt = this._posState.get() + this._addedData.length;
   if(theoricalAt != at && this._addedData.length != 0) {
     // change somewhere else... save 
-    this._mem.saveChange(createAddModif(this._addedData, this._startAddedPos));
+    this._mem.saveChange(createAddModif(this._addedData, this._posState.get()));
 
     // and start new change
-    this._startAddedPos = at;
+    this._posState.set(at);
     this._addedData = val;
   }
   else {
@@ -95,28 +98,31 @@ LocalChangeAddState.prototype.remove = function(at, count) {
   this._mem.handleSwitchToRemoveState(at, count); 
 };
 LocalChangeAddState.prototype.init = function() {
-  this._startAddedPos = undefined;
+  this._posState = this._posUnknownState;
   this._addedData = "";
 };
 LocalChangeAddState.prototype.isChangeInProgress = function() {
   return this._addedData.length != 0;
 };
 LocalChangeAddState.prototype.getPendingChange = function() {
-  return createAddModif(this._addedData, this._startAddedPos);
+  return createAddModif(this._addedData, this._posState.get());
 };
 LocalChangeAddState.prototype.update = function(delta) {
-  if(this._startAddedPos != undefined && delta.pos <= this._startAddedPos) {
-    this._startAddedPos += delta.type == CHANGE_RM_TYPE ? 
-      -delta.count : 
-      delta.content.length;
-  }
+  this._posState.update(delta);
+};
+LocalChangeAddState.prototype.switchToKnownPosition = function(pos) {
+  this._posState = this._posKnownState;
+  this._posState.set(pos);
 };
 
 
 function LocalChangeRemoveState(mem){
   this._mem = mem;
-  this._startRemovePos = undefined;
   this._removedCount = undefined;
+
+  this._posUnknownState = new PositionUnknownState(this);
+  this._posKnownState = new PositionKnownState(this, 0);
+  this._posState = this._posUnknownState;
 }
 LocalChangeRemoveState.prototype.add = function(at, val){
   this._mem.handleSwitchToAddState(at, val); 
@@ -124,15 +130,15 @@ LocalChangeRemoveState.prototype.add = function(at, val){
 LocalChangeRemoveState.prototype.remove = function(at, count) { 
   // Set when cursor was not set before
   // Needed because we don`t know here the size of the full text
-  this._startRemovePos = this._startRemovePos || at;
+  this._posState.trySet(at);
 
-  var theoricalAt = this._startRemovePos - this._removedCount;
+  var theoricalAt = this._posState.get() - this._removedCount;
   if(theoricalAt != at && this._removedCount != 0) {
     // change somewhere else... save 
-    this._mem.saveChange(createRemoveModif(this._removedCount, this._startRemovePos));
+    this._mem.saveChange(createRemoveModif(this._removedCount, this._posState.get()));
 
     // and start new change
-    this._startRemovePos = at;
+    this._posState.set(at);
     this._removedCount = count;
   }
   else {
@@ -140,18 +146,62 @@ LocalChangeRemoveState.prototype.remove = function(at, count) {
   }
 };
 LocalChangeRemoveState.prototype.init = function() {
-  this._startRemovePos = undefined;
+  this._posState = this._posUnknownState;
   this._removedCount = 0;
 };
 LocalChangeRemoveState.prototype.isChangeInProgress = function() {
   return this._removedCount != 0;
 };
 LocalChangeRemoveState.prototype.getPendingChange = function() {
-  return createRemoveModif(this._removedCount, this._startRemovePos);
+  return createRemoveModif(this._removedCount, this._posState.get());
 };
 LocalChangeRemoveState.prototype.update = function(delta) {
-  if(this._startRemovePos != undefined && delta.pos <= this._startRemovePos) {
-    this._startRemovePos += delta.type == CHANGE_RM_TYPE ? 
+  this._posState.update(delta);
+};
+LocalChangeRemoveState.prototype.switchToKnownPosition = function(pos) {
+  this._posState = this._posKnownState;
+  this._posState.set(pos);
+};
+
+function PositionUnknownState(changeState){
+  this._changeState = changeState;
+}
+
+// Commented out since it should never be called
+// It will be an error when trying to call this function
+// PositionUnknownState.prototype.get ...
+
+PositionUnknownState.prototype.set = function(pos){
+  // Switch state
+  this._changeState.switchToKnownPosition(pos);
+};
+// Tries to assign a value when none are already set
+PositionUnknownState.prototype.trySet = function(pos){
+  // Switch state
+  this._changeState.switchToKnownPosition(pos);
+};
+PositionUnknownState.prototype.update = function(delta){
+  // Nothing to do since the current position is unknown
+};
+
+
+function PositionKnownState(changeState, pos){
+  this._changeState = changeState;
+  this._pos = pos;
+}
+PositionKnownState.prototype.get = function(){
+  return this._pos;
+};
+PositionKnownState.prototype.set = function(pos){
+  this._pos = pos;
+};
+// Tries to assign a value when none are already set
+PositionKnownState.prototype.trySet = function(pos){
+  // Nothing to do since a position is known
+};
+PositionKnownState.prototype.update = function(delta){
+  if(delta.pos <= this._pos) {
+    this._pos += delta.type == CHANGE_RM_TYPE ? 
       -delta.count : 
       delta.content.length;
   }
