@@ -18,6 +18,15 @@ def create_file_version_dict(filename, version, changes):
           'vers':    version,
           'changes': changes}
 
+def create_change_add_element_dict(change):
+  return {'type': IDEController.CHANGE_ADD_TYPE,
+          'pos':  change.position,
+          'content': change.data}
+def create_change_remove_element_dict(change):
+  return {'type': IDEController.CHANGE_REMOVE_TYPE,
+          'pos':  change.position,
+          'count': change.size}
+
 
 def create_tree_nodes_dict(nodes):
   return {'nodes': [{'node': name,
@@ -59,6 +68,7 @@ class IDEController(object):
 
     # Register controller to events
     self._app.register_application_listener(self)
+    self.debug_bundle_id = 0
 
   @staticmethod
   def is_valid_path(path):
@@ -245,6 +255,7 @@ class IDEController(object):
 
     username = cherrypy.session['username']
     filename = request.json['file']
+    version = request.json['vers']
     changes = request.json['changes']
     self._logger.info("Save for file {3} requested by {0} ({1}:{2})".format(username,
                                                                             request.remote.ip,
@@ -253,10 +264,12 @@ class IDEController(object):
     if self.is_valid_path(filename):
       if self.is_valid_changes(changes):
         # Adds changes into a pool of task
+        self._logger.info("Calling app for bundle {0}".format(version))
         self._app.file_edit(filename, [self._app.Change(c['pos'],
                                                         c.get('content') or c.get('count'),
                                                         c['type'] == IDEController.CHANGE_ADD_TYPE)
                                        for c in changes])
+        self._logger.info("Return from app call for bundle {0}".format(version))
 
       else:
         raise HTTPError(400, "Invalid changes")
@@ -371,17 +384,23 @@ class IDEController(object):
       }
     """
 
-    temp_message = ("Temp msg from controller until "
-                    "c++ module will return applied modifications")
-    changes = [dict(type=self.CHANGE_ADD_TYPE, pos=0, content=temp_message)]
+    # Dirty hack to know type
+    from libZoneTransit import Addition as EditAdd
+    serialized_changes = [(create_change_add_element_dict(element)
+                           if type(element) is EditAdd else
+                           create_change_remove_element_dict(element))
+                          for element in changes]
+    message_sent = simplejson.dumps(create_file_version_dict(filename, version, serialized_changes))
 
     for user in users:
       ws = IDEWebSocket.IDEClients.get(user)
       if ws:
         try:
-          ws.send(simplejson.dumps(create_file_version_dict(filename,
-                                                            version,
-                                                            changes)))
+          ws.send(message_sent)
+          self._logger.info("{0} ({1}:{2}) WS transfer succeded ({3})".format(user,
+                                                                       ws.peer_address[0],
+                                                                       ws.peer_address[1],
+                                                                       self.debug_bundle_id))
         except:
           self._logger.error("{0} ({1}:{2}) WS transfer failed".format(user,
                                                                        ws.peer_address[0],
@@ -395,6 +414,7 @@ class IDEController(object):
         self._logger.error("{0} has no WS in server".format(user))
         # Remove user from every file notify list
         self._app.unregister_user_to_all_files(user)
+    ++self.debug_bundle_id
 
 
 class IDEWebSocket(WebSocket):

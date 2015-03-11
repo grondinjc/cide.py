@@ -35,7 +35,7 @@ RequestHandler.prototype._connectWS = function() {
     }
     else {
       // Send default opcode
-      console.log("No opCode in ws request for content", json_obj);
+      //console.log("No opCode in ws request for content", json_obj);
       obj._recv(0, json_obj);
     }
   };
@@ -51,9 +51,10 @@ RequestHandler.prototype.close = function() {
     this._socket.close();
   }
 };
-RequestHandler.prototype._send = function(type, url, requestData, successCallback, errorCallback) {
+RequestHandler.prototype._send = function(type, url, requestData, successCallback, errorCallback, async) {
   successCallback = successCallback || this.EMPTY_CALLBACK;
   errorCallback = errorCallback || this.EMPTY_CALLBACK;
+  async = async == undefined ? true : false;
 
   $.ajax({
     type: type,
@@ -71,14 +72,14 @@ RequestHandler.prototype._send = function(type, url, requestData, successCallbac
   });
 };
 // Send a POST ; data is in payload
-RequestHandler.prototype.post = function(url, data, successCallback, errorCallback) {
-  this._send("POST", url, JSON.stringify(data), successCallback, errorCallback);
+RequestHandler.prototype.post = function(url, data, successCallback, errorCallback, async) {
+  this._send("POST", url, JSON.stringify(data), successCallback, errorCallback, async);
 };
 // Send a PUT ; data is in payload
-RequestHandler.prototype.put = function(url, data, successCallback, errorCallback) {
-  this._send("PUT", url, JSON.stringify(data), successCallback, errorCallback);
+RequestHandler.prototype.put = function(url, data, successCallback, errorCallback, async) {
+  this._send("PUT", url, JSON.stringify(data), successCallback, errorCallback, async);
 };
 // Send a GET ; data is in query string
-RequestHandler.prototype.get = function(url, data, successCallback, errorCallback) {
-  this._send("GET", url, $.param(data), successCallback, errorCallback);
+RequestHandler.prototype.get = function(url, data, successCallback, errorCallback, async) {
+  this._send("GET", url, $.param(data), successCallback, errorCallback, async);
 };

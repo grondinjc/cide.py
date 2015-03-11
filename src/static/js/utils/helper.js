@@ -1,3 +1,7 @@
+/* Encoder and decoder for html entities */
+function htmlEncode(value) { return $('<div/>').text(value).html(); }
+function htmlDecode(value) { return $('<div/>').html(value).text(); }
+
 /* SELECTION HELPER FUNCTIONS */
 $.fn.selectRange = function(start, end) {
   // Check 'end' variable presence

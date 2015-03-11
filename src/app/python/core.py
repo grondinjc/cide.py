@@ -220,11 +220,8 @@ class Core(object):
     """
     with self._project_files_lock:
       if path in self._project_files:
-        self._project_files[path].file.writeModifications()
+        version, changes = self._project_files[path].file.writeModifications()
 
-        # Get the applied changes
-        changes = []
-        version = 0
         users_registered = self._project_files[path].users
 
         self._notify_event(lambda l: l.notify_file_edit(path,
