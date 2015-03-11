@@ -11,6 +11,11 @@ CHANGE_ADD_TYPE = 1;
 // Requests
 RETRY_CONNECT_TIMEOUT = 2000; // ms
 
+function test_export(){
+  // Change path to trigger request 
+  window.location.href = "export";
+}
+
 // Initialize content when ready
 $(document).ready(init);
 $(window).on("beforeunload", terminate);
@@ -552,7 +557,6 @@ RequestHandler.prototype.put = function(url, data, successCallback, errorCallbac
 RequestHandler.prototype.get = function(url, data, successCallback, errorCallback) {
   this._send("GET", url, $.param(data), successCallback, errorCallback);
 };
-
 
 
 /* Class to encapsulate tree view representation 

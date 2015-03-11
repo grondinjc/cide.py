@@ -1,4 +1,5 @@
 import os
+import zipfile
 import cherrypy
 from cherrypy import request, HTTPError
 import simplejson
@@ -24,6 +25,14 @@ def create_tree_nodes_dict(nodes):
                      'isDir': is_dir}
                     for (name, is_dir) in nodes]}
 
+
+BUF_SIZE = 1024 * 5
+def stream(filepath):
+  with open(filepath, 'rb') as f:
+    data = f.read(BUF_SIZE)
+    while len(data) > 0:
+      yield data
+      data = f.read(BUF_SIZE)
 
 class IDEController(object):
   """
@@ -337,6 +346,46 @@ class IDEController(object):
 
     nodes = self._app.get_project_nodes()
     return create_tree_nodes_dict(nodes)
+
+
+  @cherrypy.expose
+  @require_identify()
+  def export(self, path=None, **kw):
+    # Create zip file
+    exportname = "dummyProjectName.zip"
+    export_dir = '/tmp/'
+    source_basedir = "/tmp/test/dummyProjectName"
+    with zipfile.ZipFile(export_dir + exportname, "w") as zf:
+      for dirname, _, files in os.walk(source_basedir):
+        zf.write(dirname, dirname.replace(source_basedir, ""))
+        for filename in files:
+          filepath = os.path.join(dirname, filename)
+          zf.write(filepath, filepath.replace(source_basedir,""))
+
+    # Export file
+    zipFileName = export_dir + exportname
+
+    from cherrypy.lib import static
+    def download_complete():
+      os.unlink(cherrypy.request.zipFileName)
+
+    cherrypy.request.zipFileName = zipFileName
+    cherrypy.request.hooks.attach('on_end_request', download_complete)
+    return cherrypy.lib.static.serve_download(zipFileName)
+    #path_res = export_dir + exportname
+    #return static.serve_file(path_res, 
+    #                         "application/zip",
+    #                         "attachment",
+    #                         os.path.basename(path_res))
+
+    #cherrypy.response.headers['Content-Type'] = 'application/zip'
+    #cherrypy.response.headers['Content-Disposition'] = 'attachment; filename=%s' % exportname
+    #cherrypy.response.headers['Content-Length'] = os.path.getsize(export_dir + exportname)
+    
+    #with open(export_dir + exportname, 'rb') as zf2:
+    #  return zf2.read()
+    #return stream(export_dir + exportname)
+
 
   @cherrypy.expose
   @require_identify()
