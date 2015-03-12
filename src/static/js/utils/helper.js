@@ -2,54 +2,6 @@
 function htmlEncode(value) { return $('<div/>').text(value).html(); }
 function htmlDecode(value) { return $('<div/>').html(value).text(); }
 
-/* SELECTION HELPER FUNCTIONS */
-$.fn.selectRange = function(start, end) {
-  // Check 'end' variable presence
-  end = (end == undefined) ? start : end; 
-  // Apply cursor to all given elements
-  return this.each(function() {
-    if (this.setSelectionRange) {
-      this.focus();
-      this.setSelectionRange(start, end);
-    } else if (this.createTextRange) {
-      var range = this.createTextRange();
-      range.collapse(true);
-      range.moveEnd('character', end);
-      range.moveStart('character', start);
-      range.select();
-    }
-  });
-};
-
-/* CURSOR HELPER FUNCTIONS */
-$.fn.setCursorPosition = function(pos) { this.selectRange(pos, pos); };
-$.fn.getCursorPosition = function() { return this.prop("selectionStart"); };
-
-// getCaretCharacterOffsetWithin(document.getElementById("editorDisplay"));
-function getCaretCharacterOffsetWithin(element) {
-  var caretOffset = 0;
-  var doc = element.ownerDocument || element.document;
-  var win = doc.defaultView || doc.parentWindow;
-  var sel;
-  if (typeof win.getSelection != "undefined") {
-    sel = win.getSelection();
-    if (sel.rangeCount > 0) {
-      var range = win.getSelection().getRangeAt(0);
-      var preCaretRange = range.cloneRange();
-      preCaretRange.selectNodeContents(element);
-      preCaretRange.setEnd(range.endContainer, range.endOffset);
-      caretOffset = preCaretRange.toString().length;
-    }
-  } else if ( (sel = doc.selection) && sel.type != "Control") {
-    var textRange = sel.createRange();
-    var preCaretTextRange = doc.body.createTextRange();
-    preCaretTextRange.moveToElementText(element);
-    preCaretTextRange.setEndPoint("EndToEnd", textRange);
-    caretOffset = preCaretTextRange.text.length;
-  }
-  return caretOffset;
-}
-
 /* ARRAY HELPER */
 Array.prototype.dcopy = function() {
   return $.extend(true, [], this);
