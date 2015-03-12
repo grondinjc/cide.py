@@ -151,23 +151,30 @@ function AppIDE(pushInterval) {
   this.notifyForce = function(initialDelta) {
     this._zoneLastVersion.put(initialDelta.content);
     this._changeMemory.clear();
-    this._zoneDisplay.forceUpdate(initialDelta.content); 
+    this._zoneDisplay.forceUpdate([initialDelta.content, initialDelta.content.length]); 
   };
 
   this.notifySoft = function(modifications) {
     this._changeMemory.update(modifications.changes);
     this._zoneLastVersion.update(modifications.changes);
-    this._zoneDisplay.forceUpdate(this._combineText());
+
+    var cursor_pos = this._zoneDisplay.getCursorPos();
+    this._zoneDisplay.forceUpdate(this._combineText(cursor_pos));
   };
 
-  this._combineText = function() {
+  this._combineText = function(cursor_pos) {
     var base = this._zoneLastVersion.get();
     var modifs = this._changeMemory.get();
     modifs.map(function(mod) {
       base = mod.type == CHANGE_RM_TYPE ?
         base.cut(mod.pos, mod.pos+mod.count):
         base.insert(mod.content, mod.pos);
+
+      // The delete will need to be thinked a bit more
+      cursor_pos = mod.pos <= cursor_pos ?
+        cursor_pos + (mod.type == CHANGE_RM_TYPE ? 0 : mod.content) :
+        cursor_pos;
     });
-    return base;
+    return [base, cursor_pos];
   };
 };

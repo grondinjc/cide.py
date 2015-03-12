@@ -37,6 +37,15 @@ function test_f(){
   alert(chtml);
   alert(ctext);
 }
+
+function show_dump(){
+  // Do request
+  ideApplication._requestHandler.get("dump", createDump("/main.py"), function(response){
+    msg = "--ContentBegin--\n" + response.content + "\n--ContentEnd--";
+    alert(msg);
+  });
+}
+
 function addNewTextAt(){
   var content = $('#addText').val();
   var at = parseInt($('#addAt').val());
