@@ -1,4 +1,5 @@
 import os
+from copy import deepcopy
 from threading import Lock
 from collections import namedtuple
 
@@ -129,7 +130,9 @@ class Core(object):
     @param path: The path of the file in the project tree
     @param changes: Changes to be applied on the file
     """
+    self._logger.info("File_edit lock requested ... ")
     with self._project_files_lock:
+      self._logger.info("File_edit lock requested ... ACQUIRED ")
       if path in self._project_files:
         for c in changes:
           # Encoding required since c++ module requires str type
@@ -138,6 +141,7 @@ class Core(object):
           self._project_files[path].file.add(change_object)
         # register async task to apply changes
         self._add_task(lambda: self._task_apply_changes(path))
+        self._logger.info("File_edit task added")
 
   def add_file(self, path):
     """
@@ -218,16 +222,21 @@ class Core(object):
 
     @param path: The path of the file on which modifications will be applied
     """
+    self._logger.info("_task_apply_changes lock requested")
     with self._project_files_lock:
+      self._logger.info("_task_apply_changes lock acquired")
       if path in self._project_files:
         version, changes = self._project_files[path].file.writeModifications()
 
-        users_registered = self._project_files[path].users
-
+        users_registered = deepcopy(self._project_files[path].users)
+        self._logger.info("_task_apply_changes call notify")
         self._notify_event(lambda l: l.notify_file_edit(path,
                                                         changes,
                                                         version,
                                                         users_registered))
+        self._logger.info("_task_apply_changes call notify ... CALLED")
+      self._logger.info("_task_apply_changes lock about to be released")
+    self._logger.info("_task_apply_changes lock released")
 
   def _add_task(self, f):
     """

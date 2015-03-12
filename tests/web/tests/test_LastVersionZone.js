@@ -1,10 +1,15 @@
 function MockZone(initText){
   this.value = initText || "";
-  this.val = function(arg1){
+  this.text = function(arg1) {
     if(arg1 == undefined)
       return this.value;
     this.value = arg1;
   };
+
+  // Alias to get value
+  this.val = function(){
+    return this.text();
+  }
 }
 
 
