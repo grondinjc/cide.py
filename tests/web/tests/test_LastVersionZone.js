@@ -1,21 +1,19 @@
-function MockZone(initText){
+function MockZoneLastVersion(initText){
   this.value = initText || "";
-  this.text = function(arg1) {
-    if(arg1 == undefined)
-      return this.value;
-    this.value = arg1;
-  };
-
-  // Alias to get value
-  this.val = function(){
-    return this.text();
-  }
 }
+MockZoneLastVersion.prototype.text = function(arg1){
+  if(arg1 == undefined)
+    return this.value;
+  this.value = arg1;
+};
+MockZoneLastVersion.prototype.val = function(){
+  return this.text();
+};
 
 
 QUnit.module( "test_LastVersionZone", {
   beforeEach: function() {
-    this.mock = new MockZone("Hello ");
+    this.mock = new MockZoneLastVersion("Hello ");
     this.lvz = new LastVersionZone(this.mock);
     this.add1 = createAddModif("Hello", 0);
     this.add2 = createAddModif("123", 4);

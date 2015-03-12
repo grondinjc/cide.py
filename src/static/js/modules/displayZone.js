@@ -6,7 +6,6 @@ function DisplayZone(node, inputHandler){
   // Listened events to handle user inputs
   this._TEXT_EVENTS = "input paste";
 
-
   this._zone = node;
   this._inputHandler = inputHandler;
   // Initialize stored text data attribute
@@ -44,5 +43,7 @@ DisplayZone.prototype.getCursorPos = function(){
   return this._zone.caret();
 };
 DisplayZone.prototype.setCursorPos = function(pos){
+  pos = Math.min(pos, this.getText().length); // Checkup upper bound
+  pos = Math.max(pos, 0); // Checkup lower bound
   this._zone.caret(pos);
 };
