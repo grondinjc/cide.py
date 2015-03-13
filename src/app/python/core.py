@@ -230,10 +230,11 @@ class Core(object):
 
         users_registered = deepcopy(self._project_files[path].users)
         self._logger.info("_task_apply_changes call notify")
-        self._notify_event(lambda l: l.notify_file_edit(path,
-                                                        changes,
-                                                        version,
-                                                        users_registered))
+        self._add_task(lambda: self._notify_event(
+          lambda l: l.notify_file_edit(path,
+                                       changes,
+                                       version,
+                                       users_registered)))
         self._logger.info("_task_apply_changes call notify ... CALLED")
       self._logger.info("_task_apply_changes lock about to be released")
     self._logger.info("_task_apply_changes lock released")
