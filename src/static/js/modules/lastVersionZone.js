@@ -7,13 +7,9 @@ function LastVersionZone(node) {
 	  //modifications are applied as received (same order)
     //no indexing are applied to the modifications
     var changedContent = this.get();
-    modifications.map(function(mod) {
-      changedContent = mod.type == CHANGE_RM_TYPE ?
-        // Remove
-        (changedContent.slice(0, mod.pos - mod.count) + changedContent.slice(mod.pos)) :
-        // Add
-        (changedContent.slice(0, mod.pos) + mod.content + changedContent.slice(mod.pos));
-    });
+    for(var modifIndex = 0; modifIndex < modifications.length; ++modifIndex){
+      changedContent = modifications[modifIndex].applyOnText(changedContent);
+    }
     
     this.put(changedContent);
   };

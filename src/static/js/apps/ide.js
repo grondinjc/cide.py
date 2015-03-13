@@ -85,9 +85,9 @@ function AppIDE(pushInterval) {
 
     // Load TreeView content
     this._requestHandler.get("tree", {}, function(response){
-      response.nodes.forEach(function(elem){
-        obj._tree.addNode(elem.node, elem.isDir);
-      });
+      for(var i = 0; i < response.nodes.length; ++i){
+        obj._tree.addNode(response.nodes[i].node, response.nodes[i].isDir);
+      }
     });
   };
 
@@ -111,19 +111,19 @@ function AppIDE(pushInterval) {
     // -- Remove text : 1 diff remove element
     // -- Highlight text and add text : 1 diff add element and 1 diff remove element 
     var at = 0;
-    diff.map(function(change){
-      switch(change[0]) {
+    for(var i = 0; i < diff.length; ++i){
+      switch(diff[i][0]) {
         case -1:
-          obj._changeMemory.removeChange(at+change[1].length, change[1].length);
+          obj._changeMemory.removeChange(at, diff[i][1].length);
           break;
         case 1:
-          obj._changeMemory.addChange(at, change[1]);
+          obj._changeMemory.addChange(at, diff[i][1]);
           // no break on purpose
         case 0:     
-          at += change[1].length;
+          at += diff[i][1].length;
           break;
       }
-    });     
+    }     
   };
 
   this.showFileContent = function(filepath) {
@@ -143,7 +143,11 @@ function AppIDE(pushInterval) {
     // Check if opCode means fileAdd
 
     // opCode is textEdit
-    obj.notifySoft(jsonObj);
+    var modifications = [];
+    for(var i = 0; i < jsonObj.changes.length; ++i){
+      modifications.push(ObjectChangeFactory(jsonObj.changes[i]));
+    }
+    obj.notifySoft(modifications);
   };
 
   // Does not receive a group of modifications since
@@ -155,8 +159,8 @@ function AppIDE(pushInterval) {
   };
 
   this.notifySoft = function(modifications) {
-    this._changeMemory.update(modifications.changes);
-    this._zoneLastVersion.update(modifications.changes);
+    this._changeMemory.update(modifications);
+    this._zoneLastVersion.update(modifications);
 
     var cursor_pos = this._zoneDisplay.getCursorPos();
     this._zoneDisplay.forceUpdate(this._combineText(cursor_pos));
@@ -165,16 +169,10 @@ function AppIDE(pushInterval) {
   this._combineText = function(cursor_pos) {
     var base = this._zoneLastVersion.get();
     var modifs = this._changeMemory.get();
-    modifs.map(function(mod) {
-      base = mod.type == CHANGE_RM_TYPE ?
-        base.cutFrom(mod.pos, mod.count):
-        base.insert(mod.content, mod.pos);
-
-      // The delete will need to be thinked a bit more
-      cursor_pos = mod.pos <= cursor_pos ?
-        cursor_pos + (mod.type == CHANGE_RM_TYPE ? 0 : mod.content) :
-        cursor_pos;
-    });
+    for(var i = 0; i < modifs.length; ++i) {
+      base = modifs[i].applyOnText(base);
+      cursor_pos = modifs[i].applyOnPos(cursor_pos);
+    }
     return [base, cursor_pos];
   };
 };

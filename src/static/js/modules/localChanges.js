@@ -12,27 +12,24 @@ function LocalChanges() {
   this._modifications = [];
 }
 LocalChanges.prototype.get = function() {
-  if(this._state.isChangeInProgress())
+  if(this._state.isChangeInProgress()){
     this.saveChange(this._state.getPendingChange())
     this._state.init();
-  return this._modifications.dcopy();
+  }
+  return serializeObjectChangeList(this._modifications);
 };
 LocalChanges.prototype.update = function(deltas) {
   /* At request was received from the server.
   It can be additions, or removals or both.
   All saved offset need to be updated */
-  deltas.map(function(delta) {
+  for(var deltaIndex = 0; deltaIndex < deltas.length; ++deltaIndex){
     // For stored change
-    this._modifications.map(function(mod) {
-      if(delta.pos <= mod.pos) {
-        mod.pos += delta.type == CHANGE_RM_TYPE ?
-          -delta.count :
-          delta.content.length;
-      }
-    });
+    for(var modifIndex = 0; modifIndex < this._modifications.length; ++modifIndex){
+      this._modifications[modifIndex].updatePos(deltas[deltaIndex]);
+    }
     // For current change, when defined
-    this._state.update(delta);
-  }, this);
+    this._state.update(deltas[deltaIndex]);
+  }
 };
 LocalChanges.prototype.clear = function() {
   this._modifications.clear();
@@ -84,7 +81,7 @@ LocalChangeAddState.prototype.add = function(at, val){
   var theoricalAt = this._posState.get() + this._addedData.length;
   if(theoricalAt != at && this._addedData.length != 0) {
     // change somewhere else... save 
-    this._mem.saveChange(createAddModif(this._addedData, this._posState.get()));
+    this._mem.saveChange(this.getPendingChange());
 
     // and start new change
     this._posState.set(at);
@@ -105,7 +102,7 @@ LocalChangeAddState.prototype.isChangeInProgress = function() {
   return this._addedData.length != 0;
 };
 LocalChangeAddState.prototype.getPendingChange = function() {
-  return createAddModif(this._addedData, this._posState.get());
+  return new ObjectAddChange(this._posState.get(), this._addedData);
 };
 LocalChangeAddState.prototype.update = function(delta) {
   this._posState.update(delta);
@@ -135,7 +132,7 @@ LocalChangeRemoveState.prototype.remove = function(at, count) {
   var theoricalAt = this._posState.get() - this._removedCount;
   if(theoricalAt != at && this._removedCount != 0) {
     // change somewhere else... save 
-    this._mem.saveChange(createRemoveModif(this._removedCount, this._posState.get()));
+    this._mem.saveChange(this.getPendingChange());
 
     // and start new change
     this._posState.set(at);
@@ -153,7 +150,7 @@ LocalChangeRemoveState.prototype.isChangeInProgress = function() {
   return this._removedCount != 0;
 };
 LocalChangeRemoveState.prototype.getPendingChange = function() {
-  return createRemoveModif(this._removedCount, this._posState.get());
+  return new ObjectRemoveChange(this._posState.get(), this._removedCount);
 };
 LocalChangeRemoveState.prototype.update = function(delta) {
   this._posState.update(delta);
@@ -200,9 +197,5 @@ PositionKnownState.prototype.trySet = function(pos){
   // Nothing to do since a position is known
 };
 PositionKnownState.prototype.update = function(delta){
-  if(delta.pos <= this._pos) {
-    this._pos += delta.type == CHANGE_RM_TYPE ? 
-      -delta.count : 
-      delta.content.length;
-  }
+  this._pos = delta.applyOnPos(this._pos);
 };
