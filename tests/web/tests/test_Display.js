@@ -25,7 +25,7 @@ MockZoneDisplay.prototype.setText = function(text){ this.valueText = text; };
 function MockInputHandler(){}
 
 
-// Tests for LocalChanges module
+// Tests for Display module
 QUnit.module( "test_Display", {
   beforeEach: function() {
     this.mzd = new MockZoneDisplay();

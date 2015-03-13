@@ -14,6 +14,7 @@ Array.prototype.clear = function() {
 
 /* STRING HELPER */
 String.prototype.insert = function(str, index) {
+  index = Math.max(index, 0); // Check lower bound;
   return this.slice(0, index) + str + this.slice(index);
 };
 String.prototype.startsWith = function (str) {
@@ -24,8 +25,11 @@ String.prototype.endsWith = function(str) {
   var ends = d >= 0 && this.lastIndexOf(str) === d;
   return d >= 0 && this.lastIndexOf(str) === d;
 };
-String.prototype.cut = function(start, end) {
-  return this.substr(0,start) + this.substr(end+1);
+String.prototype.cutFrom = function(pos, fowardCount) {
+  // will remove [ pos ; pos + fowardCount [
+  pos = Math.max(pos, 0); // Check lower bound;
+  fowardCount = Math.max(fowardCount, 0); // Check lower bound;
+  return this.substr(0,pos) + this.substr(pos+fowardCount);
 };
 
 /* MEASUREMENT HELPER */

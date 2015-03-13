@@ -54,7 +54,7 @@ RequestHandler.prototype.close = function() {
 RequestHandler.prototype._send = function(type, url, requestData, successCallback, errorCallback, async) {
   successCallback = successCallback || this.EMPTY_CALLBACK;
   errorCallback = errorCallback || this.EMPTY_CALLBACK;
-  async = async == undefined ? true : false;
+  async = async == undefined ? true : async;
 
   $.ajax({
     type: type,

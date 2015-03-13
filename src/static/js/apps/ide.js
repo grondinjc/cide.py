@@ -167,7 +167,7 @@ function AppIDE(pushInterval) {
     var modifs = this._changeMemory.get();
     modifs.map(function(mod) {
       base = mod.type == CHANGE_RM_TYPE ?
-        base.cut(mod.pos, mod.pos+mod.count):
+        base.cutFrom(mod.pos, mod.count):
         base.insert(mod.content, mod.pos);
 
       // The delete will need to be thinked a bit more
