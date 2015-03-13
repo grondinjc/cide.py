@@ -1,3 +1,4 @@
+import sys
 import os
 from copy import deepcopy
 from threading import Lock
@@ -223,21 +224,26 @@ class Core(object):
     @param path: The path of the file on which modifications will be applied
     """
     self._logger.info("_task_apply_changes lock requested")
-    with self._project_files_lock:
-      self._logger.info("_task_apply_changes lock acquired")
-      if path in self._project_files:
-        version, changes = self._project_files[path].file.writeModifications()
+    try:
+      with self._project_files_lock:
+        self._logger.info("_task_apply_changes lock acquired")
+        if path in self._project_files:
+          version, changes = self._project_files[path].file.writeModifications()
+          users_registered = deepcopy(self._project_files[path].users)
+          self._logger.info("_task_apply_changes call notify")
+          self._add_task(lambda: self._notify_event(
+            lambda l: l.notify_file_edit(path,
+                                         changes,
+                                         version,
+                                         users_registered)))
+          self._logger.info("_task_apply_changes call notify ... CALLED")
 
-        users_registered = deepcopy(self._project_files[path].users)
-        self._logger.info("_task_apply_changes call notify")
-        self._add_task(lambda: self._notify_event(
-          lambda l: l.notify_file_edit(path,
-                                       changes,
-                                       version,
-                                       users_registered)))
-        self._logger.info("_task_apply_changes call notify ... CALLED")
-      self._logger.info("_task_apply_changes lock about to be released")
-    self._logger.info("_task_apply_changes lock released")
+        self._logger.info("_task_apply_changes lock about to be released")
+    except:
+      e = sys.exc_info()[0]
+      self._logger.exception("EXCEPTION RAISED {0}".format(e))
+    finally:
+      self._logger.info("_task_apply_changes lock released")
 
   def _add_task(self, f):
     """
