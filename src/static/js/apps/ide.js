@@ -1,15 +1,10 @@
+DEFAULT_PUSH_INTERVAL = 2000; // ms
+
 /* Central class that will interact will all other classes. */
 function AppIDE(pushInterval) {
 
   // Setup event handlers
   var obj = this; // For closure
-
-  // This will be used to store the value inside
-  // the data attribute at the following key
-  this._DATA_TEXT_KEY = "saved-text";
-
-  // Listened events to handle user inputs
-  this._TEXT_EVENTS = "input paste";
 
   this._openedFile = undefined;
   this._fileRevision = undefined;
@@ -31,21 +26,19 @@ function AppIDE(pushInterval) {
   this._zoneDisplay = null;
 
   this._nodeDisplay = null;
+
+  this._sentChanges = null;
+  this._bundleID = 0;
   
 
   this.init = function(lastVersionZoneId, displayZoneId) {
-
-    // Get a ref to edit nodes
-    var nodeLastVersion = $("#" + lastVersionZoneId);
-    this._nodeDisplay = $("#" + displayZoneId);
-
     // Required to get cursor position on contentEditable pre tag
     var elementDisplay = document.getElementById(displayZoneId);
 
     // Create classes
     this._changeMemory = new LocalChanges();
-    this._zoneLastVersion = new LastVersionZone(nodeLastVersion);
-    this._zoneDisplay = new DisplayZone(this._nodeDisplay);
+    this._zoneLastVersion = new LastVersionZone($("#" + lastVersionZoneId));
+    this._zoneDisplay = new DisplayZone($("#" + displayZoneId), this._handleInputEvent);
     this._tree = new ProjectTreeView();
 
     // Handle ways of sending and receiving data from/to server
@@ -55,10 +48,8 @@ function AppIDE(pushInterval) {
     // Diff lib to compare two texts
     this._difftool = new diff_match_patch();
     
-    // Initialize stored text data attribute
-    this._nodeDisplay.data(this._DATA_TEXT_KEY, this._nodeDisplay.text() || ""); 
-    
     // Push changes handler 
+    this._sentChanges = [];
     this._pushIntervalHandle = setInterval( 
       function() {
         // try push
@@ -66,19 +57,28 @@ function AppIDE(pushInterval) {
         if(changes.length == 0) 
           return;
 
-        // Send and clear on success
-        var modifObject = createModifGroup(changes, obj._openedFile, obj._fileRevision);
+        // Clear changes to avoid resending
+        obj._changeMemory.clear();
+        var currentBundleID = obj._bundleID;
+        ++obj._bundleID;
+
+        // Save and send, delete sent changes on success
+        var modifObject = createModifGroup(changes, obj._openedFile, currentBundleID);
+        console.log("Current bundle id is ", currentBundleID, modifObject);
+        obj._sentChanges.push([currentBundleID, modifObject]); // place at end of array
         obj._requestHandler.put("save", modifObject, function(){
           // Will I delete new input ??
-          console.log("Changes sent, clear local changes");
-          obj._changeMemory.clear();
-        });
+          var clearChange = obj._sentChanges[0];
+          console.log("ACK bundle id is ", clearChange[0], clearChange[1]);
+          obj._sentChanges.shift(); // pop front
+          /*if(clearChange[0] != currentBundleID){
+            alert("Fuck up happened");
+          }*/
+        }, function(){}, true);
       },
       this._pushInterval
     );
 
-    // Local and display sync handler
-    this._nodeDisplay.bind(this._TEXT_EVENTS, this._handleInputEvent);
 
     // Initialise Tree root.
     this._tree.initRoot("tree");
@@ -94,10 +94,11 @@ function AppIDE(pushInterval) {
   this._handleInputEvent = function(evt) {
     // Get old value, compare and store new
     // $(this) corresponds to nodeDisplay
-    var oldText = obj._nodeDisplay.data(obj._DATA_TEXT_KEY);
-    var newText = obj._nodeDisplay.text();
+    var oldText = obj._zoneDisplay.getLastVersion();
+    var newText = obj._zoneDisplay.getText();
+
     if(oldText == newText) return; // paste events are trigged early
-    obj._nodeDisplay.data(obj._DATA_TEXT_KEY, newText); 
+    obj._zoneDisplay.saveVersion(newText);
 
     // https://code.google.com/p/google-diff-match-patch/wiki/API
     // A diff is a pair (type, text) where type is 1 for addition,
@@ -134,16 +135,7 @@ function AppIDE(pushInterval) {
       // on success
       obj._fileRevision = response.vers;
       obj.notifyForce(createAddModif(response.content, 0));
-      // Save content in data attributes
-      obj._nodeDisplay.data(obj._DATA_TEXT_KEY, response.content);
     });
-  };
-
-  this._updateDisplayNoEvent = function(text) {
-    // Hack to avoid considering server text as the user input
-    this._nodeDisplay.unbind(this._TEXT_EVENTS);
-    this._zoneDisplay.update(text);
-    this._nodeDisplay.bind(this._TEXT_EVENTS, this._handleInputEvent);
   };
 
   // Data received from server
@@ -159,23 +151,30 @@ function AppIDE(pushInterval) {
   this.notifyForce = function(initialDelta) {
     this._zoneLastVersion.put(initialDelta.content);
     this._changeMemory.clear();
-    this._updateDisplayNoEvent(initialDelta.content); 
+    this._zoneDisplay.forceUpdate([initialDelta.content, initialDelta.content.length]); 
   };
 
   this.notifySoft = function(modifications) {
     this._changeMemory.update(modifications.changes);
     this._zoneLastVersion.update(modifications.changes);
-    this._updateDisplayNoEvent(this._combineText());
+
+    var cursor_pos = this._zoneDisplay.getCursorPos();
+    this._zoneDisplay.forceUpdate(this._combineText(cursor_pos));
   };
 
-  this._combineText = function() {
+  this._combineText = function(cursor_pos) {
     var base = this._zoneLastVersion.get();
     var modifs = this._changeMemory.get();
     modifs.map(function(mod) {
       base = mod.type == CHANGE_RM_TYPE ?
-        base.cut(mod.pos, mod.pos+mod.count):
+        base.cutFrom(mod.pos, mod.count):
         base.insert(mod.content, mod.pos);
+
+      // The delete will need to be thinked a bit more
+      cursor_pos = mod.pos <= cursor_pos ?
+        cursor_pos + (mod.type == CHANGE_RM_TYPE ? 0 : mod.content) :
+        cursor_pos;
     });
-    return base;
+    return [base, cursor_pos];
   };
 };

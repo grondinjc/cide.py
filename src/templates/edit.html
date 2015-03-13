@@ -71,13 +71,11 @@
         <div class="col-md-9">
           <!-- Editing zone impl -->
           <h1>Editing display</h1>
-          <!-- Container of all lines -->
+          <!-- Container of all lines  contenteditable="true"-->
           <h4>Display</h4>
-          <div id="editorWidget">
-            <pre id="editorDisplay" class="codeDisplay" contenteditable="true"></pre>
-          </div>
+          <code id="editorDisplay" class="codeDisplay" contenteditable="true"></code>
           <h4>Last version from server</h4>
-          <textarea id="editorLastVersion" class="codeInputDebug"></textarea>
+          <code id="editorLastVersion" class="codeDisplay"></code>
         </div><!-- ide sections -->
 
       </div><!-- side sections and ide -->
@@ -121,6 +119,8 @@
       </div>
     </div>
 
+    <button onClick="show_dump()">Show dump</button>
+
     <!-- JQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <!-- JS -->
@@ -135,9 +135,10 @@
     <script src="static/js/utils/helper.js" type="text/javascript" charset="utf-8"></script>
     <script src="static/js/utils/representation.js" type="text/javascript" charset="utf-8"></script>
     <!-- Bootstrap JS -->
-    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>   
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
     <!-- Diff match patch JS -->
     <script src="static/js/libs/diff_match_patch.js" type="text/javascript" charset="utf-8"></script>
-    
+    <!-- Caret JQuery helper JS (https://github.com/accursoft/caret) -->
+    <script src="static/js/libs/jquery.caret.js" type="text/javascript" charset="utf-8"></script>
   </body>
 </html>

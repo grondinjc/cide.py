@@ -1,5 +1,4 @@
 // Central point of interractions
-DEFAULT_PUSH_INTERVAL = 2000; // ms
 ideApplication = null;
 tree = null;
 chatApplication = null;
@@ -32,6 +31,21 @@ function terminate(){
 
 
 // TEST_ONLY
+function test_f(){
+  var chtml = $('#mydiv').html();
+  var ctext = $('#mydiv').text();
+  alert(chtml);
+  alert(ctext);
+}
+
+function show_dump(){
+  // Do request
+  ideApplication._requestHandler.get("dump", createDump("/main.py"), function(response){
+    msg = "--ContentBegin--\n" + response.content + "\n--ContentEnd--";
+    alert(msg);
+  });
+}
+
 function addNewTextAt(){
   var content = $('#addText').val();
   var at = parseInt($('#addAt').val());

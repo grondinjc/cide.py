@@ -6,7 +6,7 @@ function LastVersionZone(node) {
   this.update = function(modifications) {
 	  //modifications are applied as received (same order)
     //no indexing are applied to the modifications
-    var changedContent = this._zone.val();
+    var changedContent = this.get();
     modifications.map(function(mod) {
       changedContent = mod.type == CHANGE_RM_TYPE ?
         // Remove
@@ -15,14 +15,14 @@ function LastVersionZone(node) {
         (changedContent.slice(0, mod.pos) + mod.content + changedContent.slice(mod.pos));
     });
     
-    this._zone.val(changedContent);
+    this.put(changedContent);
   };
 
   this.put = function(text) {
-    this._zone.val(text);
+    this._zone.text(text);
   };
 
   this.get = function() {
-     return this._zone.val();
+     return this._zone.text();
   };
 }

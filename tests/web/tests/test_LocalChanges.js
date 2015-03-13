@@ -1,3 +1,555 @@
-QUnit.test( "hello test", function( assert ) {
-  assert.ok( 1 == "1", "Passed!" );
+// Tests for LocalChanges module
+QUnit.module( "test_LocalChanges", {
+  beforeEach: function() {
+    this.lc = new LocalChanges();
+  },
+  afterEach: function() {
+    // Nothing to be done
+  }
+});
+
+
+
+QUnit.test("testGet :: empty array", function(assert) {
+  var changes = this.lc.get();
+  assert.ok(changes.length == 0, "Default has no modification");
+});
+
+QUnit.test("testGet :: no char", function(assert) {
+  this.lc.addChange(0, "");
+  var changes = this.lc.get();
+  assert.ok(changes.length == 0, "There should be no elements");
+});
+
+// This should not happen 
+QUnit.test("testGet :: invalid position", function(assert) {
+  this.lc.addChange(-1, "abc");
+  var changes = this.lc.get();
+  assert.ok(changes.length != 0, "An invalid position should not happen in pratice");
+});
+
+QUnit.test("testGet :: no char ; invalid position", function(assert) {
+  this.lc.addChange(-1, "");
+  var changes = this.lc.get();
+  assert.ok(changes.length == 0, "An invalid position should not happen in pratice");
+});
+
+
+
+QUnit.test("testClear :: empty array", function(assert) {
+  this.lc.clear();
+  var changes = this.lc.get();
+  assert.ok(changes.length == 0, "Size should be of zero");
+});
+
+QUnit.test("testClear :: contiguous changes", function(assert) {
+  this.lc.addChange(0, "1");
+  this.lc.addChange(1, "2");
+  this.lc.clear();
+  var changes = this.lc.get();
+  assert.ok(changes.length == 0, "Size should be of zero");
+});
+
+QUnit.test("testClear :: none contiguous changes", function(assert) {
+  this.lc.addChange(1, "2");
+  this.lc.addChange(0, "1");
+  this.lc.clear();
+  var changes = this.lc.get();
+  assert.ok(changes.length == 0, "Size should be of zero");
+});
+
+
+
+QUnit.test("testAddChange :: one char", function(assert) {
+  this.lc.addChange(0, "1");
+  var changes = this.lc.get();
+  var expected = [createAddModif("1", 0)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be type add of '1' at 0");
+});
+
+QUnit.test("testAddChange :: contiguous char", function(assert) {
+  this.lc.addChange(0, "1");
+  this.lc.addChange(1, "2");
+  this.lc.addChange(2, "3");
+  var changes = this.lc.get();
+  var expected = [createAddModif("123", 0)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be type add of '123' at 0");
+});
+
+QUnit.test("testAddChange :: spaced char", function(assert) {
+  this.lc.addChange(0, "1");
+  this.lc.addChange(10, "2");
+  var changes = this.lc.get();
+  var expected = [createAddModif("1", 0),
+                  createAddModif("2", 10)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be type add of '1' at 0 and '2' at 10");
+});
+
+QUnit.test("testAddChange :: none contiguous char", function(assert) {
+  this.lc.addChange(10, "2");
+  this.lc.addChange(1, "1");
+  var changes = this.lc.get();
+  var expected = [createAddModif("2", 10), 
+                  createAddModif("1", 1)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be type add of '2' at 10 and '1' at 1");
+});
+
+QUnit.test("testAddChange :: none contiguous char ; same position", function(assert) {
+  this.lc.addChange(10, "a");
+  this.lc.addChange(10, "A");
+  var changes = this.lc.get();
+  var expected = [createAddModif("a", 10), 
+                  createAddModif("A", 10)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  // Localzone does not update his own changes by itself
+  assert.deepEqual(changes, expected, "Should be type add both at 10");
+});
+
+QUnit.test("testAddChange :: one block", function(assert) {
+  this.lc.addChange(0, "123");
+  var changes = this.lc.get();
+  var expected = [createAddModif("123", 0)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be type add of '123' at 0");
+});
+
+QUnit.test("testAddChange :: contiguous block", function(assert) {
+  this.lc.addChange(0, "123");
+  this.lc.addChange(3, "456");
+  this.lc.addChange(6, "789");
+  var changes = this.lc.get();
+  var expected = [createAddModif("123456789", 0)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be type add of '123456789' at 0");
+});
+
+QUnit.test("testAddChange :: spaced block", function(assert) {
+  this.lc.addChange(0, "123");
+  this.lc.addChange(10, "456");
+  var changes = this.lc.get();
+  var expected = [createAddModif("123", 0),
+                  createAddModif("456", 10)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be type add of '123' at 0 and '456' at 10");
+});
+
+QUnit.test("testAddChange :: none contiguous block", function(assert) {
+  this.lc.addChange(10, "ABC");
+  this.lc.addChange(1, "abc");
+  var changes = this.lc.get();
+  var expected = [createAddModif("ABC", 10), 
+                  createAddModif("abc", 1)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be type add of 'ABC' at 10 and 'abc' at 1");
+});
+
+QUnit.test("testAddChange :: none contiguous block ; same position", function(assert) {
+  this.lc.addChange(10, "abc");
+  this.lc.addChange(10, "ABC");
+  var changes = this.lc.get();
+  var expected = [createAddModif("abc", 10), 
+                  createAddModif("ABC", 10)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  // Localzone does not update his own changes by itself
+  assert.deepEqual(changes, expected, "Should be type add both at 10");
+});
+
+QUnit.test("testAddChange :: none contiguous block ; overlapping", function(assert) {
+  this.lc.addChange(10, "abc");
+  this.lc.addChange(11, "A");
+  var changes = this.lc.get();
+  var expected = [createAddModif("abc", 10), 
+                  createAddModif("A", 11)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be type add of 'abc' at 10 and 'A' at 11");
+});
+
+
+
+QUnit.test("testUpdate (add) :: one char ; one update pos before", function(assert) {
+  this.lc.addChange(10, "A"); // Base changes
+  var deltas = [createAddModif("a", 0)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("A", 11)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: one char ; one update pos after", function(assert) {
+  this.lc.addChange(10, "A"); // Base changes
+  var deltas = [createAddModif("a", 20)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("A", 10)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should not be updated");
+});
+
+QUnit.test("testUpdate (add) :: one char ; one update pos same", function(assert) {
+  this.lc.addChange(10, "A"); // Base changes
+  var deltas = [createAddModif("a", 10)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("A", 11)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: contiguous char ; one update pos before", function(assert) {
+  this.lc.addChange(10, "A");
+  this.lc.addChange(11, "B");
+  this.lc.addChange(12, "C"); // Base changes
+  var deltas = [createAddModif("a", 0)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("ABC", 11)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be updated at 11");
+});
+
+QUnit.test("testUpdate (add) :: contiguous char ; one update pos after", function(assert) {
+  this.lc.addChange(10, "A");
+  this.lc.addChange(11, "B");
+  this.lc.addChange(12, "C"); // Base changes
+  var deltas = [createAddModif("a", 20)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("ABC", 10)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should not be updated");
+});
+
+QUnit.test("testUpdate (add) :: contiguous char ; one update pos same", function(assert) {
+  this.lc.addChange(10, "A");
+  this.lc.addChange(11, "B");
+  this.lc.addChange(12, "C"); // Base changes
+  var deltas = [createAddModif("a", 10)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("ABC", 11)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: spaced char ; one update pos before", function(assert) {
+  this.lc.addChange(5, "1");
+  this.lc.addChange(10, "2"); // Base changes
+  var deltas = [createAddModif("a", 0)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("1", 6),
+                  createAddModif("2", 11)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: spaced char ; one update pos after", function(assert) {
+  this.lc.addChange(5, "1");
+  this.lc.addChange(10, "2"); // Base changes
+  var deltas = [createAddModif("a", 20)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("1", 5),
+                  createAddModif("2", 10)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should not be updated");
+});
+
+QUnit.test("testUpdate (add) :: spaced char ; one update pos same", function(assert) {
+  this.lc.addChange(5, "1");
+  this.lc.addChange(10, "2"); // Base changes
+  var deltas = [createAddModif("a", 10)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("1", 5),
+                  createAddModif("2", 11)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Only last one should be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous char ; one update pos before", function(assert) {
+  this.lc.addChange(10, "2");
+  this.lc.addChange(5, "1"); // Base changes
+  var deltas = [createAddModif("a", 0)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("2", 11),
+                  createAddModif("1", 6)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous char ; one update pos after", function(assert) {
+  this.lc.addChange(10, "2");
+  this.lc.addChange(5, "1"); // Base changes
+  var deltas = [createAddModif("a", 20)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("2", 10),
+                  createAddModif("1", 5)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should not be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous char ; one update pos same", function(assert) {
+  this.lc.addChange(10, "2");
+  this.lc.addChange(5, "1"); // Base changes
+  var deltas = [createAddModif("a", 10)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("2", 11),
+                  createAddModif("1", 5)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Only last one should be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous char ; same position ; one update pos before", function(assert) {
+  this.lc.addChange(10, "a");
+  this.lc.addChange(10, "A"); // Base changes
+  var deltas = [createAddModif("a", 0)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("a", 11),
+                  createAddModif("A", 11)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous char ; same position ; one update pos after", function(assert) {
+  this.lc.addChange(10, "a");
+  this.lc.addChange(10, "A"); // Base changes
+  var deltas = [createAddModif("a", 20)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("a", 10),
+                  createAddModif("A", 10)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should not be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous char ; same position ; one update pos same", function(assert) {
+  this.lc.addChange(10, "a");
+  this.lc.addChange(10, "A"); // Base changes
+  var deltas = [createAddModif("a", 10)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("a", 11),
+                  createAddModif("A", 11)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: one block ; one update pos before", function(assert) {
+  this.lc.addChange(10, "123"); // Base changes
+  var deltas = [createAddModif("abc", 0)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("123", 13)];
+  assert.ok(changes.length == 1, "There should only one elements");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: one block ; one update pos after", function(assert) {
+  this.lc.addChange(10, "123"); // Base changes
+  var deltas = [createAddModif("abc", 20)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("123", 10)];
+  assert.ok(changes.length == 1, "There should only one elements");
+  assert.deepEqual(changes, expected, "Should not be updated");
+});
+
+QUnit.test("testUpdate (add) :: one block ; one update pos same", function(assert) {
+  this.lc.addChange(10, "123"); // Base changes
+  var deltas = [createAddModif("abc", 10)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("123", 13)];
+  assert.ok(changes.length == 1, "There should only one elements");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: contiguous block ; one update pos before", function(assert) {
+  this.lc.addChange(10, "123");
+  this.lc.addChange(13, "456");
+  this.lc.addChange(16, "789"); // Base changes
+  var deltas = [createAddModif("abc", 0)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("123456789", 13)];
+  assert.ok(changes.length == 1, "There should only one elements");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: contiguous block ; one update pos after", function(assert) {
+  this.lc.addChange(10, "123");
+  this.lc.addChange(13, "456");
+  this.lc.addChange(16, "789"); // Base changes
+  var deltas = [createAddModif("abc", 20)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("123456789", 10)];
+  assert.ok(changes.length == 1, "There should only one elements");
+  assert.deepEqual(changes, expected, "Should not be updated");
+});
+
+QUnit.test("testUpdate (add) :: contiguous block ; one update pos same", function(assert) {
+  this.lc.addChange(10, "123");
+  this.lc.addChange(13, "456");
+  this.lc.addChange(16, "789"); // Base changes
+  var deltas = [createAddModif("abc", 10)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("123456789", 13)];
+  assert.ok(changes.length == 1, "There should only one elements");
+  assert.deepEqual(changes, expected, "Only last one should be updated");
+});
+
+QUnit.test("testUpdate (add) :: spaced block ; one update pos before", function(assert) {
+  this.lc.addChange(5, "123");
+  this.lc.addChange(13, "456"); // Base changes
+  var deltas = [createAddModif("abc", 0)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("123", 8),
+                  createAddModif("456", 16)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: spaced block ; one update pos after", function(assert) {
+  this.lc.addChange(5, "123");
+  this.lc.addChange(13, "456"); // Base changes
+  var deltas = [createAddModif("abc", 20)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("123", 5),
+                  createAddModif("456", 13)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should not be updated");
+});
+
+QUnit.test("testUpdate (add) :: spaced block ; one update pos same", function(assert) {
+  this.lc.addChange(5, "123");
+  this.lc.addChange(13, "456"); // Base changes
+  var deltas = [createAddModif("abc", 13)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("123", 5),
+                  createAddModif("456", 16)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Only last one should be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous block ; one update pos before", function(assert) {
+  this.lc.addChange(13, "456");
+  this.lc.addChange(5, "123"); // Base changes
+  var deltas = [createAddModif("abc", 0)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("456", 16),
+                  createAddModif("123", 8)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous block ; one update pos after", function(assert) {
+  this.lc.addChange(13, "456");
+  this.lc.addChange(5, "123"); // Base changes
+  var deltas = [createAddModif("abc", 20)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("456", 13),
+                  createAddModif("123", 5)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should not be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous block ; one update pos same", function(assert) {
+  this.lc.addChange(13, "456");
+  this.lc.addChange(5, "123"); // Base changes
+  var deltas = [createAddModif("abc", 13)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("456", 16),
+                  createAddModif("123", 5)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Only last one should be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous block ; same position ; one update pos before", function(assert) {
+  this.lc.addChange(10, "abc");
+  this.lc.addChange(10, "ABC"); // Base changes
+  var deltas = [createAddModif("abc", 0)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("abc", 13), 
+                  createAddModif("ABC", 13)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous block ; same position ; one update pos after", function(assert) {
+  this.lc.addChange(10, "abc");
+  this.lc.addChange(10, "ABC"); // Base changes
+  var deltas = [createAddModif("abc", 20)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("abc", 10), 
+                  createAddModif("ABC", 10)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should not be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous block ; same position ; one update pos same", function(assert) {
+  this.lc.addChange(10, "abc");
+  this.lc.addChange(10, "ABC"); // Base changes
+  var deltas = [createAddModif("abc", 10)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("abc", 13), 
+                  createAddModif("ABC", 13)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous block ; overlapping ; one update pos before", function(assert) {
+  this.lc.addChange(10, "abc");
+  this.lc.addChange(11, "A"); // Base changes
+  var deltas = [createAddModif("abc", 0)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("abc", 13), 
+                  createAddModif("A", 14)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous block ; overlapping ; one update pos after", function(assert) {
+  this.lc.addChange(10, "abc");
+  this.lc.addChange(11, "A"); // Base changes
+  var deltas = [createAddModif("abc", 20)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("abc", 10), 
+                  createAddModif("A", 11)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should not be updated");
+});
+
+QUnit.test("testUpdate (add) :: none contiguous block ; overlapping ; one update pos same", function(assert) {
+  this.lc.addChange(10, "abc");
+  this.lc.addChange(11, "A"); // Base changes
+  var deltas = [createAddModif("abc", 11)];
+  this.lc.update(deltas);
+  var changes = this.lc.get();
+  var expected = [createAddModif("abc", 10), 
+                  createAddModif("A", 14)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Only last one should be updated");
 });
