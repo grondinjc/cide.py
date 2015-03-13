@@ -63,6 +63,7 @@ RequestHandler.prototype._send = function(type, url, requestData, successCallbac
     cache: false,
     contentType: 'application/json',
     dataType: "json",
+    async: async,
     success: function(response, text) { 
       successCallback(response, text);
     },
