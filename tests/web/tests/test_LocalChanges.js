@@ -170,6 +170,116 @@ QUnit.test("testAddChange :: none contiguous block ; overlapping", function(asse
 
 
 
+QUnit.test("testRemoveChange :: one char", function(assert) {
+  this.lc.removeChange(0, 1);
+  var changes = this.lc.get();
+  var expected = [createRemoveModif(1, 0)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be type remove of 1 char from 0");
+});
+
+QUnit.test("testRemoveChange :: contiguous char", function(assert) {
+  this.lc.removeChange(0, 1);
+  this.lc.removeChange(1, 1);
+  this.lc.removeChange(2, 1);
+  var changes = this.lc.get();
+  var expected = [createRemoveModif(3, 0)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be type remove of 3 chars from 0");
+});
+
+QUnit.test("testRemoveChange :: spaced char", function(assert) {
+  this.lc.removeChange(0, 1);
+  this.lc.removeChange(10, 1);
+  var changes = this.lc.get();
+  var expected = [createRemoveModif(1, 0),
+                  createRemoveModif(1, 10)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be type remove of 1 char from 0 and of 1 char from 10");
+});
+
+QUnit.test("testRemoveChange :: none contiguous char", function(assert) {
+  this.lc.removeChange(10, 1);
+  this.lc.removeChange(1, 1);
+  var changes = this.lc.get();
+  var expected = [createRemoveModif(1, 10), 
+                  createRemoveModif(1, 1)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be type remove of 1 char from 10 and 1 char from 1");
+});
+
+QUnit.test("testRemoveChange :: none contiguous char ; same position", function(assert) {
+  this.lc.removeChange(10, 1);
+  this.lc.removeChange(10, 1);
+  var changes = this.lc.get();
+  var expected = [createRemoveModif(1, 10), 
+                  createRemoveModif(1, 10)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  // Localzone does not update his own changes by itself
+  assert.deepEqual(changes, expected, "Should be type remove both of 1 char from 10");
+});
+
+QUnit.test("testRemoveChange :: one block", function(assert) {
+  this.lc.removeChange(0, 3);
+  var changes = this.lc.get();
+  var expected = [createRemoveModif(3, 0)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be type remove of 3 chars from 0");
+});
+
+QUnit.test("testRemoveChange :: contiguous block", function(assert) {
+  this.lc.removeChange(0, 3);
+  this.lc.removeChange(3, 3);
+  this.lc.removeChange(6, 3);
+  var changes = this.lc.get();
+  var expected = [createRemoveModif(9, 0)];
+  assert.ok(changes.length == 1, "There should only be one element");
+  assert.deepEqual(changes, expected, "Should be type remove of 9 chars from 0");
+});
+
+QUnit.test("testRemoveChange :: spaced block", function(assert) {
+  this.lc.removeChange(0, 3);
+  this.lc.removeChange(10, 3);
+  var changes = this.lc.get();
+  var expected = [createRemoveModif(3, 0),
+                  createRemoveModif(3, 10)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be type remove of 3 chars from 0 and 3 chars from 10");
+});
+
+QUnit.test("testRemoveChange :: none contiguous block", function(assert) {
+  this.lc.removeChange(10, 3);
+  this.lc.removeChange(1, 3);
+  var changes = this.lc.get();
+  var expected = [createRemoveModif(3, 10), 
+                  createRemoveModif(3, 1)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be type remove of 3 chars from 10 and 3 chars from 1");
+});
+
+QUnit.test("testRemoveChange :: none contiguous block ; same position", function(assert) {
+  this.lc.removeChange(10, 3);
+  this.lc.removeChange(10, 3);
+  var changes = this.lc.get();
+  var expected = [createRemoveModif(3, 10), 
+                  createRemoveModif(3, 10)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  // Localzone does not update his own changes by itself
+  assert.deepEqual(changes, expected, "Should be type remove both of 3 chars from 10");
+});
+
+QUnit.test("testRemoveChange :: none contiguous block ; overlapping", function(assert) {
+  this.lc.removeChange(10, 3);
+  this.lc.removeChange(11, 1);
+  var changes = this.lc.get();
+  var expected = [createRemoveModif(3, 10), 
+                  createRemoveModif(1, 11)];
+  assert.ok(changes.length == 2, "There should be two elements");
+  assert.deepEqual(changes, expected, "Should be type remove of 3 chars from 10 and of 1 char from 11");
+});
+
+
+
 QUnit.test("testUpdate (add) :: one char ; one update pos before", function(assert) {
   this.lc.addChange(10, "A"); // Base changes
   var deltas = [new ObjectAddChange(0, "a")];
