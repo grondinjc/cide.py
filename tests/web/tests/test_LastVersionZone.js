@@ -15,10 +15,10 @@ QUnit.module( "test_LastVersionZone", {
   beforeEach: function() {
     this.mock = new MockZoneLastVersion("Hello ");
     this.lvz = new LastVersionZone(this.mock);
-    this.add1 = createAddModif("Hello", 0);
-    this.add2 = createAddModif("123", 4);
-    this.add3 = createAddModif("World", 6);
-    this.add4 = createAddModif("monde", 6);
+    this.add1 = new ObjectAddChange(0, "Hello");
+    this.add2 = new ObjectAddChange(4, "123");
+    this.add3 = new ObjectAddChange(6, "World");
+    this.add4 = new ObjectAddChange(6, "monde");
   }
 });
 
@@ -57,14 +57,14 @@ QUnit.test( "testUpdate_Overlaps2", function( assert ) {
 });
 
 QUnit.skip( "testUpdate_NegativePosAdd", function( assert ) {
-  var negAdd = createAddModif("Minus", -1);
+  var negAdd = new ObjectAddChange(-1, "Minus");
   this.lvz.update([negAdd]);
   stringResult = this.mock.val();
   assert.equal(stringResult, "Hello ", "Negative position should never happen. If they happen, content should not be changed.");
 });
 
 QUnit.skip( "testUpdate_AfterEndOfFileAdd", function( assert ) {
-  var tooBigAdd = createAddModif("Too big", 100);
+  var tooBigAdd = new ObjectAddChange(100, "Too big");
   this.lvz.update([tooBigAdd]);
   stringResult = this.mock.val();
   assert.equal(stringResult, "Hello ", "Position after end of file should never happen. If they happen, content should not be changed.");
