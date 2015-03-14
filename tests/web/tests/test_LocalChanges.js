@@ -172,7 +172,7 @@ QUnit.test("testAddChange :: none contiguous block ; overlapping", function(asse
 
 QUnit.test("testUpdate (add) :: one char ; one update pos before", function(assert) {
   this.lc.addChange(10, "A"); // Base changes
-  var deltas = [createAddModif("a", 0)];
+  var deltas = [new ObjectAddChange(0, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("A", 11)];
@@ -182,7 +182,7 @@ QUnit.test("testUpdate (add) :: one char ; one update pos before", function(asse
 
 QUnit.test("testUpdate (add) :: one char ; one update pos after", function(assert) {
   this.lc.addChange(10, "A"); // Base changes
-  var deltas = [createAddModif("a", 20)];
+  var deltas = [new ObjectAddChange(20, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("A", 10)];
@@ -192,7 +192,7 @@ QUnit.test("testUpdate (add) :: one char ; one update pos after", function(asser
 
 QUnit.test("testUpdate (add) :: one char ; one update pos same", function(assert) {
   this.lc.addChange(10, "A"); // Base changes
-  var deltas = [createAddModif("a", 10)];
+  var deltas = [new ObjectAddChange(10, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("A", 11)];
@@ -204,7 +204,7 @@ QUnit.test("testUpdate (add) :: contiguous char ; one update pos before", functi
   this.lc.addChange(10, "A");
   this.lc.addChange(11, "B");
   this.lc.addChange(12, "C"); // Base changes
-  var deltas = [createAddModif("a", 0)];
+  var deltas = [new ObjectAddChange(0, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("ABC", 11)];
@@ -216,7 +216,7 @@ QUnit.test("testUpdate (add) :: contiguous char ; one update pos after", functio
   this.lc.addChange(10, "A");
   this.lc.addChange(11, "B");
   this.lc.addChange(12, "C"); // Base changes
-  var deltas = [createAddModif("a", 20)];
+  var deltas = [new ObjectAddChange(20, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("ABC", 10)];
@@ -228,7 +228,7 @@ QUnit.test("testUpdate (add) :: contiguous char ; one update pos same", function
   this.lc.addChange(10, "A");
   this.lc.addChange(11, "B");
   this.lc.addChange(12, "C"); // Base changes
-  var deltas = [createAddModif("a", 10)];
+  var deltas = [new ObjectAddChange(10, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("ABC", 11)];
@@ -239,7 +239,7 @@ QUnit.test("testUpdate (add) :: contiguous char ; one update pos same", function
 QUnit.test("testUpdate (add) :: spaced char ; one update pos before", function(assert) {
   this.lc.addChange(5, "1");
   this.lc.addChange(10, "2"); // Base changes
-  var deltas = [createAddModif("a", 0)];
+  var deltas = [new ObjectAddChange(0, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("1", 6),
@@ -251,7 +251,7 @@ QUnit.test("testUpdate (add) :: spaced char ; one update pos before", function(a
 QUnit.test("testUpdate (add) :: spaced char ; one update pos after", function(assert) {
   this.lc.addChange(5, "1");
   this.lc.addChange(10, "2"); // Base changes
-  var deltas = [createAddModif("a", 20)];
+  var deltas = [new ObjectAddChange(20, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("1", 5),
@@ -263,7 +263,7 @@ QUnit.test("testUpdate (add) :: spaced char ; one update pos after", function(as
 QUnit.test("testUpdate (add) :: spaced char ; one update pos same", function(assert) {
   this.lc.addChange(5, "1");
   this.lc.addChange(10, "2"); // Base changes
-  var deltas = [createAddModif("a", 10)];
+  var deltas = [new ObjectAddChange(10, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("1", 5),
@@ -275,7 +275,7 @@ QUnit.test("testUpdate (add) :: spaced char ; one update pos same", function(ass
 QUnit.test("testUpdate (add) :: none contiguous char ; one update pos before", function(assert) {
   this.lc.addChange(10, "2");
   this.lc.addChange(5, "1"); // Base changes
-  var deltas = [createAddModif("a", 0)];
+  var deltas = [new ObjectAddChange(0, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("2", 11),
@@ -287,7 +287,7 @@ QUnit.test("testUpdate (add) :: none contiguous char ; one update pos before", f
 QUnit.test("testUpdate (add) :: none contiguous char ; one update pos after", function(assert) {
   this.lc.addChange(10, "2");
   this.lc.addChange(5, "1"); // Base changes
-  var deltas = [createAddModif("a", 20)];
+  var deltas = [new ObjectAddChange(20, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("2", 10),
@@ -299,7 +299,7 @@ QUnit.test("testUpdate (add) :: none contiguous char ; one update pos after", fu
 QUnit.test("testUpdate (add) :: none contiguous char ; one update pos same", function(assert) {
   this.lc.addChange(10, "2");
   this.lc.addChange(5, "1"); // Base changes
-  var deltas = [createAddModif("a", 10)];
+  var deltas = [new ObjectAddChange(10, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("2", 11),
@@ -311,7 +311,7 @@ QUnit.test("testUpdate (add) :: none contiguous char ; one update pos same", fun
 QUnit.test("testUpdate (add) :: none contiguous char ; same position ; one update pos before", function(assert) {
   this.lc.addChange(10, "a");
   this.lc.addChange(10, "A"); // Base changes
-  var deltas = [createAddModif("a", 0)];
+  var deltas = [new ObjectAddChange(0, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("a", 11),
@@ -323,7 +323,7 @@ QUnit.test("testUpdate (add) :: none contiguous char ; same position ; one updat
 QUnit.test("testUpdate (add) :: none contiguous char ; same position ; one update pos after", function(assert) {
   this.lc.addChange(10, "a");
   this.lc.addChange(10, "A"); // Base changes
-  var deltas = [createAddModif("a", 20)];
+  var deltas = [new ObjectAddChange(20, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("a", 10),
@@ -335,7 +335,7 @@ QUnit.test("testUpdate (add) :: none contiguous char ; same position ; one updat
 QUnit.test("testUpdate (add) :: none contiguous char ; same position ; one update pos same", function(assert) {
   this.lc.addChange(10, "a");
   this.lc.addChange(10, "A"); // Base changes
-  var deltas = [createAddModif("a", 10)];
+  var deltas = [new ObjectAddChange(10, "a")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("a", 11),
@@ -346,7 +346,7 @@ QUnit.test("testUpdate (add) :: none contiguous char ; same position ; one updat
 
 QUnit.test("testUpdate (add) :: one block ; one update pos before", function(assert) {
   this.lc.addChange(10, "123"); // Base changes
-  var deltas = [createAddModif("abc", 0)];
+  var deltas = [new ObjectAddChange(0, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("123", 13)];
@@ -356,7 +356,7 @@ QUnit.test("testUpdate (add) :: one block ; one update pos before", function(ass
 
 QUnit.test("testUpdate (add) :: one block ; one update pos after", function(assert) {
   this.lc.addChange(10, "123"); // Base changes
-  var deltas = [createAddModif("abc", 20)];
+  var deltas = [new ObjectAddChange(20, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("123", 10)];
@@ -366,7 +366,7 @@ QUnit.test("testUpdate (add) :: one block ; one update pos after", function(asse
 
 QUnit.test("testUpdate (add) :: one block ; one update pos same", function(assert) {
   this.lc.addChange(10, "123"); // Base changes
-  var deltas = [createAddModif("abc", 10)];
+  var deltas = [new ObjectAddChange(10, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("123", 13)];
@@ -378,7 +378,7 @@ QUnit.test("testUpdate (add) :: contiguous block ; one update pos before", funct
   this.lc.addChange(10, "123");
   this.lc.addChange(13, "456");
   this.lc.addChange(16, "789"); // Base changes
-  var deltas = [createAddModif("abc", 0)];
+  var deltas = [new ObjectAddChange(0, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("123456789", 13)];
@@ -390,7 +390,7 @@ QUnit.test("testUpdate (add) :: contiguous block ; one update pos after", functi
   this.lc.addChange(10, "123");
   this.lc.addChange(13, "456");
   this.lc.addChange(16, "789"); // Base changes
-  var deltas = [createAddModif("abc", 20)];
+  var deltas = [new ObjectAddChange(20, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("123456789", 10)];
@@ -402,7 +402,7 @@ QUnit.test("testUpdate (add) :: contiguous block ; one update pos same", functio
   this.lc.addChange(10, "123");
   this.lc.addChange(13, "456");
   this.lc.addChange(16, "789"); // Base changes
-  var deltas = [createAddModif("abc", 10)];
+  var deltas = [new ObjectAddChange(10, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("123456789", 13)];
@@ -413,7 +413,7 @@ QUnit.test("testUpdate (add) :: contiguous block ; one update pos same", functio
 QUnit.test("testUpdate (add) :: spaced block ; one update pos before", function(assert) {
   this.lc.addChange(5, "123");
   this.lc.addChange(13, "456"); // Base changes
-  var deltas = [createAddModif("abc", 0)];
+  var deltas = [new ObjectAddChange(0, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("123", 8),
@@ -425,7 +425,7 @@ QUnit.test("testUpdate (add) :: spaced block ; one update pos before", function(
 QUnit.test("testUpdate (add) :: spaced block ; one update pos after", function(assert) {
   this.lc.addChange(5, "123");
   this.lc.addChange(13, "456"); // Base changes
-  var deltas = [createAddModif("abc", 20)];
+  var deltas = [new ObjectAddChange(20, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("123", 5),
@@ -437,7 +437,7 @@ QUnit.test("testUpdate (add) :: spaced block ; one update pos after", function(a
 QUnit.test("testUpdate (add) :: spaced block ; one update pos same", function(assert) {
   this.lc.addChange(5, "123");
   this.lc.addChange(13, "456"); // Base changes
-  var deltas = [createAddModif("abc", 13)];
+  var deltas = [new ObjectAddChange(13, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("123", 5),
@@ -449,7 +449,7 @@ QUnit.test("testUpdate (add) :: spaced block ; one update pos same", function(as
 QUnit.test("testUpdate (add) :: none contiguous block ; one update pos before", function(assert) {
   this.lc.addChange(13, "456");
   this.lc.addChange(5, "123"); // Base changes
-  var deltas = [createAddModif("abc", 0)];
+  var deltas = [new ObjectAddChange(0, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("456", 16),
@@ -461,7 +461,7 @@ QUnit.test("testUpdate (add) :: none contiguous block ; one update pos before", 
 QUnit.test("testUpdate (add) :: none contiguous block ; one update pos after", function(assert) {
   this.lc.addChange(13, "456");
   this.lc.addChange(5, "123"); // Base changes
-  var deltas = [createAddModif("abc", 20)];
+  var deltas = [new ObjectAddChange(20, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("456", 13),
@@ -473,7 +473,7 @@ QUnit.test("testUpdate (add) :: none contiguous block ; one update pos after", f
 QUnit.test("testUpdate (add) :: none contiguous block ; one update pos same", function(assert) {
   this.lc.addChange(13, "456");
   this.lc.addChange(5, "123"); // Base changes
-  var deltas = [createAddModif("abc", 13)];
+  var deltas = [new ObjectAddChange(13, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("456", 16),
@@ -485,7 +485,7 @@ QUnit.test("testUpdate (add) :: none contiguous block ; one update pos same", fu
 QUnit.test("testUpdate (add) :: none contiguous block ; same position ; one update pos before", function(assert) {
   this.lc.addChange(10, "abc");
   this.lc.addChange(10, "ABC"); // Base changes
-  var deltas = [createAddModif("abc", 0)];
+  var deltas = [new ObjectAddChange(0, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("abc", 13), 
@@ -497,7 +497,7 @@ QUnit.test("testUpdate (add) :: none contiguous block ; same position ; one upda
 QUnit.test("testUpdate (add) :: none contiguous block ; same position ; one update pos after", function(assert) {
   this.lc.addChange(10, "abc");
   this.lc.addChange(10, "ABC"); // Base changes
-  var deltas = [createAddModif("abc", 20)];
+  var deltas = [new ObjectAddChange(20, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("abc", 10), 
@@ -509,7 +509,7 @@ QUnit.test("testUpdate (add) :: none contiguous block ; same position ; one upda
 QUnit.test("testUpdate (add) :: none contiguous block ; same position ; one update pos same", function(assert) {
   this.lc.addChange(10, "abc");
   this.lc.addChange(10, "ABC"); // Base changes
-  var deltas = [createAddModif("abc", 10)];
+  var deltas = [new ObjectAddChange(10, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("abc", 13), 
@@ -521,7 +521,7 @@ QUnit.test("testUpdate (add) :: none contiguous block ; same position ; one upda
 QUnit.test("testUpdate (add) :: none contiguous block ; overlapping ; one update pos before", function(assert) {
   this.lc.addChange(10, "abc");
   this.lc.addChange(11, "A"); // Base changes
-  var deltas = [createAddModif("abc", 0)];
+  var deltas = [new ObjectAddChange(0, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("abc", 13), 
@@ -533,7 +533,7 @@ QUnit.test("testUpdate (add) :: none contiguous block ; overlapping ; one update
 QUnit.test("testUpdate (add) :: none contiguous block ; overlapping ; one update pos after", function(assert) {
   this.lc.addChange(10, "abc");
   this.lc.addChange(11, "A"); // Base changes
-  var deltas = [createAddModif("abc", 20)];
+  var deltas = [new ObjectAddChange(20, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("abc", 10), 
@@ -545,7 +545,7 @@ QUnit.test("testUpdate (add) :: none contiguous block ; overlapping ; one update
 QUnit.test("testUpdate (add) :: none contiguous block ; overlapping ; one update pos same", function(assert) {
   this.lc.addChange(10, "abc");
   this.lc.addChange(11, "A"); // Base changes
-  var deltas = [createAddModif("abc", 11)];
+  var deltas = [new ObjectAddChange(11, "abc")];
   this.lc.update(deltas);
   var changes = this.lc.get();
   var expected = [createAddModif("abc", 10), 

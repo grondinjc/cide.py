@@ -28,7 +28,7 @@ ObjectAddChange.prototype.applyOnText = function(text){
   return text.insert(this._content, this._pos);
 };
 ObjectAddChange.prototype.applyOnPos = function(pos){
-  return pos + (pos <= this._pos ? this.size() : 0);
+  return pos + (this._pos <= pos ? this.size() : 0);
 };
 ObjectAddChange.prototype.updatePos = function(modObject){
   this._pos = modObject.applyOnPos(this._pos);
@@ -48,7 +48,7 @@ ObjectRemoveChange.prototype.applyOnText = function(text){
   return text.cutFrom(this._pos, this._count);
 };
 ObjectRemoveChange.prototype.applyOnPos = function(pos){
-  return pos - (pos <= this._pos ? this.size() : 0);
+  return pos - (this._pos <= pos ? this.size() : 0);
 };
 ObjectRemoveChange.prototype.updatePos = function(modObject){
   this._pos = modObject.applyOnPos(this._pos);
