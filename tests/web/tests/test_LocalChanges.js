@@ -1,10 +1,7 @@
 // Tests for LocalChanges module
-QUnit.module( "test_LocalChanges", {
+QUnit.module("test_LocalChanges", {
   beforeEach: function() {
     this.lc = new LocalChanges();
-  },
-  afterEach: function() {
-    // Nothing to be done
   }
 });
 
