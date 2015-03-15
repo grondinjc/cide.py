@@ -14,7 +14,7 @@ function LocalChanges() {
 LocalChanges.prototype.get = function() {
   if(this._state.isChangeInProgress()){
     this.saveChange(this._state.getPendingChange())
-    this._state.init();
+    this._state.init(); // Init since it was saved
   }
   return serializeObjectChangeList(this._modifications);
 };
@@ -129,7 +129,7 @@ LocalChangeRemoveState.prototype.remove = function(at, count) {
   // Needed because we don`t know here the size of the full text
   this._posState.trySet(at);
 
-  var theoricalAt = this._posState.get() + this._removedCount;
+  var theoricalAt = this._posState.get();
   if(theoricalAt != at && this._removedCount != 0) {
     // change somewhere else... save 
     this._mem.saveChange(this.getPendingChange());
