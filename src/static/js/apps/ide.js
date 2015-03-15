@@ -1,4 +1,4 @@
-DEFAULT_PUSH_INTERVAL = 2000; // ms
+DEFAULT_PUSH_INTERVAL = 50; // ms
 
 /* Central class that will interact will all other classes. */
 function AppIDE(pushInterval) {
@@ -12,7 +12,6 @@ function AppIDE(pushInterval) {
   this._difftool = null;
 
   // Quick hack
-  // wait to receive projet tree
   // wait for user to select file
   // Suppose user selected main.py
   this._openedFile = "/main.py";
@@ -64,12 +63,12 @@ function AppIDE(pushInterval) {
 
         // Save and send, delete sent changes on success
         var modifObject = createModifGroup(changes, obj._openedFile, currentBundleID);
-        console.log("Current bundle id is ", currentBundleID, modifObject);
+        //console.log("Current bundle id is ", currentBundleID, modifObject);
         obj._sentChanges.push([currentBundleID, modifObject]); // place at end of array
         obj._requestHandler.put("save", modifObject, function(){
           // Will I delete new input ??
           var clearChange = obj._sentChanges[0];
-          console.log("ACK bundle id is ", clearChange[0], clearChange[1]);
+          //console.log("ACK bundle id is ", clearChange[0], clearChange[1]);
           obj._sentChanges.shift(); // pop front
           /*if(clearChange[0] != currentBundleID){
             alert("Fuck up happened");
@@ -168,7 +167,7 @@ function AppIDE(pushInterval) {
 
   this._combineText = function(cursor_pos) {
     var base = this._zoneLastVersion.get();
-    var modifs = this._changeMemory.get();
+    var modifs = this._changeMemory.getUnserialized();
     for(var i = 0; i < modifs.length; ++i) {
       base = modifs[i].applyOnText(base);
       cursor_pos = modifs[i].applyOnPos(cursor_pos);

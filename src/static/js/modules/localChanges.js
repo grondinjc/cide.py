@@ -12,11 +12,18 @@ function LocalChanges() {
   this._modifications = [];
 }
 LocalChanges.prototype.get = function() {
+  this._savePendingChange();
+  return serializeObjectChangeList(this._modifications);
+};
+LocalChanges.prototype.getUnserialized = function() {
+  this._savePendingChange();
+  return this._modifications;
+};
+LocalChanges.prototype._savePendingChange = function() {
   if(this._state.isChangeInProgress()){
     this._saveChange(this._state.getPendingChange());
     this._state.init(); // Init since it was saved
   }
-  return serializeObjectChangeList(this._modifications);
 };
 LocalChanges.prototype.update = function(deltas) {
   /* At request was received from the server.
