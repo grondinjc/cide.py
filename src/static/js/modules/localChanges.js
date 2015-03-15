@@ -13,7 +13,7 @@ function LocalChanges() {
 }
 LocalChanges.prototype.get = function() {
   if(this._state.isChangeInProgress()){
-    this.saveChange(this._state.getPendingChange())
+    this._saveChange(this._state.getPendingChange());
     this._state.init(); // Init since it was saved
   }
   return serializeObjectChangeList(this._modifications);
@@ -46,7 +46,7 @@ LocalChanges.prototype.removeChange = function(at, count) {
 LocalChanges.prototype.handleSwitchToAddState = function(val, at){
   // Get any pending change to avoid data miss
   if(this._state.isChangeInProgress())
-    this.saveChange(this._state.getPendingChange());
+    this._saveChange(this._state.getPendingChange());
   
   this._state = this._addState;
   this._state.init();
@@ -55,13 +55,13 @@ LocalChanges.prototype.handleSwitchToAddState = function(val, at){
 LocalChanges.prototype.handleSwitchToRemoveState = function(val, count){
   // Get any pending change to avoid data miss
   if(this._state.isChangeInProgress())
-    this.saveChange(this._state.getPendingChange());
+    this._saveChange(this._state.getPendingChange());
 
   this._state = this._removeState;
   this._state.init();
   this._state.remove(val, count);
 };
-LocalChanges.prototype.saveChange = function(change) {
+LocalChanges.prototype._saveChange = function(change) {
   this._modifications.push(change);
 };
 
@@ -81,7 +81,7 @@ LocalChangeAddState.prototype.add = function(at, val){
   var theoricalAt = this._posState.get() + this._addedData.length;
   if(theoricalAt != at && this._addedData.length != 0) {
     // change somewhere else... save 
-    this._mem.saveChange(this.getPendingChange());
+    this._mem._saveChange(this.getPendingChange());
 
     // and start new change
     this._posState.set(at);
@@ -132,7 +132,7 @@ LocalChangeRemoveState.prototype.remove = function(at, count) {
   var theoricalAt = this._posState.get();
   if(theoricalAt != at && this._removedCount != 0) {
     // change somewhere else... save 
-    this._mem.saveChange(this.getPendingChange());
+    this._mem._saveChange(this.getPendingChange());
 
     // and start new change
     this._posState.set(at);
