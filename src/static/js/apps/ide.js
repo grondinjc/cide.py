@@ -1,4 +1,4 @@
-DEFAULT_PUSH_INTERVAL = 50; // ms
+DEFAULT_PUSH_INTERVAL = 2000; // ms
 
 /* Central class that will interact will all other classes. */
 function AppIDE(pushInterval) {
@@ -73,7 +73,7 @@ function AppIDE(pushInterval) {
           /*if(clearChange[0] != currentBundleID){
             alert("Fuck up happened");
           }*/
-        }, function(){}, true);
+        }, function(){}, false);
       },
       this._pushInterval
     );
@@ -95,8 +95,6 @@ function AppIDE(pushInterval) {
     // $(this) corresponds to nodeDisplay
     var oldText = obj._zoneDisplay.getLastVersion();
     var newText = obj._zoneDisplay.getText();
-
-    if(oldText == newText) return; // paste events are trigged early
     obj._zoneDisplay.saveVersion(newText);
 
     // https://code.google.com/p/google-diff-match-patch/wiki/API

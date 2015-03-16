@@ -4,7 +4,7 @@ function DisplayZone(node, inputHandler){
   // the data attribute at the following key
   this._DATA_TEXT_KEY = "saved-text";
   // Listened events to handle user inputs
-  this._TEXT_EVENTS = "input paste";
+  this._TEXT_EVENTS = "input";
 
   this._zone = node;
   this._inputHandler = inputHandler;
