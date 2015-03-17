@@ -28,6 +28,8 @@ namespace types
   using ModificationPtr = shared_ptr<Modification>;
 };
 
+class Zut{};
+
 class ZoneTransit
 {
   private:
@@ -74,6 +76,8 @@ class ZoneTransit
     string getContenu() const {return _fichier.getContenu();}
 
     bool estVide() const noexcept {return _modifications.empty();}
+
+    void throwZut() {throw Zut{};}
 
   private:
     void mettreAJourModifications(vector<ModificationPtr>::iterator it)

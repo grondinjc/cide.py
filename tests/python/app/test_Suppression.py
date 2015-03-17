@@ -27,3 +27,9 @@ class TestSuppression(TestCase):
     modification = Addition(0,5,"allo ")
     self.removal.update(modification)
     self.assertEqual(self.removal.position, 7)
+    
+  def test_isAdd(self):
+    self.assertFalse(self.removal.isAdd())
+    
+  def test_isRemove(self):
+    self.assertTrue(self.removal.isRemove())

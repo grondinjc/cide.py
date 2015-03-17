@@ -37,6 +37,7 @@ BOOST_PYTHON_MODULE(libZoneTransit)
     .def("add", &ZoneTransit::add)
     .def("writeModifications", &ZoneTransit::ecrireModifications)
     .def("isEmpty", &ZoneTransit::estVide)
+    .def("testThrow", &ZoneTransit::throwZut)
     .add_property("content", &ZoneTransit::getContenu);
 
   //Definit la classe Modification (non instantiable, abstraite) et le type ModificationPtr
@@ -46,7 +47,9 @@ BOOST_PYTHON_MODULE(libZoneTransit)
     .add_property("position", &Modification::getPosition)
     .add_property("size", &Modification::getTaille)
     .def("apply", &Modification::effectuerModification)
-    .def("update", &Modification::mettreAJour);
+    .def("update", &Modification::mettreAJour)
+    .def("isAdd", &Modification::isAdd)
+    .def("isRemove", &Modification::isRemove);
 
   //Definit Ajout heritant de Modification
   class_<Ajout, bases<Modification>>("Addition")
