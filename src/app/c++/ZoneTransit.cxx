@@ -37,7 +37,6 @@ BOOST_PYTHON_MODULE(libZoneTransit)
     .def("add", &ZoneTransit::add)
     .def("writeModifications", &ZoneTransit::ecrireModifications)
     .def("isEmpty", &ZoneTransit::estVide)
-    .def("testThrow", &ZoneTransit::throwZut)
     .add_property("content", &ZoneTransit::getContenu);
 
   //Definit la classe Modification (non instantiable, abstraite) et le type ModificationPtr
