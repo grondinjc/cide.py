@@ -1,7 +1,8 @@
 import sys
 import os
+import Queue
 from copy import deepcopy
-from threading import Lock
+from threading import Lock, Thread
 from collections import namedtuple
 
 from cide.app.python.utils.nodes import (get_existing_files,
@@ -9,10 +10,6 @@ from cide.app.python.utils.nodes import (get_existing_files,
 
 # Other stategies will be used but are not required
 from cide.app.python.utils.strategies import (StrategyCallEmpty)
-
-from time import sleep  # used to patch threadpool termination
-from threadpool import (ThreadPool,
-                        makeRequests as create_task)
 
 from libZoneTransit import (TransitZone as EditBuffer,
                             Addition as EditAdd,
@@ -36,7 +33,7 @@ class Core(object):
   # Tuple to hold const pair (transitZone, user registered to changes)
   FileUserPair = namedtuple('FileUserPair', ['file', 'users'])
 
-  def __init__(self, project_name, project_path, logger, num_threads=4):
+  def __init__(self, project_name, project_path, logger):
     """
     Core initialiser
 
@@ -54,7 +51,6 @@ class Core(object):
     self._project_name = project_name
     self._project_path = project_path  # considered as /
     self._logger = logger
-    self._threadpool = ThreadPool(num_threads)
 
     # Make sure directories exists
     if not os.path.exists(self._project_path):
@@ -80,11 +76,21 @@ class Core(object):
     first_strategy = StrategyCallEmpty(self._change_core_strategy_unsafe)
     self._core_listeners_strategy = first_strategy
 
+    self.tasks = Queue.Queue()
+    self._thread = CoreThread(self)
+
+  def start(self):
+    """
+    Start the application
+    """
+    self._thread.start()
+
   def stop(self):
     """
     Stop the application
     """
-    self._stop_pool()
+    self._thread.stop()
+    self.tasks.put_nowait((lambda: None))  # Unblock Queue if empty
 
   def get_project_name(self):
     """
@@ -215,6 +221,35 @@ class Core(object):
       for f in self._project_files:
         f.users.discard(user)
 
+  def _add_task(self, f):
+    """
+    Add a task into the threadpool
+    Execution centralized into a function to hide flaws of external library
+
+    @type f: lambda
+
+    @param f: The task wrapped with args inside a callable (function or lambda)
+    """
+    self.tasks.put(f)
+
+  def _create_file_unsafe(self, content=""):
+    """
+    Creates the representation of a file
+    Construction isolated in a function to simply further changes
+    This function is unsafe since no locking is done
+
+    @type content: str
+
+    @param content: The initial content of the file representation
+
+    @return FileUserPair namedtuple
+    """
+    return self.FileUserPair(EditBuffer(content), set())
+
+  """
+  Tasks call section
+  Those are queued to be executed by the CoreThread
+  """
   def _task_apply_changes(self, path):
     """
     Async task to apply pending modifications on the file
@@ -244,44 +279,6 @@ class Core(object):
       self._logger.exception("EXCEPTION RAISED {0}".format(e))
     finally:
       self._logger.info("_task_apply_changes lock released")
-
-  def _add_task(self, f):
-    """
-    Add a task into the threadpool
-    Execution centralized into a function to hide flaws of external library
-
-    @type f: function
-
-    @param f: The task wrapped with args inside a callable (function or lambda)
-    """
-    # Since task needs to receive one parameter as an arg array or receive
-    # two argument a dummy lambda is needed to hides this.
-
-    # Creates an array with one request since one tuple of args was provided
-    rq = create_task(lambda *a: f(), [(None, None,)])
-    self._threadpool.putRequest(rq[0])
-
-  def _create_file_unsafe(self, content=""):
-    """
-    Creates the representation of a file
-    Construction isolated in a function to simply further changes
-    This function is unsafe since no locking is done
-
-    @type content: str
-
-    @param content: The initial content of the file representation
-
-    @return FileUserPair namedtuple
-    """
-    return self.FileUserPair(EditBuffer(content), set())
-
-  def _stop_pool(self):
-    """
-    Stops the threadpool
-    """
-    self._threadpool.wait()
-    # Thread pool does not terminate well
-    sleep(1)
 
   """
   Observer and Stategy design patterns
@@ -332,3 +329,29 @@ class Core(object):
     """
     with self._core_listeners_lock:
       self._core_listeners_strategy.send(f, self._core_listeners)
+
+
+class CoreThread(Thread):
+  """
+  Core app Thread
+  """
+
+  def __init__(self, app):
+    """
+    @type app: core.Core
+
+    @param app: The core application
+    """
+    Thread.__init__(self)
+    self._app = app
+    self._stop_asked = False
+
+  def stop(self):
+    self._stop_asked = True
+
+  def run(self):
+    while not self._stop_asked:
+      task = self._app.tasks.get()
+      task()
+
+
