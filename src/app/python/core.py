@@ -79,6 +79,11 @@ class Core(object):
     self.tasks = Queue.Queue()
     self._thread = CoreThread(self)
 
+  """
+  Sync Call
+  The call completes the task and returns with the result, if any
+  """
+
   def start(self):
     """
     Start the application
@@ -98,19 +103,6 @@ class Core(object):
     """
     return self._project_name
 
-  def get_project_nodes(self):
-    """
-    Get all files and directories from project
-
-    @return list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
-    """
-    with self._project_files_lock:
-      sorted_nodes = ([(d, True) for d in get_existing_dirs(self._project_path)] +
-                      [(f, False) for f in self._project_files.keys()])
-      sorted_nodes.sort()
-
-      return sorted_nodes
-
   def get_file_content(self, path):
     """
     Get the content of a file
@@ -126,29 +118,6 @@ class Core(object):
       if path in self._project_files:
         return (self._project_files[path].file.content,
                 0)  # Version
-
-  def file_edit(self, path, changes):
-    """
-    Send changes, text added or text removed, to the file
-
-    @type path: str
-    @type changes: list [Change namedtuple]
-
-    @param path: The path of the file in the project tree
-    @param changes: Changes to be applied on the file
-    """
-    self._logger.info("File_edit lock requested ... ")
-    with self._project_files_lock:
-      self._logger.info("File_edit lock requested ... ACQUIRED ")
-      if path in self._project_files:
-        for c in changes:
-          # Encoding required since c++ module requires str type
-          change_object = (EditAdd(c.pos, c.data.encode("utf-8")) if c.is_add
-                           else EditRemove(c.pos, c.data))
-          self._project_files[path].file.add(change_object)
-        # register async task to apply changes
-        self._add_task(lambda: self._task_apply_changes(path))
-        self._logger.info("File_edit task added")
 
   def add_file(self, path):
     """
@@ -247,9 +216,65 @@ class Core(object):
     return self.FileUserPair(EditBuffer(content), set())
 
   """
+  Async Call
+  The call queues the task.
+  If there's a result to receive, the caller must have the callback for it
+  """
+  def get_project_nodes(self, caller):
+    """
+    Get all files and directories from project
+
+    @param caller: Username of the client to answer to
+
+    List of nodes is: list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
+    Callback will be called with: nodes, caller
+    """
+    self._add_task(lambda: self._task_get_project_nodes(caller))
+
+  def file_edit(self, path, changes):
+    """
+    Send changes, text added or text removed, to the file
+
+    @type path: str
+    @type changes: list [Change namedtuple]
+
+    @param path: The path of the file in the project tree
+    @param changes: Changes to be applied on the file
+    """
+    self._logger.info("File_edit lock requested ... ")
+    with self._project_files_lock:
+      self._logger.info("File_edit lock requested ... ACQUIRED ")
+      if path in self._project_files:
+        for c in changes:
+          # Encoding required since c++ module requires str type
+          change_object = (EditAdd(c.pos, c.data.encode("utf-8")) if c.is_add
+                           else EditRemove(c.pos, c.data))
+          self._project_files[path].file.add(change_object)
+        # register async task to apply changes
+        self._add_task(lambda: self._task_apply_changes(path))
+        self._logger.info("File_edit task added")
+
+  """
   Tasks call section
   Those are queued to be executed by the CoreThread
   """
+  def _task_get_project_nodes(self, caller):
+    """
+    Task to get all files and directories from project
+
+    @param caller: Username of the client to answer to
+
+    Callback called: notify_get_project_nodes
+    List of nodes is: list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
+    Callback will be called with: nodes, caller
+    """
+    with self._project_files_lock:
+      sorted_nodes = ([(d, True) for d in get_existing_dirs(self._project_path)] +
+                      [(f, False) for f in self._project_files.keys()])
+      sorted_nodes.sort()
+
+      self._notify_event(lambda l: l.notify_get_project_nodes(sorted_nodes, caller))
+
   def _task_apply_changes(self, path):
     """
     Async task to apply pending modifications on the file
@@ -286,6 +311,7 @@ class Core(object):
 
   The listener will need to implement the following functions :
    - notify_file_edit(filename, changes, version, users)
+   - notify_get_project_nodes(nodes_list)
   """
 
   def register_application_listener(self, listener):
@@ -327,8 +353,8 @@ class Core(object):
 
     @param f: The notification callable
     """
-    with self._core_listeners_lock:
-      self._core_listeners_strategy.send(f, self._core_listeners)
+    # with self._core_listeners_lock:
+    self._core_listeners_strategy.send(f, self._core_listeners)
 
 
 class CoreThread(Thread):

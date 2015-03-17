@@ -7,6 +7,11 @@ from genshi.template import TemplateLoader
 from cide.server.identifyController import require_identify
 
 
+def wrap_opCode(opCode, payload):
+  return {'opCode': opCode,
+          'data': payload}
+
+
 def create_file_dump_dict(filename, version, content):
   return {'file':    filename,
           'vers':    version,
@@ -18,10 +23,13 @@ def create_file_version_dict(filename, version, changes):
           'vers':    version,
           'changes': changes}
 
+
 def create_change_add_element_dict(change):
   return {'type': IDEController.CHANGE_ADD_TYPE,
           'pos':  change.position,
           'content': change.data}
+
+
 def create_change_remove_element_dict(change):
   return {'type': IDEController.CHANGE_REMOVE_TYPE,
           'pos':  change.position,
@@ -65,6 +73,7 @@ class IDEController(object):
     # be implemented as tasks callbacks. To simplify reading,
     # required functions will all be aliases to methods
     self.notify_file_edit = self._save_callback
+    self.notify_get_project_nodes = self._tree_callback
 
     # Register controller to events
     self._app.register_application_listener(self)
@@ -331,7 +340,7 @@ class IDEController(object):
     Method : GET
     (Path : /ide/tree)
 
-    @return: JSON of the following format:
+    Output on the WS will be JSON of the following format:
       {
         'nodes':    [{
                      'node':    '<<Path of the project node>>',
@@ -348,8 +357,7 @@ class IDEController(object):
                                                                     request.remote.ip,
                                                                     request.remote.port))
 
-    nodes = self._app.get_project_nodes()
-    return create_tree_nodes_dict(nodes)
+    self._app.get_project_nodes(username)
 
   @cherrypy.expose
   @require_identify()
@@ -390,7 +398,11 @@ class IDEController(object):
                            if type(element) is EditAdd else
                            create_change_remove_element_dict(element))
                           for element in changes]
-    message_sent = simplejson.dumps(create_file_version_dict(filename, version, serialized_changes))
+
+    message_sent = simplejson.dumps(wrap_opCode('save',
+                                                create_file_version_dict(filename,
+                                                                         version,
+                                                                         serialized_changes)))
 
     for user in users:
       ws = IDEWebSocket.IDEClients.get(user)
@@ -398,9 +410,9 @@ class IDEController(object):
         try:
           ws.send(message_sent)
           self._logger.info("{0} ({1}:{2}) WS transfer succeded ({3})".format(user,
-                                                                       ws.peer_address[0],
-                                                                       ws.peer_address[1],
-                                                                       self.debug_bundle_id))
+                                                                              ws.peer_address[0],
+                                                                              ws.peer_address[1],
+                                                                              self.debug_bundle_id))
         except:
           self._logger.error("{0} ({1}:{2}) WS transfer failed".format(user,
                                                                        ws.peer_address[0],
@@ -415,6 +427,40 @@ class IDEController(object):
         # Remove user from every file notify list
         self._app.unregister_user_to_all_files(user)
     ++self.debug_bundle_id
+
+  def _tree_callback(self, nodes, caller):
+    """
+    Sends the files and the directories paths included in the project tree
+    This is the call back from /ide/tree GET-method
+
+    Output on the WS will be JSON of the following format:
+      {
+        'nodes':    [{
+                     'node':    '<<Path of the project node>>',
+                     'isDir':   '<<Flag to diffenciate directories from file>>'
+                    }]
+      }
+    """
+    self._logger.info("Tree-callback for {0}".format(caller))
+
+    to_send = simplejson.dumps(wrap_opCode('tree', create_tree_nodes_dict(nodes)))
+
+    ws = IDEWebSocket.IDEClients.get(caller)
+    if ws:
+      try:
+        ws.send(to_send)
+        self._logger.info("{0} ({1}:{2}) WS transfer succeded".format(caller,
+                                                                      ws.peer_address[0],
+                                                                      ws.peer_address[1]))
+      except:
+        self._logger.error("{0} ({1}:{2}) WS transfer failed".format(caller,
+                                                                     ws.peer_address[0],
+                                                                     ws.peer_address[1]))
+        # Close websocket
+        ws.close(reason='Failed to send tree')
+
+    else:
+      self._logger.error("{0} has no WS in server".format(caller))
 
 
 class IDEWebSocket(WebSocket):
