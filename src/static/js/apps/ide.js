@@ -1,7 +1,8 @@
 DEFAULT_PUSH_INTERVAL = 2000; // ms
 
 /* Central class that will interact will all other classes. */
-function AppIDE(pushInterval) {
+function AppIDE(lastVersionZoneId, displayZoneId, pushInterval) {
+  pushInterval = pushInterval || DEFAULT_PUSH_INTERVAL;
 
   // Setup event handlers
   var obj = this; // For closure
@@ -17,7 +18,7 @@ function AppIDE(pushInterval) {
   this._openedFile = "/main.py";
 
   // Handle null value
-  this._pushInterval = pushInterval || DEFAULT_PUSH_INTERVAL;
+  this._pushInterval = pushInterval;
   this._pushIntervalHandle = null;
 
   this._changeMemory = null;
@@ -29,68 +30,11 @@ function AppIDE(pushInterval) {
   this._sentChanges = null;
   this._bundleID = 0;
   
+  // Required to get cursor position on contentEditable pre tag
+  var elementDisplay = document.getElementById(displayZoneId);
 
-  this.init = function(lastVersionZoneId, displayZoneId) {
-    // Required to get cursor position on contentEditable pre tag
-    var elementDisplay = document.getElementById(displayZoneId);
-
-    // Create classes
-    this._changeMemory = new LocalChanges();
-    this._zoneLastVersion = new LastVersionZone($("#" + lastVersionZoneId));
-    this._zoneDisplay = new DisplayZone($("#" + displayZoneId), this._handleInputEvent);
-    this._tree = new ProjectTreeView();
-
-    // Handle ways of sending and receiving data from/to server
-    this._requestHandler = new RequestHandler('ide', this.receive);
-    // TODO block / wait for the WS to be open before allowing ws-based stuff
-
-    // Diff lib to compare two texts
-    this._difftool = new diff_match_patch();
-    
-    // Push changes handler 
-    this._sentChanges = [];
-    this._pushIntervalHandle = setInterval( 
-      function() {
-        // try push
-        var changes = obj._changeMemory.get();
-        if(changes.length == 0) 
-          return;
-
-        // Clear changes to avoid resending
-        obj._changeMemory.clear();
-        var currentBundleID = obj._bundleID;
-        ++obj._bundleID;
-
-        // Save and send, delete sent changes on success
-        var modifObject = createModifGroup(changes, obj._openedFile, currentBundleID);
-        //console.log("Current bundle id is ", currentBundleID, modifObject);
-        obj._sentChanges.push([currentBundleID, modifObject]); // place at end of array
-        obj._requestHandler.put("save", modifObject, function(){
-          // Will I delete new input ??
-          var clearChange = obj._sentChanges[0];
-          //console.log("ACK bundle id is ", clearChange[0], clearChange[1]);
-          obj._sentChanges.shift(); // pop front
-          /*if(clearChange[0] != currentBundleID){
-            alert("Fuck up happened");
-          }*/
-        }, function(){}, false);
-      },
-      this._pushInterval
-    );
-
-
-    // Initialise Tree root.
-    this._tree.initRoot("tree");
-
-    // Load TreeView content
-    this._requestHandler.get("tree", {}, function(response){
-      for(var i = 0; i < response.nodes.length; ++i){
-        obj._tree.addNode(response.nodes[i].node, response.nodes[i].isDir);
-      }
-    });
-  };
-
-  this._handleInputEvent = function(evt) {
+  // Input handler
+  var inputEventHandler = function(evt) {
     // Get old value, compare and store new
     // $(this) corresponds to nodeDisplay
     var oldText = obj._zoneDisplay.getLastVersion();
@@ -120,23 +64,11 @@ function AppIDE(pushInterval) {
           at += diff[i][1].length;
           break;
       }
-    }     
+    }
   };
 
-  this.showFileContent = function(filepath) {
-    // force send any pending changes on current file (if any)
-    // TODO changeFileState class
-
-    // Do request
-    this._requestHandler.post("open", createOpen(filepath), function(response){
-      // on success
-      obj._fileRevision = response.vers;
-      obj.notifyForce(createAddModif(response.content, 0));
-    });
-  };
-
-  // Data received from server
-  this.receive = function(opCode, jsonObj){
+  // Receive callback
+  var receiveHandler = function(opCode, jsonObj){
     // Check if opCode means fileAdd
 
     // opCode is textEdit
@@ -147,29 +79,99 @@ function AppIDE(pushInterval) {
     obj.notifySoft(modifications);
   };
 
-  // Does not receive a group of modifications since
-  // every zone will be overriden. One delta is enough
-  this.notifyForce = function(initialDelta) {
-    this._zoneLastVersion.put(initialDelta.content);
-    this._changeMemory.clear();
-    this._zoneDisplay.forceUpdate([initialDelta.content, initialDelta.content.length]); 
-  };
 
-  this.notifySoft = function(modifications) {
-    this._changeMemory.update(modifications);
-    this._zoneLastVersion.update(modifications);
+  // Create classes
+  this._changeMemory = new LocalChanges();
+  this._zoneLastVersion = new LastVersionZone($("#" + lastVersionZoneId));
+  this._zoneDisplay = new DisplayZone($("#" + displayZoneId), inputEventHandler);
+  this._tree = new ProjectTreeView();
 
-    var cursor_pos = this._zoneDisplay.getCursorPos();
-    this._zoneDisplay.forceUpdate(this._combineText(cursor_pos));
-  };
+  // Handle ways of sending and receiving data from/to server
+  this._requestHandler = new RequestHandler('ide', receiveHandler);
+  // TODO block / wait for the WS to be open before allowing ws-based stuff
 
-  this._combineText = function(cursor_pos) {
-    var base = this._zoneLastVersion.get();
-    var modifs = this._changeMemory.getUnserialized();
-    for(var i = 0; i < modifs.length; ++i) {
-      base = modifs[i].applyOnText(base);
-      cursor_pos = modifs[i].applyOnPos(cursor_pos);
+  // Diff lib to compare two texts
+  this._difftool = new diff_match_patch();
+  
+  // Push changes handler 
+  this._sentChanges = [];
+  this._pushIntervalHandle = setInterval( 
+    function() {
+      // try push
+      var changes = obj._changeMemory.get();
+      if(changes.length == 0) 
+        return;
+
+      // Clear changes to avoid resending
+      obj._changeMemory.clear();
+      var currentBundleID = obj._bundleID;
+      ++obj._bundleID;
+
+      // Save and send, delete sent changes on success
+      var modifObject = createModifGroup(changes, obj._openedFile, currentBundleID);
+      //console.log("Current bundle id is ", currentBundleID, modifObject);
+      obj._sentChanges.push([currentBundleID, modifObject]); // place at end of array
+      obj._requestHandler.put("save", modifObject, function(){
+        // Will I delete new input ??
+        var clearChange = obj._sentChanges[0];
+        //console.log("ACK bundle id is ", clearChange[0], clearChange[1]);
+        obj._sentChanges.shift(); // pop front
+        /*if(clearChange[0] != currentBundleID){
+          alert("Fuck up happened");
+        }*/
+      }, function(){}, false);
+    },
+    this._pushInterval
+  );
+
+
+  // Initialise Tree root.
+  this._tree.initRoot("tree");
+
+  // Load TreeView content
+  this._requestHandler.get("tree", {}, function(response){
+    for(var i = 0; i < response.nodes.length; ++i){
+      obj._tree.addNode(response.nodes[i].node, response.nodes[i].isDir);
     }
-    return [base, cursor_pos];
-  };
+  });
+};
+
+
+AppIDE.prototype.showFileContent = function(filepath) {
+  // force send any pending changes on current file (if any)
+  // TODO changeFileState class
+
+  // Do request
+  var obj = this;
+  this._requestHandler.post("open", createOpen(filepath), function(response){
+    // on success
+    obj._fileRevision = response.vers;
+    obj.notifyForce(createAddModif(response.content, 0));
+  });
+};
+
+// Does not receive a group of modifications since
+// every zone will be overriden. One delta is enough
+AppIDE.prototype.notifyForce = function(initialDelta) {
+  this._zoneLastVersion.put(initialDelta.content);
+  this._changeMemory.clear();
+  this._zoneDisplay.forceUpdate([initialDelta.content, initialDelta.content.length]); 
+};
+
+AppIDE.prototype.notifySoft = function(modifications) {
+  this._changeMemory.update(modifications);
+  this._zoneLastVersion.update(modifications);
+
+  var cursor_pos = this._zoneDisplay.getCursorPos();
+  this._zoneDisplay.forceUpdate(this._combineText(cursor_pos));
+};
+
+AppIDE.prototype._combineText = function(cursor_pos) {
+  var base = this._zoneLastVersion.get();
+  var modifs = this._changeMemory.getUnserialized();
+  for(var i = 0; i < modifs.length; ++i) {
+    base = modifs[i].applyOnText(base);
+    cursor_pos = modifs[i].applyOnPos(cursor_pos);
+  }
+  return [base, cursor_pos];
 };

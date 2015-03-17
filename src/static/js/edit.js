@@ -16,8 +16,7 @@ function init() {
   chatApplication = new AppChat("chat-display", "chat-user-text-input", "chat-user-text-btn");
 
   // Application IDE
-  ideApplication = new AppIDE();
-  ideApplication.init('editorLastVersion', 'editorDisplay');
+  ideApplication = new AppIDE('editorLastVersion', 'editorDisplay');
 
   // Quick hack
   ideApplication.showFileContent(ideApplication._openedFile);
