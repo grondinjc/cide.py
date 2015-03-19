@@ -204,8 +204,6 @@ class IDEController(object):
       {
         'file':    '<<Filepath of file to close>>'
       }
-
-    @return: None
     """
     self._logger.debug("Close by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                  request.remote.ip,
@@ -223,8 +221,6 @@ class IDEController(object):
       self._app.unregister_user_to_file(username, filename)
     else:
       raise HTTPError(400, "Invalid path")
-
-    return None
 
   @cherrypy.expose
   @cherrypy.tools.json_out()

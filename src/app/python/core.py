@@ -315,7 +315,6 @@ class Core(object):
     @param user: The user name
     @param path: The path of the file to be unregistrered from
     """
-    # XXX Currently Unused
     with self._project_files_lock:
       if path in self._project_files:
         self._project_files[path].users.discard(user)
