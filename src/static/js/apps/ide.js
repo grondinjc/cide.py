@@ -4,15 +4,8 @@ DEFAULT_PUSH_INTERVAL = 2000; // ms
 function AppIDE(lastVersionZoneId, displayZoneId, pushInterval) {
   pushInterval = pushInterval || DEFAULT_PUSH_INTERVAL;
 
-  // Setup event handlers
-  var obj = this; // For closure
-
-  // Create classes
-  var changeMemory = new LocalChanges();
-  var zoneLastVersion = new LastVersionZone($("#" + lastVersionZoneId));
-  var zoneDisplay = new DisplayZone($("#" + displayZoneId), function() {
-    obj.handleInput();
-  });
+  // For closure
+  var obj = this; 
 
   // Initialise Tree root.
   var tree = new ProjectTreeView(function(filepath){
@@ -28,9 +21,12 @@ function AppIDE(lastVersionZoneId, displayZoneId, pushInterval) {
 
   // States
   // Create all to avoid recreation
-  this._noFileState = new IdeNoFileState(this, requestHandler);
+  this._noFileState = new IdeNoFileState(this, requestHandler, tree);
   this._fileChangeState = new IdeFileChangeState(this, requestHandler);
-  this._editState = new IdeEditState(this, requestHandler, tree, changeMemory, zoneLastVersion, zoneDisplay, pushInterval);
+  this._editState = new IdeEditState(this, requestHandler, tree, pushInterval, 
+    $("#" + lastVersionZoneId),
+    $("#" + displayZoneId));
+  
   // Initial state
   this._ideState = new IdeInitState(this, requestHandler, tree);
   this._ideState.init();
@@ -104,10 +100,13 @@ IdeInitState.prototype.handleReceive = function(opCode, jsonObj) {
 };
 IdeInitState.prototype.handleInput = function(){};
 
+
+
 /* There is no active page to edit */
-function IdeNoFileState(ide, rqh){
+function IdeNoFileState(ide, rqh, tree){
   this._ide = ide;
   this._rqh = rqh;
+  this._tree = tree;
 }
 IdeNoFileState.prototype.init = function(){};
 IdeNoFileState.prototype.leave = function(){};
@@ -120,6 +119,8 @@ IdeNoFileState.prototype.handleReceive = function(opCode, jsonObj) {
   console.log("WARNING", msg, jsonObj);
 };
 IdeNoFileState.prototype.handleInput = function(){};
+
+
 
 /* User requested to change file */
 function IdeFileChangeState(ide, rqh){
@@ -183,20 +184,25 @@ IdeFileChangeState.prototype.handleReceive = function(opCode, jsonObj) {
 IdeFileChangeState.prototype.handleInput = function(){};
 
 
+
 /* There is an active page to edit */
-function IdeEditState(ide, rqh, tree, changeMemory, lastVersion, displayZone, pushInterval){
+function IdeEditState(ide, rqh, tree, pushInterval, nodeLastVersion, nodeDisplay){
   this._ide = ide;
   this._rqh = rqh;
   this._tree = tree;
-  this._changeMemory = changeMemory;
-  this._lastVersion = lastVersion;
-  this._displayZone = displayZone;
+
+  // Create classes
+  this._changeMemory = new LocalChanges();
+  this._lastVersion = new LastVersionZone(nodeLastVersion);
+  this._displayZone = new DisplayZone(nodeDisplay, this.handleInput);
 
   // Send frequency 
   this._pushInterval = pushInterval;
   this._pushIntervalHandle = null;
+
   // Diff lib to compare two texts
   this._difftool = new diff_match_patch();
+
   // Currently opened file
   this._currentFile = "";
   this._currentFileRevision = 0;
