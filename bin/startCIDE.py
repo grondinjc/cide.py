@@ -55,7 +55,11 @@ cherrypy.tools.websocket = WebSocketTool()
 
 # Instanciate App
 chatApp = Chat(logger)
-coreApp = Core("dummyProjectName", "/tmp/test/dummyProjectName", logger, 1)
+coreApp = Core("dummyProjectName", "/tmp/test/dummyProjectName", logger)
+
+# Bind for server event (start/stop)
+cherrypy.engine.subscribe('start', coreApp.start)
+cherrypy.engine.subscribe('stop', coreApp.stop)
 
 # Load Identification/Auth handler
 cherrypy.tools.auth = cherrypy.Tool('before_handler', check_identify)

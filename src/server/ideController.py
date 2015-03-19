@@ -7,6 +7,11 @@ from genshi.template import TemplateLoader
 from cide.server.identifyController import require_identify
 
 
+def wrap_opCode(opCode, payload):
+  return {'opCode': opCode,
+          'data': payload}
+
+
 def create_file_dump_dict(filename, version, content):
   return {'file':    filename,
           'vers':    version,
@@ -18,10 +23,13 @@ def create_file_version_dict(filename, version, changes):
           'vers':    version,
           'changes': changes}
 
+
 def create_change_add_element_dict(change):
   return {'type': IDEController.CHANGE_ADD_TYPE,
           'pos':  change.position,
           'content': change.data}
+
+
 def create_change_remove_element_dict(change):
   return {'type': IDEController.CHANGE_REMOVE_TYPE,
           'pos':  change.position,
@@ -65,6 +73,8 @@ class IDEController(object):
     # be implemented as tasks callbacks. To simplify reading,
     # required functions will all be aliases to methods
     self.notify_file_edit = self._save_callback
+    self.notify_get_project_nodes = self._tree_callback
+    self.notify_get_file_content = self._dump_callback
 
     # Register controller to events
     self._app.register_application_listener(self)
@@ -150,12 +160,17 @@ class IDEController(object):
         'file':    '<<Filepath of file to open>>'
       }
 
-    @return: JSON of the following format:
+    Output on the WS will be JSON of the following format:
       {
-        'file':    '<<Filepath of given file>>',
-        'vers':    '<<File version>>',
-        'content': '<<Content of the requested file>>'
+        'opCode': 'dump',
+        'data': {
+                  'file':    '<<Filepath of given file>>',
+                  'vers':    '<<File version>>',
+                  'content': '<<Content of the requested file>>'
+                }
       }
+      OR
+      Invalid path: None + (400 - Invalid path)
     """
     self._logger.debug("Open by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                 request.remote.ip,
@@ -169,12 +184,9 @@ class IDEController(object):
                                                                             request.remote.port,
                                                                             filename))
 
-    # TODO Check if we have a WS before subscribing?
     if self.is_valid_path(filename):
       self._app.register_user_to_file(username, filename)
-      content, version = self._app.get_file_content(filename)
-      # Dump content
-      return create_file_dump_dict(filename, version, content)
+      self._app.get_file_content(filename, username)
     else:
       raise HTTPError(400, "Invalid path")
 
@@ -192,8 +204,6 @@ class IDEController(object):
       {
         'file':    '<<Filepath of file to close>>'
       }
-
-    @return: None
     """
     self._logger.debug("Close by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                  request.remote.ip,
@@ -211,8 +221,6 @@ class IDEController(object):
       self._app.unregister_user_to_file(username, filename)
     else:
       raise HTTPError(400, "Invalid path")
-
-    return None
 
   @cherrypy.expose
   @cherrypy.tools.json_out()
@@ -237,16 +245,17 @@ class IDEController(object):
 
     Output on the WS will be JSON of the following format:
       {
-        'file':    '<<Filepath of edited file>>',
-        'vers':    '<<File version>>',
-        'changes': [{
-                     'type':    '<<Type of edit (ins | del)>>',
-                     'pos':     '<<Position of edit>>',
-                     'content': '<<Content of insert | Number of deletes>>'
-                   }]
+        'opCode': 'save',
+        'data': {
+                  'file':    '<<Filepath of edited file>>',
+                  'vers':    '<<File version>>',
+                  'changes': [{
+                               'type':    '<<Type of edit (ins | del)>>',
+                               'pos':     '<<Position of edit>>',
+                               'content': '<<Content of insert | Number of deletes>>'
+                             }]
+                }
       }
-
-    @return: None
     """
     self._logger.debug("Save by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                 request.remote.ip,
@@ -276,8 +285,6 @@ class IDEController(object):
     else:
       raise HTTPError(400, "Invalid path")
 
-    return None
-
   @cherrypy.expose
   @cherrypy.tools.json_out()
   @require_identify()
@@ -294,15 +301,17 @@ class IDEController(object):
 
     @param filename: Filepath of requested file
 
-    @return: JSON of the following format:
+    Output on the WS will be JSON of the following format:
       {
-        'file':    '<<Filepath of given file>>',
-        'vers':    '<<File version>>',
-        'content': '<<Content of the requested file>>'
+        'opCode': 'dump',
+        'data': {
+                  'file':    '<<Filepath of given file>>',
+                  'vers':    '<<File version>>',
+                  'content': '<<Content of the requested file>>'
+                }
       }
       OR
       Invalid path: None + (400 - Invalid path)
-      File doesn't exist: Nothing + (404 Not found)
     """
     self._logger.debug("Dump by {0} ({1}:{2}) filename: {3}".format(cherrypy.session['username'],
                                                                     request.remote.ip,
@@ -316,9 +325,7 @@ class IDEController(object):
                                                                            filename))
 
     if self.is_valid_path(filename):
-      # TODO Check for exceptions
-      content, version = self._app.get_file_content(filename)
-      return create_file_dump_dict(filename, version, content)
+      self._app.get_file_content(filename, username)
     else:
       raise HTTPError(400, "Invalid path")
 
@@ -331,12 +338,15 @@ class IDEController(object):
     Method : GET
     (Path : /ide/tree)
 
-    @return: JSON of the following format:
+    Output on the WS will be JSON of the following format:
       {
-        'nodes':    [{
-                     'node':    '<<Path of the project node>>',
-                     'isDir':   '<<Flag to diffenciate directories from file>>'
-                    }]
+        'opCode': 'tree',
+        'data': {
+                  'nodes':    [{
+                               'node':    '<<Path of the project node>>',
+                               'isDir':   '<<Flag to diffenciate directories from file>>'
+                              }]
+                }
       }
     """
     self._logger.debug("Tree dump by {0} ({1}:{2})".format(cherrypy.session['username'],
@@ -348,8 +358,7 @@ class IDEController(object):
                                                                     request.remote.ip,
                                                                     request.remote.port))
 
-    nodes = self._app.get_project_nodes()
-    return create_tree_nodes_dict(nodes)
+    self._app.get_project_nodes(username)
 
   @cherrypy.expose
   @require_identify()
@@ -374,13 +383,16 @@ class IDEController(object):
 
     Output on the WS will be JSON of the following format:
       {
-        'file':    '<<Filepath of edited file>>',
-        'vers':    '<<File version>>',
-        'changes': [{
-                     'type':    '<<Type of edit (ins | del)>>',
-                     'pos':     '<<Position of edit>>',
-                     'content': '<<Content of insert | Number of deletes>>'
-                   }]
+        'opCode': 'save',
+        'data': {
+                  'file':    '<<Filepath of edited file>>',
+                  'vers':    '<<File version>>',
+                  'changes': [{
+                               'type':    '<<Type of edit (ins | del)>>',
+                               'pos':     '<<Position of edit>>',
+                               'content': '<<Content of insert | Number of deletes>>'
+                             }]
+                }
       }
     """
 
@@ -390,7 +402,11 @@ class IDEController(object):
                            if type(element) is EditAdd else
                            create_change_remove_element_dict(element))
                           for element in changes]
-    message_sent = simplejson.dumps(create_file_version_dict(filename, version, serialized_changes))
+
+    message_sent = simplejson.dumps(wrap_opCode('save',
+                                                create_file_version_dict(filename,
+                                                                         version,
+                                                                         serialized_changes)))
 
     for user in users:
       ws = IDEWebSocket.IDEClients.get(user)
@@ -398,15 +414,15 @@ class IDEController(object):
         try:
           ws.send(message_sent)
           self._logger.info("{0} ({1}:{2}) WS transfer succeded ({3})".format(user,
-                                                                       ws.peer_address[0],
-                                                                       ws.peer_address[1],
-                                                                       self.debug_bundle_id))
+                                                                              ws.peer_address[0],
+                                                                              ws.peer_address[1],
+                                                                              self.debug_bundle_id))
         except:
           self._logger.error("{0} ({1}:{2}) WS transfer failed".format(user,
                                                                        ws.peer_address[0],
                                                                        ws.peer_address[1]))
           # Remove user from every file notify list
-          self._app.unregister_user_to_file(user, filename)
+          self._app.unregister_user_to_all_files(user)
           # Close websocket
           ws.close(reason='Failed to send update for file {0}'.format(filename))
 
@@ -415,6 +431,81 @@ class IDEController(object):
         # Remove user from every file notify list
         self._app.unregister_user_to_all_files(user)
     ++self.debug_bundle_id
+
+  def _tree_callback(self, nodes, caller):
+    """
+    Sends the files and the directories paths included in the project tree
+    This is the call back from /ide/tree GET-method
+
+    Output on the WS will be JSON of the following format:
+      {
+        'opCode': 'tree',
+        'data': {
+                  'nodes':    [{
+                               'node':    '<<Path of the project node>>',
+                               'isDir':   '<<Flag to diffenciate directories from file>>'
+                              }]
+                }
+      }
+    """
+    self._logger.info("Tree-callback for {0}".format(caller))
+
+    to_send = simplejson.dumps(wrap_opCode('tree', create_tree_nodes_dict(nodes)))
+
+    ws = IDEWebSocket.IDEClients.get(caller)
+    if ws:
+      try:
+        ws.send(to_send)
+        self._logger.info("{0} ({1}:{2}) WS transfer succeded".format(caller,
+                                                                      ws.peer_address[0],
+                                                                      ws.peer_address[1]))
+      except:
+        self._logger.error("{0} ({1}:{2}) WS transfer failed".format(caller,
+                                                                     ws.peer_address[0],
+                                                                     ws.peer_address[1]))
+        # Close websocket
+        ws.close(reason='Failed to send tree')
+
+    else:
+      self._logger.error("{0} has no WS in server".format(caller))
+
+  def _dump_callback(self, result, caller):
+    """
+    Sends the current content of a given file
+    This is the call back from /ide/open and /ide/dump
+
+    Output on the WS will be JSON of the following format:
+      {
+        'opCode': 'dump',
+        'data': {
+                  'file':    '<<Filepath of given file>>',
+                  'vers':    '<<File version>>',
+                  'content': '<<Content of the requested file>>'
+                }
+      }
+    """
+    self._logger.info("Tree-callback for {0}".format(caller))
+    filename, content, version = result  # TODO Check if result is None
+
+    to_send = simplejson.dumps(wrap_opCode('dump',
+                                           create_file_dump_dict(filename, version, content)))
+
+    ws = IDEWebSocket.IDEClients.get(caller)
+    if ws:
+      try:
+        ws.send(to_send)
+        self._logger.info("{0} ({1}:{2}) WS transfer succeded".format(caller,
+                                                                      ws.peer_address[0],
+                                                                      ws.peer_address[1]))
+      except:
+        self._logger.error("{0} ({1}:{2}) WS transfer failed".format(caller,
+                                                                     ws.peer_address[0],
+                                                                     ws.peer_address[1]))
+        # Close websocket
+        ws.close(reason='Failed to send dump')
+
+    else:
+      self._logger.error("{0} has no WS in server".format(caller))
 
 
 class IDEWebSocket(WebSocket):
