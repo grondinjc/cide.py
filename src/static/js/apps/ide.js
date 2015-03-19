@@ -30,6 +30,8 @@ function AppIDE(lastVersionZoneId, displayZoneId, pushInterval) {
   // Initial state
   this._ideState = new IdeInitState(this, requestHandler, tree);
   this._ideState.init();
+  // Debug
+  $("#stateHelper").text("Waiting project tree from server");
 };
 
 AppIDE.prototype.showFile = function(filepath) {
@@ -43,18 +45,27 @@ AppIDE.prototype.handleInput = function() {
 };
 
 AppIDE.prototype.waitForFileSelected = function() {
+  // Debug
+  $("#stateHelper").text("Waiting for a file to be selected");
+
   console.log("INFO", "IDE : Switch to NoFileState");
   this._ideState.leave();
   this._noFileState.init();
   this._ideState = this._noFileState;
 };
 AppIDE.prototype.waitForTargetFile = function(targetFilepath) {
+  // Debug
+  $("#stateHelper").text("Waiting for file '" +targetFilepath+ "' from server");
+
   console.log("INFO", "IDE : Switch to ChangeFileState ('" +targetFilepath+"')");
   this._ideState.leave();
   this._fileChangeState.init(targetFilepath);
   this._ideState = this._fileChangeState;
 };
 AppIDE.prototype.switchToEditFileState = function(targetFilepath, dumpObj, changeObjs) {
+  // Debug
+  $("#stateHelper").text("Editing file '" +targetFilepath+ "'");
+
   console.log("INFO", "IDE : Switch to EditFileState ('" +targetFilepath+"')");
   this._ideState.leave();
   this._editState.init(targetFilepath, dumpObj, changeObjs);
