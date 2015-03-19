@@ -129,36 +129,6 @@ class Core(object):
       if path in self._project_files:
         del self._project_files[path]
 
-  def unregister_user_to_file(self, user, path):
-    """
-    Unregister a user to a file in order to stop receiving file modification
-    notifications
-
-    @type user: str
-    @type path: str
-
-    @param user: The user name
-    @param path: The path of the file to be unregistrered from
-    """
-    # XXX Currently Unused
-    with self._project_files_lock:
-      if (path in self._project_files and
-          user in self._project_files[path].users):
-        self._project_files[path].users.remove(user)
-
-  def unregister_user_to_all_files(self, user):
-    """
-    Unregister a user from all files in order to stop receiving file modification
-    notifications
-
-    @type user: str
-
-    @param user: The user name
-    """
-    with self._project_files_lock:
-      for f in self._project_files:
-        f.users.discard(user)
-
   def _add_task(self, f):
     """
     Add a task into the threadpool
@@ -226,6 +196,30 @@ class Core(object):
     @param path: The path of the file to be registered to
     """
     self._add_task(lambda: self._task_register_user_to_file(user, path))
+
+  def unregister_user_to_file(self, user, path):
+    """
+    Unregister a user to a file in order to stop receiving file modification
+    notifications
+
+    @type user: str
+    @type path: str
+
+    @param user: The user name
+    @param path: The path of the file to be unregistrered from
+    """
+    self._add_task(lambda: self._task_unregister_user_to_file(user, path))
+
+  def unregister_user_to_all_files(self, user):
+    """
+    Unregister a user from all files in order to stop receiving file modification
+    notifications
+
+    @type user: str
+
+    @param user: The user name
+    """
+    self._add_task(lambda: self._task_unregister_user_to_all_files(user))
 
   def file_edit(self, path, changes):
     """
@@ -309,6 +303,35 @@ class Core(object):
         self._project_files[path] = self._create_file_unsafe()
       # Register user
       self._project_files[path].users.add(user)
+
+  def _task_unregister_user_to_file(self, user, path):
+    """
+    Task to unregister a user to a file in order to stop receiving file modification
+    notifications
+
+    @type user: str
+    @type path: str
+
+    @param user: The user name
+    @param path: The path of the file to be unregistrered from
+    """
+    # XXX Currently Unused
+    with self._project_files_lock:
+      if path in self._project_files:
+        self._project_files[path].users.discard(user)
+
+  def _task_unregister_user_to_all_files(self, user):
+    """
+    Task to unregister a user from all files in order to stop receiving file modification
+    notifications
+
+    @type user: str
+
+    @param user: The user name
+    """
+    with self._project_files_lock:
+      for f in self._project_files:
+        f.users.discard(user)
 
   def _task_apply_changes(self, path):
     """
