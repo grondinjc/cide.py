@@ -24,8 +24,6 @@ class PaquetModifications
 {
   private:
     vector<ModificationPtr> _modifications;
-    //size_t _taille;
-    //uint _versionID;
 
   public:
     PaquetModifications() = default;
