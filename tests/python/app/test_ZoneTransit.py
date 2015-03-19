@@ -3,6 +3,7 @@ from unittest import TestCase
 from libZoneTransit import TransitZone
 from libZoneTransit import Removal
 from libZoneTransit import Addition
+from libZoneTransit import Modifications
 from pdb import set_trace as dbg
 
 class TestTransitZone(TestCase):
@@ -76,6 +77,49 @@ class TestTransitZone(TestCase):
     self.zone.add(self.addition2)
     self.zone.writeModifications()
     self.assertEqual(self.zone.content, "Hello allomondeWorld")
+    
+  def test_writeModificationsFromSameBundle0(self):
+    bundle = Modifications()
+    add0 = Addition(11,"1")
+    add1 = Addition(12,"2")
+    add2 = Addition(13,"3")
+    bundle.extend([add0,add1,add2])
+    self.zone.add(bundle)
+    self.zone.writeModifications()
+    self.assertEqual(self.zone.content, "Hello World123")
+    
+  def test_writeModificationsFromSameBundle1(self):
+    bundle = Modifications()
+    add0 = Addition(11,"1")
+    add1 = Addition(12,"2")
+    add2 = Addition(13,"3")
+    rem1 = Removal(13,1)
+    bundle.extend([add0,add1,add2,rem1])
+    self.zone.add(bundle)
+    self.zone.writeModifications()
+    self.assertEqual(self.zone.content, "Hello World12")
+    
+  def test_writeTwoBundles0(self):
+    bundle = Modifications()
+    add0 = Addition(11,"1")
+    add1 = Addition(12,"2")
+    add2 = Addition(13,"3")
+    bundle.extend([add0,add1,add2])
+    self.zone.add(self.addition1)
+    self.zone.add(bundle)
+    self.zone.writeModifications()
+    self.assertEqual(self.zone.content, "Hello alloWorld123")
+    
+  def test_writeTwoBundles1(self):
+    bundle = Modifications()
+    add0 = Addition(11,"1")
+    add1 = Addition(12,"2")
+    add2 = Addition(13,"3")
+    bundle.extend([add0,add1,add2])
+    self.zone.add(self.removal1)
+    self.zone.add(bundle)
+    self.zone.writeModifications()
+    self.assertEqual(self.zone.content, "123")
     
   def test_isEmpty(self):
     self.assertTrue(self.zone.isEmpty())

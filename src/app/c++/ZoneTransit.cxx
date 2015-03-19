@@ -23,6 +23,9 @@ using namespace types;
 
 BOOST_PYTHON_MODULE(libZoneTransit)
 {
+  void (ZoneTransit::*add1)(const vector<ModificationPtr>& pm) = &ZoneTransit::add;
+  void (ZoneTransit::*add2)(const ModificationPtr& m)          = &ZoneTransit::add;
+
   //Definit la classe Fichier. Fichier est un alias pour FichierType<string>
   class_<Fichier, boost::noncopyable>("File")
     .def(init<const string &>())
@@ -34,7 +37,8 @@ BOOST_PYTHON_MODULE(libZoneTransit)
 
   class_<ZoneTransit, boost::noncopyable>("TransitZone")
     .def(init<const string&>())
-    .def("add", &ZoneTransit::add)
+    .def("add", add1)
+    .def("add", add2)
     .def("writeModifications", &ZoneTransit::ecrireModifications)
     .def("isEmpty", &ZoneTransit::estVide)
     .add_property("content", &ZoneTransit::getContenu);
@@ -61,6 +65,6 @@ BOOST_PYTHON_MODULE(libZoneTransit)
     .def(init<pos_t, size_t>())
     .def(init<const Suppression&>());
 
-  class_<std::vector<ModificationPtr> >("Modifications")
+  class_<std::vector<ModificationPtr>>("Modifications")
     .def(vector_indexing_suite<std::vector<ModificationPtr>, true >());
 }
