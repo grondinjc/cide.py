@@ -202,10 +202,19 @@ function IdeEditState(ide, rqh, tree, pushInterval, nodeLastVersion, nodeDisplay
   this._rqh = rqh;
   this._tree = tree;
 
+  // For closure
+  var obj = this;
+
+  // Benchmarks
+  this._debugStopWatchLap = new StopWatch();
+  this._debugStopWatchLap.hide();
+
   // Create classes
   this._changeMemory = new LocalChanges();
   this._lastVersion = new LastVersionZone(nodeLastVersion);
-  this._displayZone = new DisplayZone(nodeDisplay, this.handleInput);
+  this._displayZone = new DisplayZone(nodeDisplay, function(){
+    obj.handleInput();
+  });
 
   // Send frequency 
   this._pushInterval = pushInterval;
@@ -232,6 +241,7 @@ function IdeEditState(ide, rqh, tree, pushInterval, nodeLastVersion, nodeDisplay
     // Save and send, delete sent changes on success
     var modifObject = createModifGroup(changes, obj._currentFile, obj._currentFileRevision);
     //console.log("Current bundle id is ", currentBundleID, modifObject);
+    obj._debugStopWatchLap.start(); // debug
     obj._rqh.put("save", modifObject, function(){
       // Will I delete new input ??
     }, function(){}, false);
@@ -248,6 +258,9 @@ IdeEditState.prototype.init = function(targetFilepath, dumpObj, changeObjs){
   // Interval to send changes to server
   this._pushIntervalHandle = setInterval(this._pushChanges,
                                          this._pushInterval);
+
+  // debug
+  this._debugStopWatchLap.show();
 };
 IdeEditState.prototype.leave = function(){
   // Avoid sending other packages
@@ -255,8 +268,12 @@ IdeEditState.prototype.leave = function(){
   // Make sure no changes are left behind
   this._pushChanges();
   // Unregister to file ... call /close
+
+  // debug
+  this._debugStopWatchLap.hide();
 };
 IdeEditState.prototype.handleReceive = function(opCode, jsonObj){
+  this._debugStopWatchLap.stop();
   if(opCode == OPCODE_IDE_SAVE || opCode == 0) {
     // opCode is textEdit
     if(jsonObj.file == this._currentFile) {
@@ -355,4 +372,48 @@ IdeEditState.prototype._combineText = function(cursor_pos) {
     cursor_pos = modifs[i].applyOnPos(cursor_pos);
   }
   return [base, cursor_pos];
+};
+
+
+
+
+
+
+
+// Debug
+function StopWatch(){
+  var obj = this; // Closure
+  this._node = $("<div>");
+  this._node_list = $("<ol>");
+  this._node.append($("<h2>").append("StopWatchLap"))
+            .append(this._node_list)
+            .append($("<button>").click(function(){obj._node_list.empty();})
+                                 .text("Clear"));
+  $("#editorLastVersion").parent().append(this._node);
+  this._startTime = [];
+}
+StopWatch.prototype.start = function(){
+  this._startTime.push(performance.now());
+  ++this._startedCount;
+};
+StopWatch.prototype.stop = function(){
+  var end = performance.now();
+  this._displayLaps(this._startTime, end);
+  this._startTime = [];
+};
+StopWatch.prototype.hide = function(){
+  this._node.hide();
+};
+StopWatch.prototype.show = function(){
+  this._node.show();
+};
+StopWatch.prototype._displayLaps = function(startsArray, end){
+  for(var i = 0; i < startsArray.length; ++i){
+    var lapTimeMS = end - startsArray[i];
+    this._node_list.append(
+      $("<li>").append(
+        lapTimeMS + "ms (start is : '"+startsArray[i]+"' and end is '"+end+"')"
+      )
+    );
+  }
 };
