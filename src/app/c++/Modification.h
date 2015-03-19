@@ -32,16 +32,19 @@ class Modification
     virtual size_t getTaille() const noexcept {return _taille;}
     virtual void effectuerModification(Fichier& fichier) = 0;
 
-    virtual void mettreAJour(const Modification& autre)
+    virtual void mettreAJour(const Modification& m1)
     {
-        autre.mettreAJourAutre(*this);
+        m1.mettreAJourAutre(*this);
     }
 
     virtual void setPosition(pos_t value) noexcept {_position = value;}
     virtual void setTaille(size_t value) noexcept {_taille = value;}
+    virtual bool isAdd() const = 0;
+    virtual bool isRemove() const = 0;
+    virtual void updateTaille(const Modification& m1) = 0;
 
   protected:
-    virtual void mettreAJourAutre(Modification& autre) const = 0;
+    virtual void mettreAJourAutre(Modification& m2) const = 0;
 };
 
 #endif //MODIFICATION

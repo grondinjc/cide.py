@@ -8,7 +8,7 @@
 #include <vector>
 #include <mutex>
 #include <boost/python/tuple.hpp>
-#include "Modification.h"
+#include "PaquetModifications.h"
 #include "Fichier.h"
 #include "Types.h"
 
@@ -19,19 +19,14 @@ using std::vector;
 using std::mutex;
 using std::lock_guard;
 using std::string;
-using boost::shared_ptr;
 
 using namespace types;
-
-namespace types
-{
-  using ModificationPtr = shared_ptr<Modification>;
-};
 
 class ZoneTransit
 {
   private:
-    vector<ModificationPtr> _modifications;
+    vector<PaquetModifications> _paquetModifications; //ce vecteur sert a la gestion interne d'ecriture et de mise a jour des modifications
+    vector<ModificationPtr> _modifications; //ce vecteur sera retourne a l'application lorsqu'ecrireModifications est appele
     Fichier _fichier;
     mutex _mutex;
 
@@ -39,18 +34,30 @@ class ZoneTransit
     ZoneTransit() = default;
 
     ZoneTransit(const string& contenu) noexcept
-      : _modifications{}
+      : _paquetModifications{}
       , _fichier{contenu}
       , _mutex{}
     {}
 
     //ajoute la modification a la liste
+    void add(const vector<ModificationPtr>& pm)
+    {
+      lock_guard<mutex> lock{_mutex};
+
+      _paquetModifications.push_back(PaquetModifications(pm));
+
+      //On ajoute graduellement a ce vecteur pour amortir le cout d'un appel a ecrireModifications
+      _modifications.insert(_modifications.end(), pm.begin(), pm.end());
+    }
+
     void add(const ModificationPtr& m)
     {
       lock_guard<mutex> lock{_mutex};
 
-      _modifications.push_back(m);
+      _paquetModifications.push_back(PaquetModifications(vector<ModificationPtr>(1,m)));
 
+      //On ajoute graduellement a ce vecteur pour amortir le cout d'un appel a ecrireModifications
+      _modifications.push_back(m);
     }
 
     //effectue les modifications
@@ -58,14 +65,17 @@ class ZoneTransit
     {
       lock_guard<mutex> lock{_mutex};
 
-      for(auto it = _modifications.begin(); it != _modifications.end(); ++it)
+      //On effectue les modifications par "paquet" pour eviter que les modifications
+      //d'un meme paquet se mettent a jour inutilement entre elles
+      for(auto it = _paquetModifications.begin(); it != _paquetModifications.end(); ++it)
       {
-        (*it)->effectuerModification(_fichier);
+        it->effectuerModification(_fichier);
         mettreAJourModifications(it);
       }
 
       boost::python::tuple modifications = boost::python::make_tuple(0,_modifications);
 
+      _paquetModifications.clear();
       _modifications.clear();
 
       return modifications;
@@ -76,12 +86,12 @@ class ZoneTransit
     bool estVide() const noexcept {return _modifications.empty();}
 
   private:
-    void mettreAJourModifications(vector<ModificationPtr>::iterator it)
+    void mettreAJourModifications(vector<PaquetModifications>::iterator it)
     {
-      Modification& modification = **it;
-      for(++it; it != _modifications.end(); ++it)
+      PaquetModifications& modification = *it;
+      for(++it; it != _paquetModifications.end(); ++it)
       {
-        (*it)->mettreAJour(modification);
+        it->mettreAJour(modification);
       }
     }
 };

@@ -24,9 +24,15 @@ class TestAjout(TestCase):
     self.assertEqual(self.file.content, "teallost")
 
   def test_mettreAJour(self):
-    modification = Removal(0,3)
+    modification = Removal(1,3)
     self.addition.update(modification)
-    self.assertEqual(self.addition.position, 0)
+    self.assertEqual(self.addition.position, 1)
     
   def test_getData(self):
     self.assertEqual(self.addition.data, "allo")
+    
+  def test_isAdd(self):
+    self.assertTrue(self.addition.isAdd())
+    
+  def test_isRemove(self):
+    self.assertFalse(self.addition.isRemove())

@@ -35,19 +35,38 @@ class Ajout : public Modification
       fichier.inserer(_data.c_str(), getPosition(), getTaille());
     }
 
-    virtual void mettreAJourAutre(Modification& autre) const override
+    virtual void mettreAJourAutre(Modification& m2) const override
     {
       //cas possibles:
-      //this est un ajout et a ete effectue apres autre (pos)
+      //this (m1) est un ajout et est positionne apres m2
       //rien a faire
 
-      //this est un ajout et a ete effectue avant autre (pos)
-      pos_t posAutre = autre.getPosition();
+      //this (m1) est un ajout et est positionne avant m2 (pos)
+      pos_t posAutre = m2.getPosition();
       if(getPosition() <= posAutre)
-          autre.setPosition(posAutre + getTaille());
+          m2.setPosition(posAutre + getTaille());
+    }
+
+
+    virtual void updateTaille(const Modification& m1) override
+    {
+      //this = m2
+      //On assume que m1 est necessairement une suppression.
+      //Etant donne que m2 (this) est un ajout, il n'y a rien a faire ici.
+      //La taille - qui est celle de son contenu - n'est pas affectee.
     }
 
     string getData() const {return _data;}
+
+    virtual bool isAdd() const override
+    {
+      return true;
+    }
+
+    virtual bool isRemove() const override
+    {
+      return false;
+    }
 };
 
 #endif //AJOUT
