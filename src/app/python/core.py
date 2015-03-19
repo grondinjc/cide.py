@@ -2,7 +2,7 @@ import sys
 import os
 import Queue
 from copy import deepcopy
-from threading import Lock, Thread
+from threading import Thread
 from collections import namedtuple
 
 from cide.app.python.utils.nodes import (get_existing_files,
@@ -63,17 +63,12 @@ class Core(object):
     existing_files_path = get_existing_files(self._project_path)
     for path in existing_files_path:
       with open(os.path.join(self._project_path, path.lstrip('/')), 'r') as f:
-        self._project_files[path] = self._create_file_unsafe(f.read())
+        self._project_files[path] = self._create_file(f.read())
 
-    # Lock when interracting with `filesystem` or with `users`
-    self._project_files_lock = Lock()
-
-    # Lock when dealing with application listeners
-    self._core_listeners_lock = Lock()
     self._core_listeners = list()  # List for direct indexing
 
     # Initialize first strategy to null since nobody is registered
-    first_strategy = StrategyCallEmpty(self._change_core_strategy_unsafe)
+    first_strategy = StrategyCallEmpty(self._change_core_strategy)
     self._core_listeners_strategy = first_strategy
 
     self.tasks = Queue.Queue()
@@ -112,9 +107,9 @@ class Core(object):
     @param path: The path of the new file to be added in the project tree
     """
     # XXX Currently Unused
-    with self._project_files_lock:
-      if path not in self._project_files:
-        self._project_files[path] = self._create_file_unsafe()
+    # XXX Concurency issue without lock here
+    if path not in self._project_files:
+      self._project_files[path] = self._create_file()
 
   def delete_file(self, path):
     """
@@ -125,9 +120,9 @@ class Core(object):
     @param path: The path of the file to be removed in the project tree
     """
     # XXX Currently Unused
-    with self._project_files_lock:
-      if path in self._project_files:
-        del self._project_files[path]
+    # XXX Concurency issue without lock here
+    if path in self._project_files:
+      del self._project_files[path]
 
   def _add_task(self, f):
     """
@@ -140,11 +135,10 @@ class Core(object):
     """
     self.tasks.put(f)
 
-  def _create_file_unsafe(self, content=""):
+  def _create_file(self, content=""):
     """
     Creates the representation of a file
     Construction isolated in a function to simply further changes
-    This function is unsafe since no locking is done
 
     @type content: str
 
@@ -254,12 +248,11 @@ class Core(object):
     Callback will be called with: nodes, caller
     """
     self._logger.info("get_project_nodes task called for {0}".format(caller))
-    with self._project_files_lock:
-      sorted_nodes = ([(d, True) for d in get_existing_dirs(self._project_path)] +
-                      [(f, False) for f in self._project_files.keys()])
-      sorted_nodes.sort()
+    sorted_nodes = ([(d, True) for d in get_existing_dirs(self._project_path)] +
+                    [(f, False) for f in self._project_files.keys()])
+    sorted_nodes.sort()
 
-      self._notify_event(lambda l: l.notify_get_project_nodes(sorted_nodes, caller))
+    self._notify_event(lambda l: l.notify_get_project_nodes(sorted_nodes, caller))
 
   def _task_get_file_content(self, path, caller):
     """
@@ -275,11 +268,10 @@ class Core(object):
     """
     self._logger.info("get_file_content task called for {0}, {1}".format(caller, path))
     result = None
-    with self._project_files_lock:
-      if path in self._project_files:
-        result = (path,
-                  self._project_files[path].file.content,
-                  0)  # Version
+    if path in self._project_files:
+      result = (path,
+                self._project_files[path].file.content,
+                0)  # Version
 
     self._notify_event(lambda l: l.notify_get_file_content(result, caller))
 
@@ -295,12 +287,12 @@ class Core(object):
     @param path: The path of the file to be registered to
     """
     self._logger.info("register_user_to_file task called for {0}, {1}".format(user, path))
-    with self._project_files_lock:
-      if path not in self._project_files:
-        # Create file when does not exists
-        self._project_files[path] = self._create_file_unsafe()
-      # Register user
-      self._project_files[path].users.add(user)
+    if path not in self._project_files:
+      # Create file when does not exists
+      self._project_files[path] = self._create_file()
+
+    # Register user
+    self._project_files[path].users.add(user)
 
   def _task_unregister_user_to_file(self, user, path):
     """
@@ -314,9 +306,8 @@ class Core(object):
     @param path: The path of the file to be unregistrered from
     """
     self._logger.info("unregister_user_to_file task called for {0}, {1}".format(user, path))
-    with self._project_files_lock:
-      if path in self._project_files:
-        self._project_files[path].users.discard(user)
+    if path in self._project_files:
+      self._project_files[path].users.discard(user)
 
   def _task_unregister_user_to_all_files(self, user):
     """
@@ -328,9 +319,8 @@ class Core(object):
     @param user: The user name
     """
     self._logger.info("unregister_user_to_all_files task called for {0}".format(user))
-    with self._project_files_lock:
-      for f in self._project_files:
-        f.users.discard(user)
+    for f in self._project_files:
+      f.users.discard(user)
 
   def _task_file_edit(self, path, changes):
     """
@@ -343,17 +333,16 @@ class Core(object):
     @param changes: Changes to be applied on the file
     """
     self._logger.info("file_edit task called for {0}".format(path))
-    with self._project_files_lock:
-      if path in self._project_files:
-        for c in changes:
-          # Encoding required since c++ module requires str type
-          change_object = (EditAdd(c.pos, c.data.encode("utf-8")) if c.is_add
-                           else EditRemove(c.pos, c.data))
-          self._project_files[path].file.add(change_object)
+    if path in self._project_files:
+      for c in changes:
+        # Encoding required since c++ module requires str type
+        change_object = (EditAdd(c.pos, c.data.encode("utf-8")) if c.is_add
+                         else EditRemove(c.pos, c.data))
+        self._project_files[path].file.add(change_object)
 
-        # register async task to apply changes XXX Will become periodic instead
-        self._add_task(lambda: self._task_apply_changes(path))
-        self._logger.info("apply_changes task task added")
+      # register async task to apply changes XXX Will become periodic instead
+      self._add_task(lambda: self._task_apply_changes(path))
+      self._logger.info("apply_changes task task added")
 
   def _task_apply_changes(self, path):
     """
@@ -364,27 +353,19 @@ class Core(object):
     @param path: The path of the file on which modifications will be applied
     """
     self._logger.info("apply_changes task called for {0}".format(path))
-    self._logger.info("_task_apply_changes lock requested")
     try:
-      with self._project_files_lock:
-        self._logger.info("_task_apply_changes lock acquired")
-        if path in self._project_files:
-          version, changes = self._project_files[path].file.writeModifications()
-          users_registered = deepcopy(self._project_files[path].users)
-          self._logger.info("_task_apply_changes call notify")
-          self._add_task(lambda: self._notify_event(
-            lambda l: l.notify_file_edit(path,
-                                         changes,
-                                         version,
-                                         users_registered)))
-          self._logger.info("_task_apply_changes call notify ... CALLED")
-
-        self._logger.info("_task_apply_changes lock about to be released")
+      if path in self._project_files:
+        version, changes = self._project_files[path].file.writeModifications()
+        users_registered = deepcopy(self._project_files[path].users)
+        self._logger.info("_task_apply_changes call notify")
+        self._add_task(lambda: self._notify_event(
+          lambda l: l.notify_file_edit(path,
+                                       changes,
+                                       version,
+                                       users_registered)))
     except:
-      e = sys.exc_info()[0]
-      self._logger.exception("EXCEPTION RAISED {0}".format(e))
-    finally:
-      self._logger.info("_task_apply_changes lock released")
+      e = sys.exc_info()
+      self._logger.exception("EXCEPTION RAISED {0}\n{1}\n{2}".format(e[0], e[1], e[2]))
 
   """
   Observer and Stategy design patterns
@@ -402,10 +383,9 @@ class Core(object):
 
     @param listener: The observer requesting notifications from the app
     """
-    with self._core_listeners_lock:
-      if listener not in self._core_listeners:
-        self._core_listeners.append(listener)
-        self._core_listeners_strategy.upgrade_strategy()
+    if listener not in self._core_listeners:
+      self._core_listeners.append(listener)
+      self._core_listeners_strategy.upgrade_strategy()
 
   def unregister_application_listener(self, listener):
     """
@@ -413,15 +393,13 @@ class Core(object):
 
     @param listener: The observer requesting notifications from the application
     """
-    with self._core_listeners_lock:
-      if listener in self._core_listeners:
-        self._core_listeners.remove(listener)
-        self._core_listeners_strategy.downgrade_strategy()
+    if listener in self._core_listeners:
+      self._core_listeners.remove(listener)
+      self._core_listeners_strategy.downgrade_strategy()
 
-  def _change_core_strategy_unsafe(self, strategy):
+  def _change_core_strategy(self, strategy):
     """
     Change the current strategy
-    This function is unsafe since no locking is done
 
     @param strategy: The new strategy to use
     """
@@ -435,7 +413,6 @@ class Core(object):
 
     @param f: The notification callable
     """
-    # with self._core_listeners_lock:
     self._core_listeners_strategy.send(f, self._core_listeners)
 
 
