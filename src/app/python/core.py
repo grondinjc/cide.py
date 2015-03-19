@@ -111,6 +111,7 @@ class Core(object):
 
     @param path: The path of the new file to be added in the project tree
     """
+    # XXX Currently Unused
     with self._project_files_lock:
       if path not in self._project_files:
         self._project_files[path] = self._create_file_unsafe()
@@ -123,27 +124,10 @@ class Core(object):
 
     @param path: The path of the file to be removed in the project tree
     """
+    # XXX Currently Unused
     with self._project_files_lock:
       if path in self._project_files:
         del self._project_files[path]
-
-  def register_user_to_file(self, user, path):
-    """
-    Register a user to a file in order to receive file modification
-    notifications. When the file does not exists, it is created
-
-    @type user: str
-    @type path: str
-
-    @param user: The user name
-    @param path: The path of the file to be registered to
-    """
-    with self._project_files_lock:
-      if path not in self._project_files:
-        # Create file when does not exists
-        self._project_files[path] = self._create_file_unsafe()
-      # Register user
-      self._project_files[path].users.add(user)
 
   def unregister_user_to_file(self, user, path):
     """
@@ -156,6 +140,7 @@ class Core(object):
     @param user: The user name
     @param path: The path of the file to be unregistrered from
     """
+    # XXX Currently Unused
     with self._project_files_lock:
       if (path in self._project_files and
           user in self._project_files[path].users):
@@ -229,6 +214,19 @@ class Core(object):
     """
     self._add_task(lambda: self._task_get_file_content(path, caller))
 
+  def register_user_to_file(self, user, path):
+    """
+    Register a user to a file in order to receive file modification
+    notifications. When the file does not exists, it is created
+
+    @type user: str
+    @type path: str
+
+    @param user: The user name
+    @param path: The path of the file to be registered to
+    """
+    self._add_task(lambda: self._task_register_user_to_file(user, path))
+
   def file_edit(self, path, changes):
     """
     Send changes, text added or text removed, to the file
@@ -293,6 +291,24 @@ class Core(object):
                   0)  # Version
 
     self._notify_event(lambda l: l.notify_get_file_content(result, caller))
+
+  def _task_register_user_to_file(self, user, path):
+    """
+    Task to register a user to a file in order to receive file modification
+    notifications. When the file does not exists, it is created
+
+    @type user: str
+    @type path: str
+
+    @param user: The user name
+    @param path: The path of the file to be registered to
+    """
+    with self._project_files_lock:
+      if path not in self._project_files:
+        # Create file when does not exists
+        self._project_files[path] = self._create_file_unsafe()
+      # Register user
+      self._project_files[path].users.add(user)
 
   def _task_apply_changes(self, path):
     """

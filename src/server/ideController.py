@@ -160,12 +160,17 @@ class IDEController(object):
         'file':    '<<Filepath of file to open>>'
       }
 
-    @return: JSON of the following format:
+    Output on the WS will be JSON of the following format:
       {
-        'file':    '<<Filepath of given file>>',
-        'vers':    '<<File version>>',
-        'content': '<<Content of the requested file>>'
+        'opCode': 'dump',
+        'data': {
+                  'file':    '<<Filepath of given file>>',
+                  'vers':    '<<File version>>',
+                  'content': '<<Content of the requested file>>'
+                }
       }
+      OR
+      Invalid path: None + (400 - Invalid path)
     """
     self._logger.debug("Open by {0} ({1}:{2}) JSON: {3}".format(cherrypy.session['username'],
                                                                 request.remote.ip,
@@ -179,12 +184,9 @@ class IDEController(object):
                                                                             request.remote.port,
                                                                             filename))
 
-    # TODO Check if we have a WS before subscribing?
     if self.is_valid_path(filename):
       self._app.register_user_to_file(username, filename)
-      content, version = self._app.get_file_content(filename)
-      # Dump content
-      return create_file_dump_dict(filename, version, content)
+      self._app.get_file_content(filename, username)
     else:
       raise HTTPError(400, "Invalid path")
 
@@ -303,7 +305,7 @@ class IDEController(object):
 
     @param filename: Filepath of requested file
 
-    @return: JSON of the following format:
+    Output on the WS will be JSON of the following format:
       {
         'opCode': 'dump',
         'data': {
@@ -327,7 +329,7 @@ class IDEController(object):
                                                                            filename))
 
     if self.is_valid_path(filename):
-      self._app.get_file_content(filename)
+      self._app.get_file_content(filename, username)
     else:
       raise HTTPError(400, "Invalid path")
 
@@ -424,7 +426,7 @@ class IDEController(object):
                                                                        ws.peer_address[0],
                                                                        ws.peer_address[1]))
           # Remove user from every file notify list
-          self._app.unregister_user_to_file(user, filename)
+          self._app.unregister_user_to_all_files(user)
           # Close websocket
           ws.close(reason='Failed to send update for file {0}'.format(filename))
 
