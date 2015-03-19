@@ -258,6 +258,7 @@ class Core(object):
     List of nodes is: list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
     Callback will be called with: nodes, caller
     """
+    self._logger.info("get_project_nodes task called for {0}".format(caller))
     with self._project_files_lock:
       sorted_nodes = ([(d, True) for d in get_existing_dirs(self._project_path)] +
                       [(f, False) for f in self._project_files.keys()])
@@ -277,6 +278,7 @@ class Core(object):
 
     Callback will be called with: tuple (<<File name>>, <<File Content>>, <<File Version>>)
     """
+    self._logger.info("get_file_content task called for {0}, {1}".format(caller, path))
     result = None
     with self._project_files_lock:
       if path in self._project_files:
@@ -297,6 +299,7 @@ class Core(object):
     @param user: The user name
     @param path: The path of the file to be registered to
     """
+    self._logger.info("register_user_to_file task called for {0}, {1}".format(user, path))
     with self._project_files_lock:
       if path not in self._project_files:
         # Create file when does not exists
@@ -315,6 +318,7 @@ class Core(object):
     @param user: The user name
     @param path: The path of the file to be unregistrered from
     """
+    self._logger.info("unregister_user_to_file task called for {0}, {1}".format(user, path))
     with self._project_files_lock:
       if path in self._project_files:
         self._project_files[path].users.discard(user)
@@ -328,6 +332,7 @@ class Core(object):
 
     @param user: The user name
     """
+    self._logger.info("unregister_user_to_all_files task called for {0}".format(user))
     with self._project_files_lock:
       for f in self._project_files:
         f.users.discard(user)
@@ -340,6 +345,7 @@ class Core(object):
 
     @param path: The path of the file on which modifications will be applied
     """
+    self._logger.info("apply_changes task called for {0}".format(path))
     self._logger.info("_task_apply_changes lock requested")
     try:
       with self._project_files_lock:
