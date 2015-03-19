@@ -37,17 +37,6 @@ function test_f(){
   alert(ctext);
 }
 
-function show_dump(){
-  ideApplication._ideState._rqh.get("dump", createDump("/main.py"), function(response){
-    msg = "--ContentBegin (/main.py)--\n" + response.content + "\n--ContentEnd(/main.py)--";
-    alert(msg);
-  });
-  ideApplication._ideState._rqh.get("dump", createDump("/file2.py"), function(response){
-    msg = "--ContentBegin (/file2.py)--\n" + response.content + "\n--ContentEnd(/file2.py)--";
-    alert(msg);
-  });
-}
-
 function addNewTextAt(){
   var content = $('#addText').val();
   var at = parseInt($('#addAt').val());

@@ -87,13 +87,7 @@ function IdeInitState(ide, rqh, tree){
 IdeInitState.prototype.init = function(){
   // Request project tree and load TreeView content
   // Display a msg for user to wait ??
-
-  // Uncomment when result will be async
-  //this._rqh.get("tree", {}, this._tree_success, this._tree_error);
-  
-  // hack until async return
-  var obj = this;
-  this._rqh.get("tree", {}, function(a){obj.handleReceive(OPCODE_IDE_TREE, a);}, this._tree_error);
+  this._rqh.get("tree", {}, this._tree_success, this._tree_error);
 };
 IdeInitState.prototype.leave = function(){};
 IdeInitState.prototype.showFile = function(targetFilepath){};
@@ -145,18 +139,10 @@ function IdeFileChangeState(ide, rqh){
   this._open_error = function() { console.log("Open request failed"); };
 }
 IdeFileChangeState.prototype.init = function(targetFilepath){
-  // Do request
   this._targetFilepath = targetFilepath;
   this._changesBuffer = [];
-  // Uncomment when result will be async
-  //this._rqh.post("open", createOpen(targetFilepath), this.__open_success, this._open_error);
-  
-  // hack until async return
-  var obj = this;
-  this._rqh.post("open", 
-    createOpen(targetFilepath), 
-    function(a){obj.handleReceive(OPCODE_IDE_DUMP, a);}, 
-    this._open_error);
+  // Do request
+  this._rqh.post("open", createOpen(targetFilepath), this._open_success, this._open_error);
 };
 IdeFileChangeState.prototype.leave = function(){};
 IdeFileChangeState.prototype.showFile = function(targetFilepath){
