@@ -14,26 +14,29 @@ function AppIDE(lastVersionZoneId, displayZoneId, pushInterval) {
   tree.initRoot("tree");
 
   // Handle ways of sending and receiving data from/to server
-  var requestHandler = new RequestHandler('ide', function(opCode, jsonObj) {
-    obj.handleReceive(opCode, jsonObj);
-  });
+  var onopen = function(){ obj._ideState.init(); };
+  var onclose = function(){ /* For future usage */ };
+  var onreceive = function(opCode, jsonObj) { obj.handleReceive(opCode, jsonObj); };
+  var requestHandler = new RequestHandler('ide', onreceive, onopen, onclose);
   // TODO block / wait for the WS to be open before allowing ws-based stuff
 
   // States
   // Create all to avoid recreation
   this._noFileState = new IdeNoFileState(this, requestHandler, tree);
-  this._fileChangeState = new IdeFileChangeState(this, requestHandler);
+  this._fileChangeState = new IdeFileChangeState(this, requestHandler, tree);
   this._editState = new IdeEditState(this, requestHandler, tree, pushInterval, 
     $("#" + lastVersionZoneId),
     $("#" + displayZoneId));
   
   // Initial state
   this._ideState = new IdeInitState(this, requestHandler, tree);
-  this._ideState.init();
+
   // Debug
   $("#stateHelper").text("Waiting project tree from server");
 };
-
+AppIDE.prototype.close = function() {
+  this._ideState.close();
+};
 AppIDE.prototype.showFile = function(filepath) {
   this._ideState.showFile(filepath);
 };
@@ -90,6 +93,7 @@ IdeInitState.prototype.init = function(){
   this._rqh.get("tree", {}, this._tree_success, this._tree_error);
 };
 IdeInitState.prototype.leave = function(){};
+IdeInitState.prototype.close = function(){ this._rqh.close(); };
 IdeInitState.prototype.showFile = function(targetFilepath){};
 IdeInitState.prototype.handleReceive = function(opCode, jsonObj) {
   if(opCode == OPCODE_IDE_TREE) {
@@ -115,6 +119,7 @@ function IdeNoFileState(ide, rqh, tree){
 }
 IdeNoFileState.prototype.init = function(){};
 IdeNoFileState.prototype.leave = function(){};
+IdeNoFileState.prototype.close = function(){ this._rqh.close(); };
 IdeNoFileState.prototype.showFile = function(targetFilepath){
   this._ide.waitForTargetFile(targetFilepath);
 };
@@ -128,9 +133,10 @@ IdeNoFileState.prototype.handleInput = function(){};
 
 
 /* User requested to change file */
-function IdeFileChangeState(ide, rqh){
+function IdeFileChangeState(ide, rqh, tree){
   this._ide = ide;
   this._rqh = rqh;
+  this._tree = tree;
 
   this._targetFilepath = undefined;
   this._changesBuffer = undefined;
@@ -145,6 +151,7 @@ IdeFileChangeState.prototype.init = function(targetFilepath){
   this._rqh.post("open", createOpen(targetFilepath), this._open_success, this._open_error);
 };
 IdeFileChangeState.prototype.leave = function(){};
+IdeFileChangeState.prototype.close = function(){ this._rqh.close(); };
 IdeFileChangeState.prototype.showFile = function(targetFilepath){
   var msg = "Already in transfer for '" + this._targetFilepath + "'. ";
   msg += "Cannot transfer to '" + targetFilepath + "'";
@@ -258,6 +265,7 @@ IdeEditState.prototype.leave = function(){
   // debug
   this._debugStopWatchLap.hide();
 };
+IdeEditState.prototype.close = function(){ this._rqh.close(); };
 IdeEditState.prototype.handleReceive = function(opCode, jsonObj){
   this._debugStopWatchLap.stop();
   if(opCode == OPCODE_IDE_SAVE || opCode == 0) {

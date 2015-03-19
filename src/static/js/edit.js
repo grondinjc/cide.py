@@ -17,15 +17,13 @@ function init() {
 
   // Application IDE
   ideApplication = new AppIDE('editorLastVersion', 'editorDisplay');
-
-  // Quick hack
-  //ideApplication.showFileContent(ideApplication._openedFile);
 }
 
 function terminate(){
   if(chatApplication)
     chatApplication.close();
-  // ide.close would send a stopNotify request
+  if(ide)
+    ide.close();
 }
 
 
