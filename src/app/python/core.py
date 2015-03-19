@@ -103,22 +103,6 @@ class Core(object):
     """
     return self._project_name
 
-  def get_file_content(self, path):
-    """
-    Get the content of a file
-    Synchronous function
-
-    @type path: str
-
-    @param path: The path of the file in the project tree
-
-    @return tuple (<<File name>>, <<File Content>>, <<File Version>>)
-    """
-    with self._project_files_lock:
-      if path in self._project_files:
-        return (self._project_files[path].file.content,
-                0)  # Version
-
   def add_file(self, path):
     """
     Adds a file to the project tree
@@ -231,6 +215,20 @@ class Core(object):
     """
     self._add_task(lambda: self._task_get_project_nodes(caller))
 
+  def get_file_content(self, path, caller):
+    """
+    Get the content of a file
+
+    @type path: str
+    @type caller: str
+
+    @param path: The path of the file in the project tree
+    @param caller: Username of the client to answer to
+
+    Callback will be called with: tuple (<<File name>>, <<File Content>>, <<File Version>>), caller
+    """
+    self._add_task(lambda: self._task_get_file_content(path, caller))
+
   def file_edit(self, path, changes):
     """
     Send changes, text added or text removed, to the file
@@ -275,6 +273,27 @@ class Core(object):
 
       self._notify_event(lambda l: l.notify_get_project_nodes(sorted_nodes, caller))
 
+  def _task_get_file_content(self, path, caller):
+    """
+    Task to get the content of a file
+
+    @type path: str
+    @type path: caller
+
+    @param path: The path of the file in the project tree
+    @param caller: Username of the client to answer to
+
+    Callback will be called with: tuple (<<File name>>, <<File Content>>, <<File Version>>)
+    """
+    result = None
+    with self._project_files_lock:
+      if path in self._project_files:
+        result = (path,
+                  self._project_files[path].file.content,
+                  0)  # Version
+
+    self._notify_event(lambda l: l.notify_get_file_content(result, caller))
+
   def _task_apply_changes(self, path):
     """
     Async task to apply pending modifications on the file
@@ -312,6 +331,7 @@ class Core(object):
   The listener will need to implement the following functions :
    - notify_file_edit(filename, changes, version, users)
    - notify_get_project_nodes(nodes_list)
+   - notify_get_file_content(nodes_list)
   """
 
   def register_application_listener(self, listener):
