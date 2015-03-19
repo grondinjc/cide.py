@@ -19,7 +19,7 @@ function init() {
   ideApplication = new AppIDE('editorLastVersion', 'editorDisplay');
 
   // Quick hack
-  ideApplication.showFileContent(ideApplication._openedFile);
+  //ideApplication.showFileContent(ideApplication._openedFile);
 }
 
 function terminate(){
@@ -38,9 +38,12 @@ function test_f(){
 }
 
 function show_dump(){
-  // Do request
-  ideApplication._requestHandler.get("dump", createDump("/main.py"), function(response){
-    msg = "--ContentBegin--\n" + response.content + "\n--ContentEnd--";
+  ideApplication._ideState._rqh.get("dump", createDump("/main.py"), function(response){
+    msg = "--ContentBegin (/main.py)--\n" + response.content + "\n--ContentEnd(/main.py)--";
+    alert(msg);
+  });
+  ideApplication._ideState._rqh.get("dump", createDump("/file2.py"), function(response){
+    msg = "--ContentBegin (/file2.py)--\n" + response.content + "\n--ContentEnd(/file2.py)--";
     alert(msg);
   });
 }

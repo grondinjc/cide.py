@@ -7,167 +7,331 @@ function AppIDE(lastVersionZoneId, displayZoneId, pushInterval) {
   // Setup event handlers
   var obj = this; // For closure
 
-  this._openedFile = undefined;
-  this._fileRevision = undefined;
-
-  this._difftool = null;
-
-  // Quick hack
-  // wait for user to select file
-  // Suppose user selected main.py
-  this._openedFile = "/main.py";
-
-  // Handle null value
-  this._pushInterval = pushInterval;
-  this._pushIntervalHandle = null;
-
-  this._changeMemory = null;
-  this._zoneLastVersion = null;
-  this._zoneDisplay = null;
-
-  this._nodeDisplay = null;
-
-  this._sentChanges = null;
-  this._bundleID = 0;
-  
-  // Required to get cursor position on contentEditable pre tag
-  var elementDisplay = document.getElementById(displayZoneId);
-
-  // Input handler
-  var inputEventHandler = function(evt) {
-    // Get old value, compare and store new
-    // $(this) corresponds to nodeDisplay
-    var oldText = obj._zoneDisplay.getLastVersion();
-    var newText = obj._zoneDisplay.getText();
-    obj._zoneDisplay.saveVersion(newText);
-
-    // https://code.google.com/p/google-diff-match-patch/wiki/API
-    // A diff is a pair (type, text) where type is 1 for addition,
-    // 0  for 'no-change' and -1 for substraction
-    var diff = obj._difftool.diff_main(oldText, newText);
-    // Since this function is triggered after one change,
-    // which corresponds to a maximum of two diff elements,
-    // position needs to be computed over iteration
-    // -- Add text : 1 diff add element
-    // -- Remove text : 1 diff remove element
-    // -- Highlight text and add text : 1 diff add element and 1 diff remove element 
-    var at = 0;
-    for(var i = 0; i < diff.length; ++i){
-      switch(diff[i][0]) {
-        case -1:
-          obj._changeMemory.removeChange(at, diff[i][1].length);
-          break;
-        case 1:
-          obj._changeMemory.addChange(at, diff[i][1]);
-          // no break on purpose
-        case 0:     
-          at += diff[i][1].length;
-          break;
-      }
-    }
-  };
-
-  // Receive callback
-  var receiveHandler = function(opCode, jsonObj){
-    // Check if opCode means fileAdd
-
-    // opCode is textEdit
-    var modifications = [];
-    for(var i = 0; i < jsonObj.changes.length; ++i){
-      modifications.push(ObjectChangeFactory(jsonObj.changes[i]));
-    }
-    obj.notifySoft(modifications);
-  };
-
-
   // Create classes
-  this._changeMemory = new LocalChanges();
-  this._zoneLastVersion = new LastVersionZone($("#" + lastVersionZoneId));
-  this._zoneDisplay = new DisplayZone($("#" + displayZoneId), inputEventHandler);
-  this._tree = new ProjectTreeView();
-
-  // Handle ways of sending and receiving data from/to server
-  this._requestHandler = new RequestHandler('ide', receiveHandler);
-  // TODO block / wait for the WS to be open before allowing ws-based stuff
-
-  // Diff lib to compare two texts
-  this._difftool = new diff_match_patch();
-  
-  // Push changes handler 
-  this._sentChanges = [];
-  this._pushIntervalHandle = setInterval( 
-    function() {
-      // try push
-      var changes = obj._changeMemory.get();
-      if(changes.length == 0) 
-        return;
-
-      // Clear changes to avoid resending
-      obj._changeMemory.clear();
-      var currentBundleID = obj._bundleID;
-      ++obj._bundleID;
-
-      // Save and send, delete sent changes on success
-      var modifObject = createModifGroup(changes, obj._openedFile, currentBundleID);
-      //console.log("Current bundle id is ", currentBundleID, modifObject);
-      obj._sentChanges.push([currentBundleID, modifObject]); // place at end of array
-      obj._requestHandler.put("save", modifObject, function(){
-        // Will I delete new input ??
-        var clearChange = obj._sentChanges[0];
-        //console.log("ACK bundle id is ", clearChange[0], clearChange[1]);
-        obj._sentChanges.shift(); // pop front
-        /*if(clearChange[0] != currentBundleID){
-          alert("Fuck up happened");
-        }*/
-      }, function(){}, false);
-    },
-    this._pushInterval
-  );
-
+  var changeMemory = new LocalChanges();
+  var zoneLastVersion = new LastVersionZone($("#" + lastVersionZoneId));
+  var zoneDisplay = new DisplayZone($("#" + displayZoneId), function() {
+    obj.handleInput();
+  });
 
   // Initialise Tree root.
-  this._tree.initRoot("tree");
-
-  // Load TreeView content
-  this._requestHandler.get("tree", {}, function(response){
-    for(var i = 0; i < response.nodes.length; ++i){
-      obj._tree.addNode(response.nodes[i].node, response.nodes[i].isDir);
-    }
+  var tree = new ProjectTreeView(function(filepath){
+    obj.showFile(filepath); // file was clicked
   });
+  tree.initRoot("tree");
+
+  // Handle ways of sending and receiving data from/to server
+  var requestHandler = new RequestHandler('ide', function(opCode, jsonObj) {
+    obj.handleReceive(opCode, jsonObj);
+  });
+  // TODO block / wait for the WS to be open before allowing ws-based stuff
+
+  // States
+  // Create all to avoid recreation
+  this._noFileState = new IdeNoFileState(this, requestHandler);
+  this._fileChangeState = new IdeFileChangeState(this, requestHandler);
+  this._editState = new IdeEditState(this, requestHandler, tree, changeMemory, zoneLastVersion, zoneDisplay, pushInterval);
+  // Initial state
+  this._ideState = new IdeInitState(this, requestHandler, tree);
+  this._ideState.init();
+};
+
+AppIDE.prototype.showFile = function(filepath) {
+  this._ideState.showFile(filepath);
+};
+AppIDE.prototype.handleReceive = function(opCode, jsonObj) {
+  this._ideState.handleReceive(opCode, jsonObj);
+};
+AppIDE.prototype.handleInput = function() {
+  this._ideState.handleInput();
+};
+
+AppIDE.prototype.waitForFileSelected = function() {
+  console.log("INFO", "IDE : Switch to NoFileState");
+  this._ideState.leave();
+  this._noFileState.init();
+  this._ideState = this._noFileState;
+};
+AppIDE.prototype.waitForTargetFile = function(targetFilepath) {
+  console.log("INFO", "IDE : Switch to ChangeFileState ('" +targetFilepath+"')");
+  this._ideState.leave();
+  this._fileChangeState.init(targetFilepath);
+  this._ideState = this._fileChangeState;
+};
+AppIDE.prototype.switchToEditFileState = function(targetFilepath, dumpObj, changeObjs) {
+  console.log("INFO", "IDE : Switch to EditFileState ('" +targetFilepath+"')");
+  this._ideState.leave();
+  this._editState.init(targetFilepath, dumpObj, changeObjs);
+  this._ideState = this._editState;
 };
 
 
-AppIDE.prototype.showFileContent = function(filepath) {
-  // force send any pending changes on current file (if any)
-  // TODO changeFileState class
 
-  // Do request
+/*  The initial state of the ide 
+    No state should go back to this one */
+function IdeInitState(ide, rqh, tree){
+  this._ide = ide;
+  this._rqh = rqh;
+  this._tree = tree;
+
+  this._tree_success = function() { console.log("Tree request received successfully"); };
+  this._tree_error = function() { console.log("Tree request failed"); };
+}
+IdeInitState.prototype.init = function(){
+  // Request project tree and load TreeView content
+  // Display a msg for user to wait ??
+
+  // Uncomment when result will be async
+  //this._rqh.get("tree", {}, this._tree_success, this._tree_error);
+  
+  // hack until async return
   var obj = this;
-  this._requestHandler.post("open", createOpen(filepath), function(response){
-    // on success
-    obj._fileRevision = response.vers;
-    obj.notifyForce(createAddModif(response.content, 0));
-  });
+  this._rqh.get("tree", {}, function(a){obj.handleReceive(OPCODE_IDE_TREE, a);}, this._tree_error);
 };
+IdeInitState.prototype.leave = function(){};
+IdeInitState.prototype.showFile = function(targetFilepath){};
+IdeInitState.prototype.handleReceive = function(opCode, jsonObj) {
+  if(opCode == OPCODE_IDE_TREE) {
+    for(var i = 0; i < jsonObj.nodes.length; ++i){
+      this._tree.addNode(jsonObj.nodes[i].node, jsonObj.nodes[i].isDir);
+    }
+    // Change state
+    this._ide.waitForFileSelected();
+  }
+  else {
+    console.log("WARNING", "IdeInitState received opCode '" + opCode + "'");
+  }
+};
+IdeInitState.prototype.handleInput = function(){};
 
+/* There is no active page to edit */
+function IdeNoFileState(ide, rqh){
+  this._ide = ide;
+  this._rqh = rqh;
+}
+IdeNoFileState.prototype.init = function(){};
+IdeNoFileState.prototype.leave = function(){};
+IdeNoFileState.prototype.showFile = function(targetFilepath){
+  this._ide.waitForTargetFile(targetFilepath);
+};
+IdeNoFileState.prototype.handleReceive = function(opCode, jsonObj) {
+  var msg = "IdeNoFileState only expects file clicks.";
+  msg += "Received opcode '" + opCode + "' with data :";
+  console.log("WARNING", msg, jsonObj);
+};
+IdeNoFileState.prototype.handleInput = function(){};
+
+/* User requested to change file */
+function IdeFileChangeState(ide, rqh){
+  this._ide = ide;
+  this._rqh = rqh;
+
+  this._targetFilepath = undefined;
+  this._changesBuffer = undefined;
+
+  this._open_success = function() { console.log("Open request received successfully"); };
+  this._open_error = function() { console.log("Open request failed"); };
+}
+IdeFileChangeState.prototype.init = function(targetFilepath){
+  // Do request
+  this._targetFilepath = targetFilepath;
+  this._changesBuffer = [];
+  // Uncomment when result will be async
+  //this._rqh.post("open", createOpen(targetFilepath), this.__open_success, this._open_error);
+  
+  // hack until async return
+  var obj = this;
+  this._rqh.post("open", 
+    createOpen(targetFilepath), 
+    function(a){obj.handleReceive(OPCODE_IDE_DUMP, a);}, 
+    this._open_error);
+};
+IdeFileChangeState.prototype.leave = function(){};
+IdeFileChangeState.prototype.showFile = function(targetFilepath){
+  var msg = "Already in transfer for '" + this._targetFilepath + "'. ";
+  msg += "Cannot transfer to '" + targetFilepath + "'";
+  console.log("WARNING", msg);
+};
+IdeFileChangeState.prototype.handleReceive = function(opCode, jsonObj) {
+  if(opCode == OPCODE_IDE_SAVE) {
+    // Changes can arrive early since notifications can be done
+    // right after being registered... Buffer for a delayed apply
+    if(jsonObj.file == this._targetFilepath) {
+      this._changesBuffer.push(jsonObj);
+    }
+    else {
+      var msg = "IdeFileChangeState discarding changes for '" + jsonObj.file + "'";
+      console.log(msg);
+    }
+  }
+  else if(opCode == OPCODE_IDE_DUMP) {
+    if(jsonObj.file == this._targetFilepath) {
+      // Received waiting change
+      this._ide.switchToEditFileState(this._targetFilepath, jsonObj, this._changesBuffer);
+    }
+    else {
+      var msg = "IdeFileChangeState discarding dump for '" + jsonObj.file + "'";
+      console.log(msg);
+    }
+  }
+  else {
+    var msg = "IdeFileChangeState only expects /save and /dump.";
+    msg += "Received opcode '" + opCode + "' with data :";
+    console.log("WARNING", msg, jsonObj);
+  }
+};
+IdeFileChangeState.prototype.handleInput = function(){};
+
+
+/* There is an active page to edit */
+function IdeEditState(ide, rqh, tree, changeMemory, lastVersion, displayZone, pushInterval){
+  this._ide = ide;
+  this._rqh = rqh;
+  this._tree = tree;
+  this._changeMemory = changeMemory;
+  this._lastVersion = lastVersion;
+  this._displayZone = displayZone;
+
+  // Send frequency 
+  this._pushInterval = pushInterval;
+  this._pushIntervalHandle = null;
+  // Diff lib to compare two texts
+  this._difftool = new diff_match_patch();
+  // Currently opened file
+  this._currentFile = "";
+  this._currentFileRevision = 0;
+
+  // Function to push changes to server
+  var obj = this;
+  this._pushChanges = function() {
+    // try push
+    var changes = obj._changeMemory.get();
+    if(changes.length == 0) 
+      return;
+
+    // Clear changes to avoid resending
+    obj._changeMemory.clear();
+
+    // Save and send, delete sent changes on success
+    var modifObject = createModifGroup(changes, obj._currentFile, obj._currentFileRevision);
+    //console.log("Current bundle id is ", currentBundleID, modifObject);
+    obj._rqh.put("save", modifObject, function(){
+      // Will I delete new input ??
+    }, function(){}, false);
+  };
+}
+IdeEditState.prototype.init = function(targetFilepath, dumpObj, changeObjs){
+  // Initialize base text
+  this._currentFile = targetFilepath;
+  this._handleReceiveDump(dumpObj);
+  // Update base text with buffered changes
+  for(var i = 0; i < changeObjs.length; ++i) {
+    this._handleReceiveSave(changeObjs[i]);
+  }
+  // Interval to send changes to server
+  this._pushIntervalHandle = setInterval(this._pushChanges,
+                                         this._pushInterval);
+};
+IdeEditState.prototype.leave = function(){
+  // Avoid sending other packages
+  clearInterval(this._pushIntervalHandle);
+  // Make sure no changes are left behind
+  this._pushChanges();
+  // Unregister to file ... call /close
+};
+IdeEditState.prototype.handleReceive = function(opCode, jsonObj){
+  if(opCode == OPCODE_IDE_SAVE || opCode == 0) {
+    // opCode is textEdit
+    if(jsonObj.file == this._currentFile) {
+      this._handleReceiveSave(jsonObj);
+    }
+    else {
+      var msg = "IdeEditState received update for '" + jsonObj.file;
+      msg += "' when current file is '" + this._currentFile + "'";
+      console.log(msg);
+    }
+  }
+  else if(opCode == OPCODE_IDE_DUMP) { 
+    this._handleReceiveDump(jsonObj);
+  }
+  else {
+    var msg = "IdeEditState only expects /save and /dump.";
+    msg += "Received opcode '" + opCode + "' with data :";
+    console.log("WARNING", msg, jsonObj);
+  }
+};
+IdeEditState.prototype._handleReceiveDump = function(dumpObj){
+  this._notifyForce(createAddModif(dumpObj.content, 0));
+  this._currentFileRevision = dumpObj.vers;
+};
+IdeEditState.prototype._handleReceiveSave = function(saveObj){
+  var modifications = [];
+  for(var i = 0; i < saveObj.changes.length; ++i){
+    modifications.push(ObjectChangeFactory(saveObj.changes[i]));
+  }
+  // Update
+  this._notifySoft(modifications);
+  this._currentFileRevision = saveObj.vers;
+};
+IdeEditState.prototype.handleInput = function(){
+  // Get old value, compare and store new
+  // $(this) corresponds to nodeDisplay
+  var oldText = this._displayZone.getLastVersion();
+  var newText = this._displayZone.getText();
+  this._displayZone.saveVersion(newText);
+
+  // https://code.google.com/p/google-diff-match-patch/wiki/API
+  // A diff is a pair (type, text) where type is 1 for addition,
+  // 0  for 'no-change' and -1 for substraction
+  var diff = this._difftool.diff_main(oldText, newText);
+  // Since this function is triggered after one change,
+  // which corresponds to a maximum of two diff elements,
+  // position needs to be computed over iteration
+  // -- Add text : 1 diff add element
+  // -- Remove text : 1 diff remove element
+  // -- Highlight text and add text : 1 diff add element and 1 diff remove element 
+  var at = 0;
+  for(var i = 0; i < diff.length; ++i){
+    switch(diff[i][0]) {
+      case -1:
+        this._changeMemory.removeChange(at, diff[i][1].length);
+        break;
+      case 1:
+        this._changeMemory.addChange(at, diff[i][1]);
+        // no break on purpose
+      case 0:     
+        at += diff[i][1].length;
+        break;
+    }
+  }
+};
+IdeEditState.prototype.showFile = function(targetFilepath) {
+  if(targetFilepath != this._currentFile){
+    // Change file and state
+    this._ide.waitForTargetFile(targetFilepath);
+  }
+  else {
+    var msg = "File change request for '" + targetFilepath + "'.";
+    msg += "Already active, not changing";
+    console.log("INFO", msg);
+  }
+};
 // Does not receive a group of modifications since
 // every zone will be overriden. One delta is enough
-AppIDE.prototype.notifyForce = function(initialDelta) {
-  this._zoneLastVersion.put(initialDelta.content);
+IdeEditState.prototype._notifyForce = function(initialDelta) {
+  this._lastVersion.put(initialDelta.content);
   this._changeMemory.clear();
-  this._zoneDisplay.forceUpdate([initialDelta.content, initialDelta.content.length]); 
+  this._displayZone.forceUpdate([initialDelta.content, initialDelta.content.length]); 
 };
-
-AppIDE.prototype.notifySoft = function(modifications) {
+IdeEditState.prototype._notifySoft = function(modifications) {
   this._changeMemory.update(modifications);
-  this._zoneLastVersion.update(modifications);
+  this._lastVersion.update(modifications);
 
-  var cursor_pos = this._zoneDisplay.getCursorPos();
-  this._zoneDisplay.forceUpdate(this._combineText(cursor_pos));
+  var cursor_pos = this._displayZone.getCursorPos();
+  this._displayZone.forceUpdate(this._combineText(cursor_pos));
 };
-
-AppIDE.prototype._combineText = function(cursor_pos) {
-  var base = this._zoneLastVersion.get();
+IdeEditState.prototype._combineText = function(cursor_pos) {
+  var base = this._lastVersion.get();
   var modifs = this._changeMemory.getUnserialized();
   for(var i = 0; i < modifs.length; ++i) {
     base = modifs[i].applyOnText(base);

@@ -1,10 +1,15 @@
-// 
+// Modification types
 CHANGE_RM_TYPE = -1;
-CHANGE_ADD_TYPE = 1; 
+CHANGE_ADD_TYPE = 1;
+// Opcode for response type on WS
+OPCODE_IDE_TREE = "/tree";
+OPCODE_IDE_SAVE = "/save";
+OPCODE_IDE_DUMP = "/dump";
+OPCODE_IDE_OPEN = "/open";
+OPCODE_IDE_CLOSE = "/close";
 
 // used for /ide/save
 function createModifGroup(changes, file, vers) { return { file: file, vers: vers, changes: changes}; }
-
 function createAddModif(content, pos) { return { content: content, pos: pos, type: CHANGE_ADD_TYPE}; }
 function createRemoveModif(count, pos) { return { count: count, pos: pos, type: CHANGE_RM_TYPE}; }
 
