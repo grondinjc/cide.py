@@ -169,6 +169,7 @@ class Core(object):
     Callback will be called with: nodes, caller
     """
     self._add_task(lambda: self._task_get_project_nodes(caller))
+    self._logger.info("get_project_nodes task added")
 
   def get_file_content(self, path, caller):
     """
@@ -183,6 +184,7 @@ class Core(object):
     Callback will be called with: tuple (<<File name>>, <<File Content>>, <<File Version>>), caller
     """
     self._add_task(lambda: self._task_get_file_content(path, caller))
+    self._logger.info("get_file_content task added")
 
   def register_user_to_file(self, user, path):
     """
@@ -196,6 +198,7 @@ class Core(object):
     @param path: The path of the file to be registered to
     """
     self._add_task(lambda: self._task_register_user_to_file(user, path))
+    self._logger.info("register_user_to_file task added")
 
   def unregister_user_to_file(self, user, path):
     """
@@ -209,6 +212,7 @@ class Core(object):
     @param path: The path of the file to be unregistrered from
     """
     self._add_task(lambda: self._task_unregister_user_to_file(user, path))
+    self._logger.info("unregister_user_to_file task added")
 
   def unregister_user_to_all_files(self, user):
     """
@@ -220,6 +224,7 @@ class Core(object):
     @param user: The user name
     """
     self._add_task(lambda: self._task_unregister_user_to_all_files(user))
+    self._logger.info("unregister_user_to_all_files task added")
 
   def file_edit(self, path, changes):
     """
@@ -231,18 +236,8 @@ class Core(object):
     @param path: The path of the file in the project tree
     @param changes: Changes to be applied on the file
     """
-    self._logger.info("File_edit lock requested ... ")
-    with self._project_files_lock:
-      self._logger.info("File_edit lock requested ... ACQUIRED ")
-      if path in self._project_files:
-        for c in changes:
-          # Encoding required since c++ module requires str type
-          change_object = (EditAdd(c.pos, c.data.encode("utf-8")) if c.is_add
-                           else EditRemove(c.pos, c.data))
-          self._project_files[path].file.add(change_object)
-        # register async task to apply changes
-        self._add_task(lambda: self._task_apply_changes(path))
-        self._logger.info("File_edit task added")
+    self._add_task(lambda: self._task_file_edit(path, changes))
+    self._logger.info("File_edit task added")
 
   """
   Tasks call section
@@ -336,6 +331,29 @@ class Core(object):
     with self._project_files_lock:
       for f in self._project_files:
         f.users.discard(user)
+
+  def _task_file_edit(self, path, changes):
+    """
+    Task to add change to be applied to a file
+
+    @type path: str
+    @type changes: [namedtuple Change]
+
+    @param path: The path of the file in the project tree
+    @param changes: Changes to be applied on the file
+    """
+    self._logger.info("file_edit task called for {0}".format(path))
+    with self._project_files_lock:
+      if path in self._project_files:
+        for c in changes:
+          # Encoding required since c++ module requires str type
+          change_object = (EditAdd(c.pos, c.data.encode("utf-8")) if c.is_add
+                           else EditRemove(c.pos, c.data))
+          self._project_files[path].file.add(change_object)
+
+        # register async task to apply changes XXX Will become periodic instead
+        self._add_task(lambda: self._task_apply_changes(path))
+        self._logger.info("apply_changes task task added")
 
   def _task_apply_changes(self, path):
     """
