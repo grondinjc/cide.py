@@ -16,17 +16,14 @@ function init() {
   chatApplication = new AppChat("chat-display", "chat-user-text-input", "chat-user-text-btn");
 
   // Application IDE
-  ideApplication = new AppIDE();
-  ideApplication.init('editorLastVersion', 'editorDisplay');
-
-  // Quick hack
-  ideApplication.showFileContent(ideApplication._openedFile);
+  ideApplication = new AppIDE('editorLastVersion', 'editorDisplay');
 }
 
 function terminate(){
   if(chatApplication)
     chatApplication.close();
-  // ide.close would send a stopNotify request
+  if(ideApplication)
+    ideApplication.close();
 }
 
 
@@ -36,14 +33,6 @@ function test_f(){
   var ctext = $('#mydiv').text();
   alert(chtml);
   alert(ctext);
-}
-
-function show_dump(){
-  // Do request
-  ideApplication._requestHandler.get("dump", createDump("/main.py"), function(response){
-    msg = "--ContentBegin--\n" + response.content + "\n--ContentEnd--";
-    alert(msg);
-  });
 }
 
 function addNewTextAt(){

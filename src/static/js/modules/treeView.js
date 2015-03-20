@@ -1,6 +1,6 @@
 /* Class to encapsulate tree view representation 
 of the project */
-function ProjectTreeView() {
+function ProjectTreeView(fileClickedHandler) {
   this._ID_PREFIX = "tree-node";
 
   this.initRoot = function(treeID){
@@ -105,9 +105,8 @@ function ProjectTreeView() {
 
 
   this._fileClick = function(e) {
-    // 'this' is now the treeview node element
-    alert("TODO: Switch to file " + this.title);
-    //ideApplication.showFileContent(this.title);
+    // Notify handler that a file was clicked
+    fileClickedHandler(this.title);
     e.stopPropagation();
   };
 
