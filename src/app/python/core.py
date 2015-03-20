@@ -13,7 +13,8 @@ from cide.app.python.utils.strategies import (StrategyCallEmpty)
 
 from libZoneTransit import (TransitZone as EditBuffer,
                             Addition as EditAdd,
-                            Removal as EditRemove)
+                            Removal as EditRemove,
+                            Modifications)
 
 
 Error = namedtuple('Error', ['message'])
@@ -334,11 +335,10 @@ class Core(object):
     """
     self._logger.info("file_edit task called for {0}".format(path))
     if path in self._project_files:
-      for c in changes:
-        # Encoding required since c++ module requires str type
-        change_object = (EditAdd(c.pos, c.data.encode("utf-8")) if c.is_add
-                         else EditRemove(c.pos, c.data))
-        self._project_files[path].file.add(change_object)
+      bundle = Modifications()
+      bundle.extend([(EditAdd(c.pos, c.data.encode("utf-8")) if c.is_add
+                      else EditRemove(c.pos, c.data)) for c in changes])
+      self._project_files[path].file.add(bundle)
 
       # register async task to apply changes XXX Will become periodic instead
       self._add_task(lambda: self._task_apply_changes(path))
