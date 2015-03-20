@@ -90,7 +90,7 @@ cherrypy.tools.websocket = WebSocketTool()
 
 # Instanciate App
 chatApp = Chat(logger)
-coreApp = Core("dummyProjectName", "/tmp/test/dummyProjectName", logger)
+coreApp = Core(project_conf, core_conf, logger)
 
 # Bind for server event (start/stop)
 cherrypy.engine.subscribe('start', coreApp.start)
