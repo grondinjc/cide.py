@@ -395,12 +395,8 @@ class IDEController(object):
                 }
       }
     """
-
-    # Dirty hack to know type
-    from libZoneTransit import Addition as EditAdd
-    serialized_changes = [(create_change_add_element_dict(element)
-                           if type(element) is EditAdd else
-                           create_change_remove_element_dict(element))
+    serialized_changes = [(create_change_add_element_dict(element) if element.isAdd()
+                           else create_change_remove_element_dict(element))
                           for element in changes]
 
     message_sent = simplejson.dumps(wrap_opCode('save',
