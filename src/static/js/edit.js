@@ -22,8 +22,8 @@ function init() {
 function terminate(){
   if(chatApplication)
     chatApplication.close();
-  if(ide)
-    ide.close();
+  if(ideApplication)
+    ideApplication.close();
 }
 
 
