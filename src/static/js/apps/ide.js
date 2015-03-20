@@ -18,7 +18,6 @@ function AppIDE(lastVersionZoneId, displayZoneId, pushInterval) {
   var onclose = function(){ /* For future usage */ };
   var onreceive = function(opCode, jsonObj) { obj.handleReceive(opCode, jsonObj); };
   var requestHandler = new RequestHandler('ide', onreceive, onopen, onclose);
-  // TODO block / wait for the WS to be open before allowing ws-based stuff
 
   // States
   // Create all to avoid recreation
@@ -261,11 +260,15 @@ IdeEditState.prototype.leave = function(){
   // Make sure no changes are left behind
   this._pushChanges();
   // Unregister to file ... call /close
+  this._rqh.put("close", createClose(this._currentFile));
 
   // debug
   this._debugStopWatchLap.hide();
 };
-IdeEditState.prototype.close = function(){ this._rqh.close(); };
+IdeEditState.prototype.close = function(){
+  this._rqh.put("close", createClose(this._currentFile));
+  this._rqh.close(); 
+};
 IdeEditState.prototype.handleReceive = function(opCode, jsonObj){
   this._debugStopWatchLap.stop();
   if(opCode == OPCODE_IDE_SAVE || opCode == 0) {

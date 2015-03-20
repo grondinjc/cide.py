@@ -15,6 +15,8 @@ function createRemoveModif(count, pos) { return { count: count, pos: pos, type: 
 
 // used for /ide/open
 function createOpen(filename) { return { file: filename}; }
+// used for /ide/close
+function createClose(filename) { return { file: filename}; }
 // used for /ide/dump
 function createDump(filename) { return { filename: filename}; }
 
