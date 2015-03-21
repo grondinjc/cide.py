@@ -211,7 +211,7 @@ class Core(object):
     @param user: The user name
     @param path: The path of the file to be registered to
     """
-    self._add_task(Task(self._task_register_user_to_file, user, path))
+    self._add_task(self._task_register_user_to_file, user, path)
     self._logger.info("register_user_to_file task added")
 
   def unregister_user_to_file(self, user, path):
