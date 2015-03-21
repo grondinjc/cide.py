@@ -4,6 +4,7 @@ from copy import deepcopy
 from threading import Thread
 from collections import namedtuple, deque
 from datetime import datetime, timedelta
+from pdb import set_trace as dbg
 
 from cide.app.python.utils.nodes import (get_existing_files,
                                          get_existing_dirs)
@@ -28,6 +29,7 @@ def task_time(microseconds):
   """
   def wrapper(func):
     func.time = timedelta(microseconds=microseconds)
+    func.debugname = func.func_name
     return func
   return wrapper
 
@@ -43,6 +45,10 @@ class Core(object):
   # Not global as it only refers to the application only
   # Tuple to hold const pair (transitZone, user registered to changes)
   FileUserPair = namedtuple('FileUserPair', ['file', 'users'])
+
+  # Task wrapper to hold the arguments to be applied on a delayed
+  # executing function
+  Task = namedtuple('Task', ['f', 'args'])
 
   def __init__(self, project_conf, core_conf, logger):
     """
@@ -65,8 +71,12 @@ class Core(object):
     self._logger = logger
 
     # Make sure directories exists
-    if not os.path.exists(self._project_src_path):
-      os.makedirs(self._project_src_path)
+    for project_dir in (self._project_base_path, 
+                        self._project_src_path,
+                        self._project_backup_path,
+                        self._project_exec_path):
+      if not os.path.exists(project_dir):
+        os.makedirs(project_dir)
 
     # Asociation filepath -> (zoneTransit, set(userlist))
     # Recreate structure from existing files on disk
@@ -134,16 +144,16 @@ class Core(object):
     if path in self._project_files:
       del self._project_files[path]
 
-  def _add_task(self, f):
+  def _add_task(self, f, *args):
     """
-    Add a task into the threadpool
-    Execution centralized into a function to hide flaws of external library
+    Add a task into the task list
+    
+    @type f: function
 
-    @type f: lambda
-
-    @param f: The task wrapped with args inside a callable (function or lambda)
+    @param f: The task
+    @param args: The arugments to be applied on f
     """
-    self.tasks.append(f)
+    self.tasks.append(Core.Task(f, args))
 
   def _create_file(self, content=""):
     """
@@ -172,7 +182,7 @@ class Core(object):
     List of nodes is: list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
     Callback will be called with: nodes, caller
     """
-    self._add_task(lambda: self._task_get_project_nodes(caller))
+    self._add_task(self._task_get_project_nodes, caller)
     self._logger.info("get_project_nodes task added")
 
   def get_file_content(self, path, caller):
@@ -187,7 +197,7 @@ class Core(object):
 
     Callback will be called with: tuple (<<File name>>, <<File Content>>, <<File Version>>), caller
     """
-    self._add_task(lambda: self._task_get_file_content(path, caller))
+    self._add_task(self._task_get_file_content, path, caller)
     self._logger.info("get_file_content task added")
 
   def register_user_to_file(self, user, path):
@@ -201,7 +211,7 @@ class Core(object):
     @param user: The user name
     @param path: The path of the file to be registered to
     """
-    self._add_task(lambda: self._task_register_user_to_file(user, path))
+    self._add_task(Task(self._task_register_user_to_file, user, path))
     self._logger.info("register_user_to_file task added")
 
   def unregister_user_to_file(self, user, path):
@@ -215,7 +225,7 @@ class Core(object):
     @param user: The user name
     @param path: The path of the file to be unregistrered from
     """
-    self._add_task(lambda: self._task_unregister_user_to_file(user, path))
+    self._add_task(self._task_unregister_user_to_file, user, path)
     self._logger.info("unregister_user_to_file task added")
 
   def unregister_user_to_all_files(self, user):
@@ -227,7 +237,7 @@ class Core(object):
 
     @param user: The user name
     """
-    self._add_task(lambda: self._task_unregister_user_to_all_files(user))
+    self._add_task(self._task_unregister_user_to_all_files, user)
     self._logger.info("unregister_user_to_all_files task added")
 
   def file_edit(self, path, changes):
@@ -240,14 +250,14 @@ class Core(object):
     @param path: The path of the file in the project tree
     @param changes: Changes to be applied on the file
     """
-    self._add_task(lambda: self._task_file_edit(path, changes))
+    self._add_task(self._task_file_edit, path, changes)
     self._logger.info("File_edit task added")
 
   """
   Tasks call section
   Those are queued to be executed by the CoreThread
   """
-  @task_time(1)
+  @task_time(microseconds=1)
   def _task_get_project_nodes(self, caller):
     """
     Task to get all files and directories from project
@@ -265,7 +275,7 @@ class Core(object):
 
     self._notify_event(lambda l: l.notify_get_project_nodes(sorted_nodes, caller))
 
-  @task_time(1)
+  @task_time(microseconds=1)
   def _task_get_file_content(self, path, caller):
     """
     Task to get the content of a file
@@ -287,7 +297,7 @@ class Core(object):
 
     self._notify_event(lambda l: l.notify_get_file_content(result, caller))
 
-  @task_time(1)
+  @task_time(microseconds=1)
   def _task_register_user_to_file(self, user, path):
     """
     Task to register a user to a file in order to receive file modification
@@ -307,7 +317,7 @@ class Core(object):
     # Register user
     self._project_files[path].users.add(user)
 
-  @task_time(1)
+  @task_time(microseconds=1)
   def _task_unregister_user_to_file(self, user, path):
     """
     Task to unregister a user to a file in order to stop receiving file modification
@@ -323,7 +333,7 @@ class Core(object):
     if path in self._project_files:
       self._project_files[path].users.discard(user)
 
-  @task_time(1)
+  @task_time(microseconds=1)
   def _task_unregister_user_to_all_files(self, user):
     """
     Task to unregister a user from all files in order to stop receiving file modification
@@ -337,7 +347,7 @@ class Core(object):
     for f in self._project_files:
       f.users.discard(user)
 
-  @task_time(1)
+  @task_time(microseconds=1)
   def _task_file_edit(self, path, changes):
     """
     Task to add change to be applied to a file
@@ -355,11 +365,7 @@ class Core(object):
                       else EditRemove(c.pos, c.data)) for c in changes])
       self._project_files[path].file.add(bundle)
 
-      # register async task to apply changes XXX Will become periodic instead
-      self._add_task(lambda: self._task_apply_changes(path))
-      self._logger.info("apply_changes task task added")
-
-  @task_time(100000) # 100 ms
+  @task_time(microseconds=1)
   def task_check_apply_notify(self):
     """
     Periodic task to apply pending modifications on all file from project.
@@ -380,16 +386,17 @@ class Core(object):
     """
     self._logger.info("apply_changes task called for {0}".format(path))
     try:
-      version, changes = self._project_files[path].file.writeModifications()
-      users_registered = deepcopy(self._project_files[path].users)
-      self._logger.info("_task_apply_changes call notify")
-      
-      # Notify registered users
-      self._notify_event(
-        lambda l: l.notify_file_edit(path,
-                                     changes,
-                                     version,
-                                     users_registered))
+      if path in self._project_files:
+        version, changes = self._project_files[path].file.writeModifications()
+        users_registered = deepcopy(self._project_files[path].users)
+        self._logger.info("_task_apply_changes call notify")
+        
+        # Notify registered users
+        self._notify_event(
+          lambda l: l.notify_file_edit(path,
+                                       changes,
+                                       version,
+                                       users_registered))
     except:
       e = sys.exc_info()
       self._logger.exception("EXCEPTION RAISED {0}\n{1}\n{2}".format(e[0], e[1], e[2]))
@@ -460,18 +467,17 @@ class CoreThread(Thread):
     # Alias for shorter name
     self._c_a_n = app.task_check_apply_notify
     self._tasks = app.tasks
+    self._stop_asked = False
 
     cycle_time = conf["cycle_time"]
-    critical_time = conf["buffer_critical"] / 100 * cycle_time
-    secondary_time = conf["buffer_secondary"] / 100 * cycle_time
-    auxiliary_time = conf["buffer_auxiliary"] / 100 * cycle_time
+    critical_time = conf["buffer_critical"] / 100.0 * cycle_time
+    secondary_time = conf["buffer_secondary"] / 100.0 * cycle_time
+    auxiliary_time = conf["buffer_auxiliary"] / 100.0 * cycle_time
 
     self._cycle_time = timedelta(microseconds=cycle_time)
     self._time_buffer_critical = timedelta(microseconds=critical_time) 
     self._time_buffer_secondary = timedelta(microseconds=secondary_time) 
     self._time_buffer_auxiliary = timedelta(microseconds=auxiliary_time) 
-
-    self._stop_asked = False
 
   def stop(self):
     self._stop_asked = True
@@ -479,21 +485,24 @@ class CoreThread(Thread):
   def run(self):
     none_critical_time_buffer = self._time_buffer_secondary+self._time_buffer_auxiliary
     
-    # Define the ending point in time of the cycle 
-    time_end_cycle = datetime.now() + self._cycle_time
+    # Define the ending point in time of the cycle
+    # Tasks will be executed in the following order : auxiliary, secondary, critical
+    # Therefore, end time points are defined corresponding to this order
+    time_end_none_critical = datetime.now() + none_critical_time_buffer
+    time_end_critical = time_end_none_critical + self._time_buffer_critical
 
     while not self._stop_asked:
 
       # None critical tasks
       # Execute loop until the time buffer exceeds 
-      while time_end_cycle - datetime.now() < none_critical_time_buffer:
+      while datetime.now() < time_end_none_critical:
         try:
           task = self._tasks.popleft()
 
           # Execute only if the task will not exceed the time buffer
           # Suppose that task were decorated by task_time function decorator
-          if time_end_cycle - datetime.now() - task.time < none_critical_time_buffer:
-            task()
+          if datetime.now() + task.f.time < time_end_none_critical:
+            task.f(*task.args)
           else:
             # Since there is no time left, replace task as first element
             # and proceed to other category of tasks
@@ -505,11 +514,13 @@ class CoreThread(Thread):
           pass
 
       # Critical tasks
-      if time_end_cycle - datetime.now() - self._c_a_n.time < self._time_buffer_critical:
+      # Check if executing the task will exceed the time buffer
+      if datetime.now() + self._c_a_n.time < time_end_critical:
         self._c_a_n()
       else:
         print "CoreThread WARNING :: Not enough time to call task_check_apply_notify"
 
       # Increment rather than affecting to preserve any
       # unused or  overused time from last cycle
-      time_end_cycle += self._cycle_time
+      time_end_none_critical += self._cycle_time
+      time_end_critical += self._cycle_time

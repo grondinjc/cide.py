@@ -1,9 +1,9 @@
 [CoreApp]
 name = '<<PRJ_NAME>>'
 project_base_dir = "<<PRJ_BASE_DIR>>"
-project_code_dir = "${project_base_dir}/code"
-project_exec_dir = "${project_base_dir}/exec"
-project_backup_dir = "${project_base_dir}/backup"
+project_code_dir = "<<PRJ_BASE_DIR>>/code"
+project_exec_dir = "<<PRJ_BASE_DIR>>/exec"
+project_backup_dir = "<<PRJ_BASE_DIR>>/backup"
 
 [CoreAppRealtime]
 cycle_time = 1000000         # in microseconds
