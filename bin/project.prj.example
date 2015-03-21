@@ -6,7 +6,7 @@ project_exec_dir = "${project_base_dir}/exec"
 project_backup_dir = "${project_base_dir}/backup"
 
 [CoreAppRealtime]
-cycle_time = 1000           # in ms
-time_buffer_critical = 50   # percentage
+cycle_time = 1000000         # in microseconds
+time_buffer_critical = 50    # percentage
 time_buffer_secondary  = 40  # percentage
 time_buffer_auxiliary  = 10  # percentage

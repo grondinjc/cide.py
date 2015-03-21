@@ -1,9 +1,9 @@
 import sys
 import os
-import Queue
 from copy import deepcopy
 from threading import Thread
 from collections import namedtuple, deque
+from datetime import datetime, timedelta
 
 from cide.app.python.utils.nodes import (get_existing_files,
                                          get_existing_dirs)
@@ -17,17 +17,17 @@ from libZoneTransit import (TransitZone as EditBuffer,
                             Modifications)
 
 
-def task_time(duration_time):
+def task_time(microseconds):
   """
   Function decorator to specify the worse execution time metadata 
-  to a task under the 'time' attribute
+  to a task under the 'time' attribute as a timedelta object
 
-  @type duration_time: int
+  @type microseconds: float
 
-  @param duration_time: The execution time found by worse case scenarios benchmarks
+  @param microseconds: The execution time found by worse case scenarios benchmarks
   """
   def wrapper(func):
-    func.time = duration_time
+    func.time = timedelta(microseconds=microseconds)
     return func
   return wrapper
 
@@ -82,7 +82,7 @@ class Core(object):
     first_strategy = StrategyCallEmpty(self._change_core_strategy)
     self._core_listeners_strategy = first_strategy
 
-    self.tasks = Queue.Queue()
+    self.tasks = deque()
     self._thread = CoreThread(self, core_conf)
 
   """
@@ -101,7 +101,6 @@ class Core(object):
     Stop the application
     """
     self._thread.stop()
-    self.tasks.put_nowait((lambda: None))  # Unblock Queue if empty
 
   def get_project_name(self):
     """
@@ -144,7 +143,7 @@ class Core(object):
 
     @param f: The task wrapped with args inside a callable (function or lambda)
     """
-    self.tasks.put(f)
+    self.tasks.append(f)
 
   def _create_file(self, content=""):
     """
@@ -360,8 +359,8 @@ class Core(object):
       self._add_task(lambda: self._task_apply_changes(path))
       self._logger.info("apply_changes task task added")
 
-  @task_time(1)
-  def _task_check_apply_notify(self):
+  @task_time(100000) # 100 ms
+  def task_check_apply_notify(self):
     """
     Periodic task to apply pending modifications on all file from project.
     It also sends notifications uppon change application.
@@ -458,12 +457,19 @@ class CoreThread(Thread):
     @param conf: Configuration dictionnary for realtime
     """
     Thread.__init__(self)
-    self._app = app
+    # Alias for shorter name
+    self._c_a_n = app.task_check_apply_notify
+    self._tasks = app.tasks
 
-    self._cycle_time = conf["cycle_time"]
-    self._time_buffer_critical = conf["buffer_critical"] / 100 * self._cycle_time 
-    self._time_buffer_secondary = conf["buffer_secondary"] / 100 * self._cycle_time 
-    self._time_buffer_auxiliary = conf["buffer_auxiliary"] / 100 * self._cycle_time 
+    cycle_time = conf["cycle_time"]
+    critical_time = conf["buffer_critical"] / 100 * cycle_time
+    secondary_time = conf["buffer_secondary"] / 100 * cycle_time
+    auxiliary_time = conf["buffer_auxiliary"] / 100 * cycle_time
+
+    self._cycle_time = timedelta(microseconds=cycle_time)
+    self._time_buffer_critical = timedelta(microseconds=critical_time) 
+    self._time_buffer_secondary = timedelta(microseconds=secondary_time) 
+    self._time_buffer_auxiliary = timedelta(microseconds=auxiliary_time) 
 
     self._stop_asked = False
 
@@ -471,38 +477,39 @@ class CoreThread(Thread):
     self._stop_asked = True
 
   def run(self):
-
     none_critical_time_buffer = self._time_buffer_secondary+self._time_buffer_auxiliary
-
-    time_now = time()
-    time() + timedelta(minutes=30)
-    time_end_cycle = self._cycle_time
+    
+    # Define the ending point in time of the cycle 
+    time_end_cycle = datetime.now() + self._cycle_time
 
     while not self._stop_asked:
 
       # None critical tasks
-      # Execute loop until the time buffer exceeds
-      while available_time < none_critical_time_buffer:
+      # Execute loop until the time buffer exceeds 
+      while time_end_cycle - datetime.now() < none_critical_time_buffer:
         try:
-          # Suppose that task in list were created with task_time decorator
-          task = self._app.tasks.popleft()
+          task = self._tasks.popleft()
 
           # Execute only if the task will not exceed the time buffer
-          if available_time - task.time < none_critical_time_buffer:
+          # Suppose that task were decorated by task_time function decorator
+          if time_end_cycle - datetime.now() - task.time < none_critical_time_buffer:
             task()
           else:
             # Since there is no time left, replace task as first element
             # and proceed to other category of tasks
-            self._app.tasks.appendleft(task)
+            self._tasks.appendleft(task)
             break
 
         # There were no tasks available
         except IndexError:
           pass
 
-
       # Critical tasks
-      self._app._task_check_apply_notify()
+      if time_end_cycle - datetime.now() - self._c_a_n.time < self._time_buffer_critical:
+        self._c_a_n()
+      else:
+        print "CoreThread WARNING :: Not enough time to call task_check_apply_notify"
 
-  def _check_remaining_time(self):
-    pass
+      # Increment rather than affecting to preserve any
+      # unused or  overused time from last cycle
+      time_end_cycle += self._cycle_time
