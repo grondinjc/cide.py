@@ -1,10 +1,14 @@
 import sys
 import os
+from Queue import Queue
 from copy import deepcopy
 from threading import Thread
 from collections import namedtuple, deque
 from datetime import datetime, timedelta
+
+from zipfile import ZipFile
 from pdb import set_trace as dbg
+from tempfile import NamedTemporaryFile
 
 from cide.app.python.utils.nodes import (get_existing_files,
                                          get_existing_dirs)
@@ -68,13 +72,15 @@ class Core(object):
     self._project_src_path = project_conf['code_dir'] # considered as root
     self._project_backup_path = project_conf['backup_dir']
     self._project_exec_path = project_conf['exec_dir']
+    self._project_tmp_path = project_conf['tmp_dir']
     self._logger = logger
 
     # Make sure directories exists
     for project_dir in (self._project_base_path, 
                         self._project_src_path,
                         self._project_backup_path,
-                        self._project_exec_path):
+                        self._project_exec_path,
+                        self._project_tmp_path):
       if not os.path.exists(project_dir):
         os.makedirs(project_dir)
 
@@ -253,6 +259,24 @@ class Core(object):
     self._add_task(self._task_file_edit, path, changes)
     self._logger.info("File_edit task added")
 
+  def create_archive(self, path, caller):
+    """
+    Compress all files under a project directory
+
+    @type path: str
+    @type caller: str
+
+    @param path: The project directory path to compress
+    @param caller: The user name
+
+
+    @return: Queue on which the first element will be the path to the archive
+    """
+    synchrone_future = Queue()
+    self._add_task(self._task_create_archive, path, caller, synchrone_future)
+    self._logger.info("Create archive task added")
+    return synchrone_future
+
   """
   Tasks call section
   Those are queued to be executed by the CoreThread
@@ -269,10 +293,7 @@ class Core(object):
     Callback will be called with: nodes, caller
     """
     self._logger.info("get_project_nodes task called for {0}".format(caller))
-    sorted_nodes = ([(d, True) for d in get_existing_dirs(self._project_src_path)] +
-                    [(f, False) for f in self._project_files.keys()])
-    sorted_nodes.sort()
-
+    sorted_nodes = self._impl_get_project_nodes()
     self._notify_event(lambda l: l.notify_get_project_nodes(sorted_nodes, caller))
 
   @task_time(microseconds=1)
@@ -289,12 +310,7 @@ class Core(object):
     Callback will be called with: tuple (<<File name>>, <<File Content>>, <<File Version>>)
     """
     self._logger.info("get_file_content task called for {0}, {1}".format(caller, path))
-    result = None
-    if path in self._project_files:
-      result = (path,
-                self._project_files[path].file.content,
-                0)  # Version
-
+    result = self._impl_get_file_content(path)
     self._notify_event(lambda l: l.notify_get_file_content(result, caller))
 
   @task_time(microseconds=1)
@@ -400,6 +416,72 @@ class Core(object):
     except:
       e = sys.exc_info()
       self._logger.exception("EXCEPTION RAISED {0}\n{1}\n{2}".format(e[0], e[1], e[2]))
+
+  @task_time(microseconds=1)
+  def _task_create_archive(self, path, caller, response):
+    """
+    Task to create an archive of the files under a project directory
+
+    @type path: str
+    @type caller: str
+    @type response: Queue.Queue
+
+    @param path: The path of the directory to compress
+    @param caller: The user name
+    @param response: Synchrone helper on which response needs to be written
+    """
+    archive_name = "{0}-{1}.zip".format(self.get_project_name(), "s")
+    archive_path = os.path.join(self._project_tmp_path, archive_name)
+
+    archive_nodes = ((node, is_dir) 
+                     for (node,is_dir) in self._impl_get_project_nodes() 
+                     if node.startswith(path))
+
+    tempfile_prefix = "{0}-tmp".format(caller)
+    archive_root_dir = "/{0}/".format(path.split("/")[-1] or self.get_project_name())
+
+    # The zip file seems to block any notify on the used file
+    with ZipFile(archive_path, "w") as zf:
+      with NamedTemporaryFile(prefix=tempfile_prefix, dir=self._project_tmp_path) as ntf:
+
+        # Not reading from disk to avoid I/O operations
+        _, content, _ = self._impl_get_file_content("/file1.py")
+        ntf.write(content)
+        # Creates file into any needed parent directories
+        zf.write(ntf.name, archive_root_dir + "root-file")
+      
+      # NamedTemporaryFile
+      # if is_dir
+
+      """for (node, is_dir) in archive_nodes:
+
+        zf.write(dirname, dirname.replace(path, ""))
+        for filename in files:
+          filepath = os.path.join(dirname, filename)
+          zf.write(filepath, filepath.replace(path,""))
+      """
+
+    # Export file 
+    response.put(archive_path)
+
+  """
+  Implementation of tasks without communication overhead.
+  This allows to reuse blocks of code 
+  """
+
+  def _impl_get_project_nodes(self):
+    sorted_nodes = ([(d, True) for d in get_existing_dirs(self._project_src_path)] +
+                    [(f, False) for f in self._project_files.keys()])
+    sorted_nodes.sort()
+    return sorted_nodes
+
+  def _impl_get_file_content(self, path):
+    result = None
+    if path in self._project_files:
+      result = (path,
+                self._project_files[path].file.content,
+                0)  # Version
+    return result
 
   """
   Observer and Stategy design patterns
