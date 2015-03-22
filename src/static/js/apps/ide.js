@@ -46,6 +46,7 @@ AppIDE.prototype.handleInput = function() {
   this._ideState.handleInput();
 };
 
+// State transitions
 AppIDE.prototype.waitForFileSelected = function() {
   // Debug
   $("#stateHelper").text("Waiting for a file to be selected");
@@ -74,6 +75,9 @@ AppIDE.prototype.switchToEditFileState = function(targetFilepath, dumpObj, chang
   this._ideState = this._editState;
 };
 
+AppIDE.prototype.export = function(path){
+  this._ideState._rqh.download('export', createExport(path));
+}
 
 
 /*  The initial state of the ide 

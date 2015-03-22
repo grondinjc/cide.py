@@ -26,6 +26,11 @@ function terminate(){
     ideApplication.close();
 }
 
+// Menu -> Project -> Export
+function menuProjectExport(){
+  ideApplication.export("/");
+  return false; // stop propagation
+}
 
 // TEST_ONLY
 function test_f(){
