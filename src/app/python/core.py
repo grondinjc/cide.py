@@ -387,6 +387,7 @@ class Core(object):
     Periodic task to apply pending modifications on all file from project.
     It also sends notifications uppon change application.
     """
+    self._logger.info("check_apply_notify task called")
     for (filepath, element) in self._project_files.iteritems():
       if not element.file.isEmpty():
         self._inner_task_apply_changes(filepath)
@@ -430,36 +431,28 @@ class Core(object):
     @param caller: The user name
     @param response: Synchrone helper on which response needs to be written
     """
-    archive_name = "{0}-{1}.zip".format(self.get_project_name(), "s")
+    self._logger.info("create_archive task called for {0}, {1}".format(caller, path))
+
+    archive_name = "{0}-{1}.zip".format(self.get_project_name(), caller)
     archive_path = os.path.join(self._project_tmp_path, archive_name)
 
-    archive_nodes = ((node, is_dir) 
-                     for (node,is_dir) in self._impl_get_project_nodes() 
-                     if node.startswith(path))
-
     tempfile_prefix = "{0}-tmp".format(caller)
-    archive_root_dir = "/{0}/".format(path.split("/")[-1] or self.get_project_name())
+    archive_root_dir = "/{0}".format(path.split("/")[-1] or self.get_project_name())
 
-    # The zip file seems to block any notify on the used file
+    archive_nodes = (node 
+                     for (node,is_dir) in self._impl_get_project_nodes() 
+                     if not is_dir and node.startswith(path))
+
     with ZipFile(archive_path, "w") as zf:
-      with NamedTemporaryFile(prefix=tempfile_prefix, dir=self._project_tmp_path) as ntf:
+      for filenode in archive_nodes:
+        with NamedTemporaryFile(prefix=tempfile_prefix, dir=self._project_tmp_path) as ntf:
+          # Not reading from disk to get the lastest version
+          _, content, _ = self._impl_get_file_content(filenode)
+          ntf.write(content)
+          ntf.flush() # Make sure text gets writen
 
-        # Not reading from disk to avoid I/O operations
-        _, content, _ = self._impl_get_file_content("/file1.py")
-        ntf.write(content)
-        # Creates file into any needed parent directories
-        zf.write(ntf.name, archive_root_dir + "root-file")
-      
-      # NamedTemporaryFile
-      # if is_dir
-
-      """for (node, is_dir) in archive_nodes:
-
-        zf.write(dirname, dirname.replace(path, ""))
-        for filename in files:
-          filepath = os.path.join(dirname, filename)
-          zf.write(filepath, filepath.replace(path,""))
-      """
+          # Creates file into any needed parent directories
+          zf.write(ntf.name, archive_root_dir + filenode)
 
     # Export file 
     response.put(archive_path)
@@ -588,6 +581,7 @@ class CoreThread(Thread):
           else:
             # Since there is no time left, replace task as first element
             # and proceed to other category of tasks
+            diff = datetime.now() + task.f.time
             self._tasks.appendleft(task)
             break
 
