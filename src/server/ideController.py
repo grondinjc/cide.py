@@ -1,6 +1,7 @@
 import os
 import cherrypy
 from cherrypy import request, HTTPError
+from cherrypy.lib import static
 import simplejson
 from ws4py.websocket import WebSocket
 from genshi.template import TemplateLoader
@@ -362,6 +363,36 @@ class IDEController(object):
 
   @cherrypy.expose
   @require_identify()
+  def export(self, path=None, **kw):
+    self._logger.debug("Export by {0} ({1}:{2}) filename: {3}".format(cherrypy.session['username'],
+                                                                    request.remote.ip,
+                                                                    request.remote.port,
+                                                                    path))
+
+    username = cherrypy.session['username']
+    self._logger.info("Dump of file {3} requested by {0} ({1}:{2})".format(username,
+                                                                           request.remote.ip,
+                                                                           request.remote.port,
+                                                                           path))
+
+    if self.is_valid_path(path) or path == "/":
+      future_response = self._app.create_archive(path, username)
+    else:
+      raise HTTPError(400, "Invalid path")
+
+    # Block until an answer is given
+    archive_path = future_response.get()
+    if not os.path.exists(archive_path):
+      raise HTTPError(500, "Unavailable archive")
+    
+    # Store archive name in request to remove it when client download will be completed
+    request.archive_path = archive_path
+    request.hooks.attach('on_end_request', lambda: os.unlink(request.archive_path))
+    # Return archive
+    return static.serve_download(archive_path)
+
+  @cherrypy.expose
+  @require_identify()
   def ws(self):
     """
     Method must exist to serve as a exposed hook for the websocket
@@ -502,7 +533,6 @@ class IDEController(object):
 
     else:
       self._logger.error("{0} has no WS in server".format(caller))
-
 
 class IDEWebSocket(WebSocket):
   """

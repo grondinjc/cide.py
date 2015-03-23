@@ -19,6 +19,8 @@ function createOpen(filename) { return { file: filename}; }
 function createClose(filename) { return { file: filename}; }
 // used for /ide/dump
 function createDump(filename) { return { filename: filename}; }
+// used for /ide/export
+function createExport(directory) { return { path: directory}; }
 
 // used for /chat/send
 function createChatMessage(msg) { return { message: msg}; }

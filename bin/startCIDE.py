@@ -49,7 +49,8 @@ project_conf = dict(name = project_config['CoreApp']['name'],
                     base_dir = project_config['CoreApp']['project_base_dir'],
                     code_dir = project_config['CoreApp']['project_code_dir'],
                     exec_dir = project_config['CoreApp']['project_exec_dir'],
-                    backup_dir = project_config['CoreApp']['project_backup_dir'])
+                    backup_dir = project_config['CoreApp']['project_backup_dir'],
+                    tmp_dir = project_config['CoreApp']['project_tmp_dir'])
 
 # Project Realtime relative configuration
 cycle_time = int(project_config['CoreAppRealtime']['cycle_time'])
