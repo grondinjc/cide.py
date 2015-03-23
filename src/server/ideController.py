@@ -186,8 +186,7 @@ class IDEController(object):
                                                                             filename))
 
     if self.is_valid_path(filename):
-      self._app.register_user_to_file(username, filename)
-      self._app.get_file_content(filename, username)
+      self._app.open_file(username, filename)
     else:
       raise HTTPError(400, "Invalid path")
 
@@ -363,17 +362,16 @@ class IDEController(object):
 
   @cherrypy.expose
   @require_identify()
-  def export(self, path=None, **kw):
-    self._logger.debug("Export by {0} ({1}:{2}) filename: {3}".format(cherrypy.session['username'],
-                                                                    request.remote.ip,
-                                                                    request.remote.port,
-                                                                    path))
+  def export(self, path, **kw):
+    self._logger.debug("Export by {0} ({1}:{2}) path: {3}".format(cherrypy.session['username'],
+                                                                  request.remote.ip,
+                                                                  request.remote.port,
+                                                                  path))
 
     username = cherrypy.session['username']
-    self._logger.info("Dump of file {3} requested by {0} ({1}:{2})".format(username,
-                                                                           request.remote.ip,
-                                                                           request.remote.port,
-                                                                           path))
+    self._logger.info("Export requested by {0} ({1}:{2})".format(username,
+                                                                 request.remote.ip,
+                                                                 request.remote.port))
 
     if self.is_valid_path(path) or path == "/":
       future_response = self._app.create_archive(path, username)
