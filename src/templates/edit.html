@@ -10,16 +10,52 @@
     <link rel="stylesheet" type="text/css" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" />
   </head>
   <body>
+    
+    <!-- Top menu -->
+    <nav class="navbar navbar-default">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" 
+                data-target="#cide-top-menubar">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="glyphicon glyphicon-menu-hamburger"></span>
+        </button>
+        <label class="navbar-brand">Cide.py</label>
+      </div>
+
+      <!-- Top menu elements -->
+      <div class="collapse navbar-collapse" id="cide-top-menubar">
+        <!-- Left section of the top menu -->
+        <ul class="nav navbar-nav">
+          <!-- Project relative elements -->
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"><span class="glyphicon glyphicon-cloud"></span> Project</a>
+            <ul class="dropdown-menu" role="menu">
+              <li class="divider"></li>
+              <li><a href="#" onclick="return menuProjectExport();"><span class="glyphicon glyphicon-cloud-download"></span> Export</a></li>
+            </ul>
+          </li>
+        </ul>
+
+        <!-- Right section of the top menu -->
+        <ul class="nav navbar-nav navbar-right">
+          <!-- User relative elements -->
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"><span class="glyphicon glyphicon-cog"></span> Parameter</a>
+            <ul class="dropdown-menu" role="menu">
+              <li class="divider"></li>
+              <li><a href="#"><span class="glyphicon glyphicon-log-out"></span> Logout</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </nav>
+    
     <div class="container-fluid">
-
-      <!-- Top menu -->
-      <!--<div class="row"></div> top menu -->
-
+      
       <!-- Side sections and IDE sections -->
       <div class="row">
 
         <!-- Side sections -->
-
         <div class="col-md-3">
           <!-- Side section menus -->
           <ul class="nav nav-pills nav-justified">

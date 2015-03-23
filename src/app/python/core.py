@@ -1,9 +1,14 @@
 import sys
 import os
-import Queue
+from Queue import Queue
 from copy import deepcopy
 from threading import Thread
-from collections import namedtuple
+from collections import namedtuple, deque
+from datetime import datetime, timedelta
+
+from zipfile import ZipFile
+from pdb import set_trace as dbg
+from tempfile import NamedTemporaryFile
 
 from cide.app.python.utils.nodes import (get_existing_files,
                                          get_existing_dirs)
@@ -17,9 +22,20 @@ from libZoneTransit import (TransitZone as EditBuffer,
                             Modifications)
 
 
-Error = namedtuple('Error', ['message'])
-Warning = namedtuple('Warning', ['message'])
+def task_time(microseconds):
+  """
+  Function decorator to specify the worse execution time metadata 
+  to a task under the 'time' attribute as a timedelta object
 
+  @type microseconds: float
+
+  @param microseconds: The execution time found by worse case scenarios benchmarks
+  """
+  def wrapper(func):
+    func.time = timedelta(microseconds=microseconds)
+    func.debugname = func.func_name
+    return func
+  return wrapper
 
 class Core(object):
   """
@@ -34,36 +50,46 @@ class Core(object):
   # Tuple to hold const pair (transitZone, user registered to changes)
   FileUserPair = namedtuple('FileUserPair', ['file', 'users'])
 
-  def __init__(self, project_name, project_path, logger):
+  # Task wrapper to hold the arguments to be applied on a delayed
+  # executing function
+  Task = namedtuple('Task', ['f', 'args'])
+
+  def __init__(self, project_conf, core_conf, logger):
     """
     Core initialiser
 
-    @type project_name: str
-    @type project_path: str
+    @type project_conf: dict
+    @type core_conf: dict
     @type logger: logging.Logger
-    @type num_threads: int
 
-    @param project_name: The name of the project being edited
-    @param project_path: The system path when files will be written
+    @param project_conf: Configuration dictionnary containing name and paths
+    @param core_conf: Configuration dictionnary for the core thread
     @param logger: The CIDE.py logger instance
-    @param num_threads: The number of worker for asynchronous tasks
     """
 
-    self._project_name = project_name
-    self._project_path = project_path  # considered as /
+    self._project_name = project_conf['name']
+    self._project_base_path = project_conf['base_dir']
+    self._project_src_path = project_conf['code_dir'] # considered as root
+    self._project_backup_path = project_conf['backup_dir']
+    self._project_exec_path = project_conf['exec_dir']
+    self._project_tmp_path = project_conf['tmp_dir']
     self._logger = logger
 
     # Make sure directories exists
-    if not os.path.exists(self._project_path):
-      os.makedirs(self._project_path)
-      # Create default file ???
+    for project_dir in (self._project_base_path, 
+                        self._project_src_path,
+                        self._project_backup_path,
+                        self._project_exec_path,
+                        self._project_tmp_path):
+      if not os.path.exists(project_dir):
+        os.makedirs(project_dir)
 
     # Asociation filepath -> (zoneTransit, set(userlist))
     # Recreate structure from existing files on disk
     self._project_files = dict()
-    existing_files_path = get_existing_files(self._project_path)
+    existing_files_path = get_existing_files(self._project_src_path)
     for path in existing_files_path:
-      with open(os.path.join(self._project_path, path.lstrip('/')), 'r') as f:
+      with open(os.path.join(self._project_src_path, path.lstrip('/')), 'r') as f:
         self._project_files[path] = self._create_file(f.read())
 
     self._core_listeners = list()  # List for direct indexing
@@ -72,8 +98,8 @@ class Core(object):
     first_strategy = StrategyCallEmpty(self._change_core_strategy)
     self._core_listeners_strategy = first_strategy
 
-    self.tasks = Queue.Queue()
-    self._thread = CoreThread(self)
+    self.tasks = deque()
+    self._thread = CoreThread(self, core_conf)
 
   """
   Sync Call
@@ -91,7 +117,6 @@ class Core(object):
     Stop the application
     """
     self._thread.stop()
-    self.tasks.put_nowait((lambda: None))  # Unblock Queue if empty
 
   def get_project_name(self):
     """
@@ -125,16 +150,16 @@ class Core(object):
     if path in self._project_files:
       del self._project_files[path]
 
-  def _add_task(self, f):
+  def _add_task(self, f, *args):
     """
-    Add a task into the threadpool
-    Execution centralized into a function to hide flaws of external library
+    Add a task into the task list
+    
+    @type f: function
 
-    @type f: lambda
-
-    @param f: The task wrapped with args inside a callable (function or lambda)
+    @param f: The task
+    @param args: The arugments to be applied on f
     """
-    self.tasks.put(f)
+    self.tasks.append(Core.Task(f, args))
 
   def _create_file(self, content=""):
     """
@@ -163,7 +188,7 @@ class Core(object):
     List of nodes is: list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
     Callback will be called with: nodes, caller
     """
-    self._add_task(lambda: self._task_get_project_nodes(caller))
+    self._add_task(self._task_get_project_nodes, caller)
     self._logger.info("get_project_nodes task added")
 
   def get_file_content(self, path, caller):
@@ -178,7 +203,7 @@ class Core(object):
 
     Callback will be called with: tuple (<<File name>>, <<File Content>>, <<File Version>>), caller
     """
-    self._add_task(lambda: self._task_get_file_content(path, caller))
+    self._add_task(self._task_get_file_content, path, caller)
     self._logger.info("get_file_content task added")
 
   def register_user_to_file(self, user, path):
@@ -192,7 +217,7 @@ class Core(object):
     @param user: The user name
     @param path: The path of the file to be registered to
     """
-    self._add_task(lambda: self._task_register_user_to_file(user, path))
+    self._add_task(self._task_register_user_to_file, user, path)
     self._logger.info("register_user_to_file task added")
 
   def unregister_user_to_file(self, user, path):
@@ -206,7 +231,7 @@ class Core(object):
     @param user: The user name
     @param path: The path of the file to be unregistrered from
     """
-    self._add_task(lambda: self._task_unregister_user_to_file(user, path))
+    self._add_task(self._task_unregister_user_to_file, user, path)
     self._logger.info("unregister_user_to_file task added")
 
   def unregister_user_to_all_files(self, user):
@@ -218,7 +243,7 @@ class Core(object):
 
     @param user: The user name
     """
-    self._add_task(lambda: self._task_unregister_user_to_all_files(user))
+    self._add_task(self._task_unregister_user_to_all_files, user)
     self._logger.info("unregister_user_to_all_files task added")
 
   def file_edit(self, path, changes):
@@ -231,13 +256,32 @@ class Core(object):
     @param path: The path of the file in the project tree
     @param changes: Changes to be applied on the file
     """
-    self._add_task(lambda: self._task_file_edit(path, changes))
+    self._add_task(self._task_file_edit, path, changes)
     self._logger.info("File_edit task added")
+
+  def create_archive(self, path, caller):
+    """
+    Compress all files under a project directory
+
+    @type path: str
+    @type caller: str
+
+    @param path: The project directory path to compress
+    @param caller: The user name
+
+
+    @return: Queue on which the first element will be the path to the archive
+    """
+    synchrone_future = Queue()
+    self._add_task(self._task_create_archive, path, caller, synchrone_future)
+    self._logger.info("Create archive task added")
+    return synchrone_future
 
   """
   Tasks call section
   Those are queued to be executed by the CoreThread
   """
+  @task_time(microseconds=1)
   def _task_get_project_nodes(self, caller):
     """
     Task to get all files and directories from project
@@ -249,12 +293,10 @@ class Core(object):
     Callback will be called with: nodes, caller
     """
     self._logger.info("get_project_nodes task called for {0}".format(caller))
-    sorted_nodes = ([(d, True) for d in get_existing_dirs(self._project_path)] +
-                    [(f, False) for f in self._project_files.keys()])
-    sorted_nodes.sort()
-
+    sorted_nodes = self._impl_get_project_nodes()
     self._notify_event(lambda l: l.notify_get_project_nodes(sorted_nodes, caller))
 
+  @task_time(microseconds=1)
   def _task_get_file_content(self, path, caller):
     """
     Task to get the content of a file
@@ -268,14 +310,10 @@ class Core(object):
     Callback will be called with: tuple (<<File name>>, <<File Content>>, <<File Version>>)
     """
     self._logger.info("get_file_content task called for {0}, {1}".format(caller, path))
-    result = None
-    if path in self._project_files:
-      result = (path,
-                self._project_files[path].file.content,
-                0)  # Version
-
+    result = self._impl_get_file_content(path)
     self._notify_event(lambda l: l.notify_get_file_content(result, caller))
 
+  @task_time(microseconds=1)
   def _task_register_user_to_file(self, user, path):
     """
     Task to register a user to a file in order to receive file modification
@@ -295,6 +333,7 @@ class Core(object):
     # Register user
     self._project_files[path].users.add(user)
 
+  @task_time(microseconds=1)
   def _task_unregister_user_to_file(self, user, path):
     """
     Task to unregister a user to a file in order to stop receiving file modification
@@ -310,6 +349,7 @@ class Core(object):
     if path in self._project_files:
       self._project_files[path].users.discard(user)
 
+  @task_time(microseconds=1)
   def _task_unregister_user_to_all_files(self, user):
     """
     Task to unregister a user from all files in order to stop receiving file modification
@@ -323,6 +363,7 @@ class Core(object):
     for f in self._project_files:
       f.users.discard(user)
 
+  @task_time(microseconds=1)
   def _task_file_edit(self, path, changes):
     """
     Task to add change to be applied to a file
@@ -340,13 +381,21 @@ class Core(object):
                       else EditRemove(c.pos, c.data)) for c in changes])
       self._project_files[path].file.add(bundle)
 
-      # register async task to apply changes XXX Will become periodic instead
-      self._add_task(lambda: self._task_apply_changes(path))
-      self._logger.info("apply_changes task task added")
-
-  def _task_apply_changes(self, path):
+  @task_time(microseconds=1)
+  def task_check_apply_notify(self):
     """
-    Async task to apply pending modifications on the file
+    Periodic task to apply pending modifications on all file from project.
+    It also sends notifications uppon change application.
+    """
+    self._logger.info("check_apply_notify task called")
+    for (filepath, element) in self._project_files.iteritems():
+      if not element.file.isEmpty():
+        self._inner_task_apply_changes(filepath)
+
+  # Does not need the task_time decorator since it is called from a task
+  def _inner_task_apply_changes(self, path):
+    """
+    Partial task body to apply pending modifications on the file
 
     @type path: str
 
@@ -358,14 +407,74 @@ class Core(object):
         version, changes = self._project_files[path].file.writeModifications()
         users_registered = deepcopy(self._project_files[path].users)
         self._logger.info("_task_apply_changes call notify")
-        self._add_task(lambda: self._notify_event(
+        
+        # Notify registered users
+        self._notify_event(
           lambda l: l.notify_file_edit(path,
                                        changes,
                                        version,
-                                       users_registered)))
+                                       users_registered))
     except:
       e = sys.exc_info()
       self._logger.exception("EXCEPTION RAISED {0}\n{1}\n{2}".format(e[0], e[1], e[2]))
+
+  @task_time(microseconds=1)
+  def _task_create_archive(self, path, caller, response):
+    """
+    Task to create an archive of the files under a project directory
+
+    @type path: str
+    @type caller: str
+    @type response: Queue.Queue
+
+    @param path: The path of the directory to compress
+    @param caller: The user name
+    @param response: Synchrone helper on which response needs to be written
+    """
+    self._logger.info("create_archive task called for {0}, {1}".format(caller, path))
+
+    archive_name = "{0}-{1}.zip".format(self.get_project_name(), caller)
+    archive_path = os.path.join(self._project_tmp_path, archive_name)
+
+    tempfile_prefix = "{0}-tmp".format(caller)
+    archive_root_dir = "/{0}".format(path.split("/")[-1] or self.get_project_name())
+
+    archive_nodes = (node 
+                     for (node,is_dir) in self._impl_get_project_nodes() 
+                     if not is_dir and node.startswith(path))
+
+    with ZipFile(archive_path, "w") as zf:
+      for filenode in archive_nodes:
+        with NamedTemporaryFile(prefix=tempfile_prefix, dir=self._project_tmp_path) as ntf:
+          # Not reading from disk to get the lastest version
+          _, content, _ = self._impl_get_file_content(filenode)
+          ntf.write(content)
+          ntf.flush() # Make sure text gets writen
+
+          # Creates file into any needed parent directories
+          zf.write(ntf.name, archive_root_dir + filenode)
+
+    # Export file 
+    response.put(archive_path)
+
+  """
+  Implementation of tasks without communication overhead.
+  This allows to reuse blocks of code 
+  """
+
+  def _impl_get_project_nodes(self):
+    sorted_nodes = ([(d, True) for d in get_existing_dirs(self._project_src_path)] +
+                    [(f, False) for f in self._project_files.keys()])
+    sorted_nodes.sort()
+    return sorted_nodes
+
+  def _impl_get_file_content(self, path):
+    result = None
+    if path in self._project_files:
+      result = (path,
+                self._project_files[path].file.content,
+                0)  # Version
+    return result
 
   """
   Observer and Stategy design patterns
@@ -421,22 +530,73 @@ class CoreThread(Thread):
   Core app Thread
   """
 
-  def __init__(self, app):
+  def __init__(self, app, conf):
     """
     @type app: core.Core
+    @type conf: dict
 
     @param app: The core application
+    @param conf: Configuration dictionnary for realtime
     """
     Thread.__init__(self)
-    self._app = app
+    # Alias for shorter name
+    self._c_a_n = app.task_check_apply_notify
+    self._tasks = app.tasks
     self._stop_asked = False
+
+    cycle_time = conf["cycle_time"]
+    critical_time = conf["buffer_critical"] / 100.0 * cycle_time
+    secondary_time = conf["buffer_secondary"] / 100.0 * cycle_time
+    auxiliary_time = conf["buffer_auxiliary"] / 100.0 * cycle_time
+
+    self._cycle_time = timedelta(microseconds=cycle_time)
+    self._time_buffer_critical = timedelta(microseconds=critical_time) 
+    self._time_buffer_secondary = timedelta(microseconds=secondary_time) 
+    self._time_buffer_auxiliary = timedelta(microseconds=auxiliary_time) 
 
   def stop(self):
     self._stop_asked = True
 
   def run(self):
+    none_critical_time_buffer = self._time_buffer_secondary+self._time_buffer_auxiliary
+    
+    # Define the ending point in time of the cycle
+    # Tasks will be executed in the following order : auxiliary, secondary, critical
+    # Therefore, end time points are defined corresponding to this order
+    time_end_none_critical = datetime.now() + none_critical_time_buffer
+    time_end_critical = time_end_none_critical + self._time_buffer_critical
+
     while not self._stop_asked:
-      task = self._app.tasks.get()
-      task()
 
+      # None critical tasks
+      # Execute loop until the time buffer exceeds 
+      while datetime.now() < time_end_none_critical:
+        try:
+          task = self._tasks.popleft()
 
+          # Execute only if the task will not exceed the time buffer
+          # Suppose that task were decorated by task_time function decorator
+          if datetime.now() + task.f.time < time_end_none_critical:
+            task.f(*task.args)
+          else:
+            # Since there is no time left, replace task as first element
+            # and proceed to other category of tasks
+            diff = datetime.now() + task.f.time
+            self._tasks.appendleft(task)
+            break
+
+        # There were no tasks available
+        except IndexError:
+          pass
+
+      # Critical tasks
+      # Check if executing the task will exceed the time buffer
+      if datetime.now() + self._c_a_n.time < time_end_critical:
+        self._c_a_n()
+      else:
+        print "CoreThread WARNING :: Not enough time to call task_check_apply_notify"
+
+      # Increment rather than affecting to preserve any
+      # unused or  overused time from last cycle
+      time_end_none_critical += self._cycle_time
+      time_end_critical += self._cycle_time

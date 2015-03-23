@@ -1,0 +1,13 @@
+[CoreApp]
+name = '<<PRJ_NAME>>'
+project_base_dir = "<<PRJ_BASE_DIR>>"
+project_code_dir = "<<PRJ_BASE_DIR>>/code"
+project_exec_dir = "<<PRJ_BASE_DIR>>/exec"
+project_backup_dir = "<<PRJ_BASE_DIR>>/backup"
+project_tmp_dir = "<<PRJ_BASE_DIR>>/tmp"
+
+[CoreAppRealtime]
+cycle_time = 1000000         # in microseconds
+time_buffer_critical = 50    # percentage
+time_buffer_secondary  = 40  # percentage
+time_buffer_auxiliary  = 10  # percentage

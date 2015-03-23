@@ -10,6 +10,9 @@ src/static/css/*.css
 bin/*.conf
 bin/configs/*.conf
 
+# Non-project conf file
+bin/*.prj
+
 # Logs
 logs/*.log
 

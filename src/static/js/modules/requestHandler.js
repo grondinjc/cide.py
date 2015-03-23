@@ -84,3 +84,9 @@ RequestHandler.prototype.put = function(url, data, successCallback, errorCallbac
 RequestHandler.prototype.get = function(url, data, successCallback, errorCallback, async) {
   this._send("GET", url, $.param(data), successCallback, errorCallback, async);
 };
+// Send a HTTP request without changing page 
+RequestHandler.prototype.download = function(url, data) {
+  var download_tag = $("<a>").attr('href', url + "?" + $.param(data))
+                             .attr('download', '');
+  download_tag[0].click();
+};
