@@ -1,13 +1,11 @@
 import sys
 import os
-from Queue import Queue
+from Queue import Queue, Empty as EmptyQueue
 from copy import deepcopy
 from threading import Thread
-from collections import namedtuple, deque
+from collections import namedtuple
 from datetime import datetime, timedelta
-
 from zipfile import ZipFile
-from pdb import set_trace as dbg
 from tempfile import NamedTemporaryFile
 
 from cide.app.python.utils.nodes import (get_existing_files,
@@ -98,7 +96,7 @@ class Core(object):
     first_strategy = StrategyCallEmpty(self._change_core_strategy)
     self._core_listeners_strategy = first_strategy
 
-    self.tasks = deque()
+    self.tasks = Queue()
     self._thread = CoreThread(self, core_conf)
 
   """
@@ -159,7 +157,7 @@ class Core(object):
     @param f: The task
     @param args: The arugments to be applied on f
     """
-    self.tasks.append(Core.Task(f, args))
+    self.tasks.put(Core.Task(f, args))
 
   def _create_file(self, content=""):
     """
@@ -206,7 +204,7 @@ class Core(object):
     self._add_task(self._task_get_file_content, path, caller)
     self._logger.info("get_file_content task added")
 
-  def register_user_to_file(self, user, path):
+  def open_file(self, user, path):
     """
     Register a user to a file in order to receive file modification
     notifications. When the file does not exists, it is created
@@ -217,8 +215,8 @@ class Core(object):
     @param user: The user name
     @param path: The path of the file to be registered to
     """
-    self._add_task(self._task_register_user_to_file, user, path)
-    self._logger.info("register_user_to_file task added")
+    self._add_task(self._task_open_file, user, path)
+    self._logger.info("open_file task added")
 
   def unregister_user_to_file(self, user, path):
     """
@@ -314,7 +312,7 @@ class Core(object):
     self._notify_event(lambda l: l.notify_get_file_content(result, caller))
 
   @task_time(microseconds=1)
-  def _task_register_user_to_file(self, user, path):
+  def _task_open_file(self, user, path):
     """
     Task to register a user to a file in order to receive file modification
     notifications. When the file does not exists, it is created
@@ -325,13 +323,17 @@ class Core(object):
     @param user: The user name
     @param path: The path of the file to be registered to
     """
-    self._logger.info("register_user_to_file task called for {0}, {1}".format(user, path))
+    self._logger.info("open_file task called for {0}, {1}".format(user, path))
     if path not in self._project_files:
       # Create file when does not exists
       self._project_files[path] = self._create_file()
 
     # Register user
     self._project_files[path].users.add(user)
+
+    # Return content
+    result = self._impl_get_file_content(path)
+    self._notify_event(lambda l: l.notify_get_file_content(result, user))
 
   @task_time(microseconds=1)
   def _task_unregister_user_to_file(self, user, path):
@@ -572,21 +574,24 @@ class CoreThread(Thread):
       # Execute loop until the time buffer exceeds 
       while datetime.now() < time_end_none_critical:
         try:
-          task = self._tasks.popleft()
+          # Blocking until timeout or an available task allows lower CPU intensive work
+          # Without blocking, CPU usage raises a lot and reduce CPU time for incomming requests
+          available_block_time = time_end_none_critical - datetime.now()
+          task = self._tasks.get(block=True, timeout=available_block_time.total_seconds())
 
           # Execute only if the task will not exceed the time buffer
           # Suppose that task were decorated by task_time function decorator
           if datetime.now() + task.f.time < time_end_none_critical:
             task.f(*task.args)
           else:
-            # Since there is no time left, replace task as first element
-            # and proceed to other category of tasks
-            diff = datetime.now() + task.f.time
-            self._tasks.appendleft(task)
+            # Since there is not enough time left, replace task back in queue
+            # and proceed to other category of tasks.
+            # Since order in task list is irrelevant, putting task at the end does not matter
+            self._tasks.put(task)
             break
 
         # There were no tasks available
-        except IndexError:
+        except EmptyQueue:
           pass
 
       # Critical tasks
