@@ -15,17 +15,16 @@ from libZoneTransit import Addition
 
 class Benchmarks(object):
   def __init__(self):
-    #From startCIDE.py
-
-    project_conf = dict(name = 'Benchmarks',
-                    base_dir = './temp',
-                    code_dir = './temp',
-                    exec_dir = './temp',
-                    backup_dir = './temp',
-                    tmp_dir = './temp')
+      
+    self.project_conf = dict(name = 'Benchmarks',
+                base_dir = './temp',
+                code_dir = './temp',
+                exec_dir = './temp',
+                backup_dir = './temp',
+                tmp_dir = './temp')
     
     #Not used since tasks are called directly              
-    core_conf = dict(cycle_time = 0.0, 
+    self.core_conf = dict(cycle_time = 0.0, 
                  buffer_critical = 0.0,
                  buffer_secondary = 0.0,
                  buffer_auxiliary = 0.0)
@@ -34,12 +33,12 @@ class Benchmarks(object):
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(module)s - %(message)s')
     handler = logging.FileHandler("log_benchmarks")
     handler.setFormatter(formatter)
-    logger = logging.getLogger('cide.py')
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(handler)
+    self.logger = logging.getLogger('cide.py')
+    self.logger.setLevel(logging.DEBUG)
+    self.logger.addHandler(handler)
     
     #debug()             
-    self.core = Core(project_conf, core_conf, logger)
+    self.core = None
     self.callers = ["Arnold", "Benjamin", "Cecile", "Donald", "Eugene", "Francis", "Ginette", "Horace", "Ingrid", "Jean-Christophe", "Mariane", "Marc", "Vincent"]
     self.files = ["/a", "/b/b", "/c/c/c", "/d/d/d/d", "/e/e/e/e/e", "/f/f/f/f/f/f", "/g/g/g/g/g/g/g", "/h/h/h/h/h/h/h/h", "/i/i/i/i/i/i/i/i/i", "/j/j/j/j/j/j/j/j/j/j"]
     self.changes = []
@@ -50,17 +49,20 @@ class Benchmarks(object):
         for j in range(random.randint(1,100)):
             filename += '/'
             filename += chr(ord('a')+i % 26)
-        self.files.append(filename)
-    
+        self.files.append(filename)     
+            
+  def setUp(self):
+    self.core = Core(self.project_conf, self.core_conf, self.logger)
+      
     for file in self.files:
       self.core.add_file(file)
-      
-    #for user in self.callers:
-    #  self.core.register_application_listener(user)
       
     for file in self.files:
         for user in self.callers:
             self.core._task_file_edit(file, [Core.Change(0,"Hello",True)])
+            
+  def tearDown(self):
+    self.core = None
 
   def benchmarks_task_get_project_nodes(self):
     print 'Test de _task_get_project_nodes'
@@ -113,16 +115,17 @@ class Benchmarks(object):
     print ' '
     
   def myTimeIt(self, function, n=10000):
-    gc.disable()
     times = []
     for i in range(n):
+      gc.disable()
+      self.setUp()
       startTime = datetime.now()
       function()
-      endTime = datetime.now()      
+      endTime = datetime.now()
+      self.tearDown()
+      gc.enable()
+      gc.collect()
       times.append(endTime - startTime)
-      
-    gc.enable()
-    gc.collect()
     
     print '3 first are : {0} {1} {2}'.format(times[0],times[1],times[2])
     print '3 last are : {0} {1} {2}'.format(times[len(times)-1], times[len(times)-2], times[len(times)-3])    
