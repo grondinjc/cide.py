@@ -245,17 +245,19 @@ class Core(object):
     self._add_task(self._task_unregister_user_to_all_files, user)
     self._logger.info("unregister_user_to_all_files task added")
 
-  def file_edit(self, path, changes):
+  def file_edit(self, path, changes, caller):
     """
     Send changes, text added or text removed, to the file
 
     @type path: str
     @type changes: list [Change namedtuple]
+    @type caller: str
 
     @param path: The path of the file in the project tree
     @param changes: Changes to be applied on the file
+    @param caller: The user name
     """
-    self._add_task(self._task_file_edit, path, changes)
+    self._add_task(self._task_file_edit, path, changes, caller)
     self._logger.info("File_edit task added")
 
   def create_archive(self, path, caller):
@@ -362,20 +364,23 @@ class Core(object):
       f.users.discard(user)
 
   @task_time(microseconds=1)
-  def _task_file_edit(self, path, changes):
+  def _task_file_edit(self, path, changes, user):
     """
     Task to add change to be applied to a file
 
     @type path: str
     @type changes: [namedtuple Change]
+    @type user: str
 
     @param path: The path of the file in the project tree
     @param changes: Changes to be applied on the file
+    @param user: User who sent the changes
     """
+    author = user.encode("utf-8")
     if path in self._project_files:
       bundle = Modifications()
-      bundle.extend([(EditAdd(c.pos, c.data.encode("utf-8")) if c.is_add
-                      else EditRemove(c.pos, c.data)) for c in changes])
+      bundle.extend([(EditAdd(c.pos, c.data.encode("utf-8"), author) if c.is_add
+                      else EditRemove(c.pos, c.data, author)) for c in changes])
       self._project_files[path].file.add(bundle)
 
   @task_time(microseconds=1)

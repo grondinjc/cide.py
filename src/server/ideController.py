@@ -28,13 +28,15 @@ def create_file_version_dict(filename, version, changes):
 def create_change_add_element_dict(change):
   return {'type': IDEController.CHANGE_ADD_TYPE,
           'pos':  change.position,
-          'content': change.data}
+          'content': change.data,
+          'author': change.author}
 
 
 def create_change_remove_element_dict(change):
   return {'type': IDEController.CHANGE_REMOVE_TYPE,
           'pos':  change.position,
-          'count': change.size}
+          'count': change.size,
+          'author': change.author}
 
 
 def create_tree_nodes_dict(nodes):
@@ -253,6 +255,7 @@ class IDEController(object):
                                'type':    '<<Type of edit (ins | del)>>',
                                'pos':     '<<Position of edit>>',
                                'content': '<<Content of insert | Number of deletes>>'
+                               'author': <<If the user is the author>>
                              }]
                 }
       }
@@ -277,7 +280,7 @@ class IDEController(object):
         self._app.file_edit(filename, [self._app.Change(c['pos'],
                                                         c.get('content') or c.get('count'),
                                                         c['type'] == IDEController.CHANGE_ADD_TYPE)
-                                       for c in changes])
+                                       for c in changes], username)
         self._logger.info("Return from app call for bundle {0}".format(version))
 
       else:
@@ -420,6 +423,7 @@ class IDEController(object):
                                'type':    '<<Type of edit (ins | del)>>',
                                'pos':     '<<Position of edit>>',
                                'content': '<<Content of insert | Number of deletes>>'
+                               'author': <<If the user is the author>>
                              }]
                 }
       }
@@ -428,12 +432,14 @@ class IDEController(object):
                            else create_change_remove_element_dict(element))
                           for element in changes]
 
-    message_sent = simplejson.dumps(wrap_opCode('save',
-                                                create_file_version_dict(filename,
-                                                                         version,
-                                                                         serialized_changes)))
-
     for user in users:
+      for sc in serialized_changes:
+        sc['author'] = (sc['author'] == user)
+
+      message_sent = simplejson.dumps(wrap_opCode('save',
+                                                  create_file_version_dict(filename,
+                                                                           version,
+                                                                           serialized_changes)))
       ws = IDEWebSocket.IDEClients.get(user)
       if ws:
         try:
