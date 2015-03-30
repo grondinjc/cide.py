@@ -45,6 +45,11 @@ def create_tree_nodes_dict(nodes):
                     for (name, is_dir) in nodes]}
 
 
+def set_author_bool_in_dict(serialized_changes, user):
+  for sc in serialized_changes:
+    sc['author'] = (sc['author'] == user)
+
+
 class IDEController(object):
   """
   Controller of the IDE/Editing part
@@ -385,7 +390,7 @@ class IDEController(object):
     archive_path = future_response.get()
     if not os.path.exists(archive_path):
       raise HTTPError(500, "Unavailable archive")
-    
+
     # Store archive name in request to remove it when client download will be completed
     request.archive_path = archive_path
     request.hooks.attach('on_end_request', lambda: os.unlink(request.archive_path))
@@ -423,7 +428,7 @@ class IDEController(object):
                                'type':    '<<Type of edit (ins | del)>>',
                                'pos':     '<<Position of edit>>',
                                'content': '<<Content of insert | Number of deletes>>'
-                               'author': <<If the user is the author>>
+                               'author':   <<If the user is the author>>
                              }]
                 }
       }
@@ -433,8 +438,7 @@ class IDEController(object):
                           for element in changes]
 
     for user in users:
-      for sc in serialized_changes:
-        sc['author'] = (sc['author'] == user)
+      set_author_bool_in_dict(serialized_changes, user)
 
       message_sent = simplejson.dumps(wrap_opCode('save',
                                                   create_file_version_dict(filename,
@@ -537,6 +541,7 @@ class IDEController(object):
 
     else:
       self._logger.error("{0} has no WS in server".format(caller))
+
 
 class IDEWebSocket(WebSocket):
   """

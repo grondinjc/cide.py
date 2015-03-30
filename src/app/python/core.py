@@ -255,7 +255,7 @@ class Core(object):
 
     @param path: The path of the file in the project tree
     @param changes: Changes to be applied on the file
-    @param caller: The user name
+    @param caller: The author of the changes
     """
     self._add_task(self._task_file_edit, path, changes, caller)
     self._logger.info("File_edit task added")

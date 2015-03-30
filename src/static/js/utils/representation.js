@@ -39,10 +39,9 @@ ObjectAddChange.prototype.applyOnText = function(text){
 };
 ObjectAddChange.prototype.applyOnPos = function(pos){
   if(!this._author){
-    return pos + (this._pos <= pos ? this.size() : 0);
-  } else {
-    return pos;
+    pos += (this._pos <= pos ? this.size() : 0);
   }
+  return pos;
 };
 ObjectAddChange.prototype.updatePos = function(modObject){
   if(!this._author){
@@ -66,10 +65,9 @@ ObjectRemoveChange.prototype.applyOnText = function(text){
 };
 ObjectRemoveChange.prototype.applyOnPos = function(pos){
   if(!this._author){
-    return pos - (this._pos <= pos ? this.size() : 0);
-  } else {
-    return pos;
+    pos -= (this._pos <= pos ? this.size() : 0);
   }
+  return pos;
 };
 ObjectRemoveChange.prototype.updatePos = function(modObject){
   if(!this._author){
