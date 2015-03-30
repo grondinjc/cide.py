@@ -358,7 +358,7 @@ class Core(object):
 
     @param user: The user name
     """
-    for f in self._project_files:
+    for f in self._project_files.itervalues():
       f.users.discard(user)
 
   @task_time(microseconds=1)
