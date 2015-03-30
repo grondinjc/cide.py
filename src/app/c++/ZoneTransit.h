@@ -31,6 +31,7 @@ class ZoneTransit
 
     ZoneTransit(const string& contenu) noexcept
       : _paquetModifications{}
+      , _modifications{}
       , _fichier{contenu}
     {}
 
