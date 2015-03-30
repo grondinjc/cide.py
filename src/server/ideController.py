@@ -260,7 +260,7 @@ class IDEController(object):
                                'type':    '<<Type of edit (ins | del)>>',
                                'pos':     '<<Position of edit>>',
                                'content': '<<Content of insert | Number of deletes>>'
-                               'author': <<If the user is the author>>
+                               'author':   <<If the user is the author>>
                              }]
                 }
       }
