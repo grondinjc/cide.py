@@ -33,7 +33,11 @@ class ZoneTransit
       : _paquetModifications{}
       , _modifications{}
       , _fichier{contenu}
-    {}
+    {
+      //// TODO Make reserve based on maximum modification constant
+      _paquetModifications.reserve(500);
+      _modifications.reserve(500);
+    }
 
     //ajoute la modification a la liste
     void add(const vector<ModificationPtr>& pm)
