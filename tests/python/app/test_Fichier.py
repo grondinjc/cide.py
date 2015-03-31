@@ -15,7 +15,6 @@ class TestFichier(TestCase):
 
   def test_ecrireSurDisque(self):
     self.file.writeToDisk()
-    self.assertEqual(self.file.version, 1)
 
   def test_inserer(self):
     self.file.insert("Hello World", 0, 11)
@@ -24,6 +23,3 @@ class TestFichier(TestCase):
   def test_supprimer(self):
     self.file.delete(0, 1)
     self.assertEqual(self.file.content, "est")
-    
-  def test_version(self):
-    self.assertEqual(self.file.version, 0)

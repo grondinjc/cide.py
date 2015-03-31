@@ -43,7 +43,7 @@ class Benchmarks(object):
     self.files = []
     self.changes = []
     
-    for i in range(100):
+    for i in range(676):
         self.callers.append(chr(ord('a')+i / 26) + chr(ord('a')+i % 26))
         filename = ""
         for j in range(random.randint(1,100)):
@@ -113,17 +113,17 @@ class Benchmarks(object):
     self.myTimeIt(lambda: self.core._task_create_archive('.', caller, Queue()))
     print ' '
     
-  def myTimeIt(self, function, n=1000):
+  def myTimeIt(self, function, n=100):
     times = []
     for i in range(n):
-      #gc.disable()
+      gc.disable()
       self.setUp()
       startTime = datetime.now()
       function()
       endTime = datetime.now()
       self.tearDown()
-      #gc.enable()
-      #gc.collect()
+      gc.enable()
+      gc.collect()
       times.append(endTime - startTime)
     
     print '3 first are : {0} {1} {2}'.format(times[0],times[1],times[2])

@@ -26,6 +26,9 @@ class FichierType
       : _contenu(contenu)
     {}
 
+    FichierType(const char* filename)
+    {}
+
     ~FichierType() = default;
     void ecrireSurDisque() {}
     void inserer(const char *data, pos_t position, size_t taille) {}

@@ -15,11 +15,8 @@
 
 using std::string;
 using std::ifstream;
-using std::ofstream;
-using std::cout;
 using std::endl;
-using std::ios;
-using std::to_string;
+using std::cout;
 using namespace types;
 
 template <>
@@ -27,46 +24,25 @@ template <>
   {
     private:
       string _contenu;
-      vers_t _version;
-      string _nomFichier;
 
     public:
       FichierType() = default;
 
       FichierType(const string &contenu)
         : _contenu(contenu)
-        , _version{}
-        , _nomFichier{}
       {}
 
-      //premiere ebauche de lecture d'un fichier
-      FichierType(const string &nomFichier, const string &contenu)
-        : _contenu{contenu}
-        , _version{}
-        , _nomFichier{nomFichier}
-        {
-          ifstream fichier(nomFichier);
-          if(fichier.is_open())
-          {
-            fichier >> _contenu;
-            fichier.close();
-          }
-        }
+      FichierType(const char* filename)
+      {
+        ifstream file;
+        file.open(filename);
+        file >> _contenu;
+        file.close();
+      }
 
       ~FichierType() = default;
 
-      //premiere ebauche d'ecrireSurDisque
-      void ecrireSurDisque()
-      {
-        string nomVersion = _nomFichier + to_string(_version);
-        ofstream fichier (nomVersion);
-        if (fichier.is_open())
-        {
-          fichier << _contenu;
-          fichier.close();
-          ++_version;
-        }
-      }
+      void ecrireSurDisque() {}
 
       void inserer(const char *data, pos_t position, size_t taille)
       {_contenu.insert(position, data, taille);}
@@ -78,7 +54,6 @@ template <>
       {cout << _contenu << endl;}
 
       string getContenu() const {return _contenu;}
-      vers_t getVersion() const {return _version;}
   };
 
 #endif //SFICHIER

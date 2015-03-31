@@ -19,12 +19,6 @@ using std::string;
 
 using namespace types;
 
-enum
-{
-  MAX_UTILISATEURS = 100,
-  MAX_MODIFICATIONS = 5 * MAX_UTILISATEURS
-};
-
 class ZoneTransit
 {
   private:
@@ -35,13 +29,14 @@ class ZoneTransit
   public:
     ZoneTransit() = default;
 
-    ZoneTransit(const string& contenu)
+    ZoneTransit(const string& contenu) noexcept
       : _paquetModifications{}
       , _modifications{}
       , _fichier{contenu}
     {
-      _paquetModifications.reserve(MAX_UTILISATEURS);  //Reserve MAX_MODIFICATIONS
-      _modifications.reserve(MAX_MODIFICATIONS);        //Reserve MAX_MODIFICATIONS
+      //// TODO Make reserve based on maximum modification constant
+      _paquetModifications.reserve(500);
+      _modifications.reserve(500);
     }
 
     //ajoute la modification a la liste
