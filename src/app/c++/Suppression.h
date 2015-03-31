@@ -26,7 +26,7 @@ class Suppression : public Modification
 
     virtual void effectuerModification(Fichier& fichier) override
     {
-      size_t finFichier = fichier.getContenu().size();
+      size_t finFichier = fichier.getTaille();
 
       //Avec les mises a jour et les modifications precedentes,
       //il se peut que la taille de la suppression depasse la fin du fichier

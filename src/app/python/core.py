@@ -582,21 +582,16 @@ class Core(object):
 
     @param path: The path of the file on which modifications will be applied
     """
-    try:
-      if path in self._project_files:
-        version, changes = self._project_files[path].file.writeModifications()
-        users_registered = deepcopy(self._project_files[path].users)
+    if path in self._project_files:
+      version, changes = self._project_files[path].file.writeModifications()
+      users_registered = deepcopy(self._project_files[path].users)
 
-        # Notify registered users
-        self._notify_event(
-          lambda l: l.notify_file_edit(path,
-                                       changes,
-                                       version,
-                                       users_registered))
-    except:
-      e = sys.exc_info()
-      # XXX Remove after correction! C++ Should handle this!
-      self._logger.exception("EXCEPTION RAISED {0}\n{1}\n{2}".format(e[0], e[1], e[2]))
+      # Notify registered users
+      self._notify_event(
+        lambda l: l.notify_file_edit(path,
+                                     changes,
+                                     version,
+                                     users_registered))
 
   @task_time(microseconds=1)
   def task_check_program_output_notify(self):

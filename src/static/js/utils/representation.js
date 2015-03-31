@@ -72,7 +72,7 @@ ObjectRemoveChange.prototype.applyOnText = function(text){
 };
 ObjectRemoveChange.prototype.applyOnPos = function(pos){
   if(!this._is_from_you){
-    pos -= (this._pos <= pos ? this.size() : 0);
+    pos -= (this._pos < pos ? this.size() : 0);
   }
   return pos;
 };
