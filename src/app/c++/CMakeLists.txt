@@ -24,6 +24,9 @@ IF(Boost_FOUND)
   SET(Boost_USE_STATIC_RUNTIME OFF)
   FIND_PACKAGE(Boost 1.45.0 COMPONENTS python)
 
+  #ADD_LIBRARY(Chronometre SHARED Chronometre.cxx)
+  #TARGET_LINK_LIBRARIES(Chronometre ${Boost_LIBRARIES})
+
   ADD_LIBRARY(ZoneTransit SHARED ZoneTransit.cxx)
   TARGET_LINK_LIBRARIES(ZoneTransit ${Boost_LIBRARIES})
 ELSEIF(NOT Boost_FOUND)
