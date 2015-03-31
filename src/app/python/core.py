@@ -1,5 +1,6 @@
 import sys
 import os
+import shutil
 from Queue import Queue, Empty as EmptyQueue
 from copy import deepcopy
 from threading import Thread
@@ -82,6 +83,12 @@ class Core(object):
                         self._project_tmp_path):
       if not os.path.exists(project_dir):
         os.makedirs(project_dir)
+
+    for node in os.listdir(self._project_tmp_path):
+      if os.path.isfile(node):
+        os.unlink(node)
+      elif os.path.isdir(node):
+        shutil.rmtree(node)
 
     # Asociation filepath -> (zoneTransit, set(userlist))
     # Recreate structure from existing files on disk
