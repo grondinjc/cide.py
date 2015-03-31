@@ -30,9 +30,11 @@ class Modification
     {}
 
     virtual ~Modification() = default;
-    virtual pos_t getPosition() const noexcept {return _position;}
-    virtual size_t getTaille() const noexcept {return _taille;}
-    virtual string getAuteur() const noexcept {return _auteur;}
+
+    pos_t getPosition() const noexcept {return _position;}
+    size_t getTaille() const noexcept {return _taille;}
+    string getAuteur() const noexcept {return _auteur;}
+
     virtual void effectuerModification(Fichier& fichier) = 0;
 
     virtual void mettreAJour(const Modification& m1)
@@ -40,8 +42,8 @@ class Modification
         m1.mettreAJourAutre(*this);
     }
 
-    virtual void setPosition(pos_t value) noexcept {_position = value;}
-    virtual void setTaille(size_t value) noexcept {_taille = value;}
+    void setPosition(pos_t value) noexcept {_position = value;}
+    void setTaille(size_t value) noexcept {_taille = value;}
     virtual bool isAdd() const = 0;
     virtual bool isRemove() const = 0;
     virtual void updateTaille(const Modification& m1) = 0;

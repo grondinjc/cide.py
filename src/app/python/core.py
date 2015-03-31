@@ -196,7 +196,7 @@ class Core(object):
     Callback will be called with: nodes, caller
     """
     self._add_task(self._task_get_project_nodes, caller)
-    self._logger.info("get_project_nodes task added")
+    #self._logger.info("get_project_nodes task added")
 
   def get_file_content(self, path, caller):
     """
@@ -211,7 +211,7 @@ class Core(object):
     Callback will be called with: tuple (<<File name>>, <<File Content>>, <<File Version>>), caller
     """
     self._add_task(self._task_get_file_content, path, caller)
-    self._logger.info("get_file_content task added")
+    #self._logger.info("get_file_content task added")
 
   def open_file(self, user, path):
     """
@@ -225,7 +225,7 @@ class Core(object):
     @param path: The path of the file to be registered to
     """
     self._add_task(self._task_open_file, user, path)
-    self._logger.info("open_file task added")
+    #self._logger.info("open_file task added")
 
   def unregister_user_to_file(self, user, path):
     """
@@ -239,7 +239,7 @@ class Core(object):
     @param path: The path of the file to be unregistrered from
     """
     self._add_task(self._task_unregister_user_to_file, user, path)
-    self._logger.info("unregister_user_to_file task added")
+    #self._logger.info("unregister_user_to_file task added")
 
   def unregister_user_to_all_files(self, user):
     """
@@ -251,7 +251,7 @@ class Core(object):
     @param user: The user name
     """
     self._add_task(self._task_unregister_user_to_all_files, user)
-    self._logger.info("unregister_user_to_all_files task added")
+    #self._logger.info("unregister_user_to_all_files task added")
 
   def file_edit(self, path, changes, caller):
     """
@@ -266,7 +266,7 @@ class Core(object):
     @param caller: The author of the changes
     """
     self._add_task(self._task_file_edit, path, changes, caller)
-    self._logger.info("File_edit task added")
+    #self._logger.info("File_edit task added")
 
   def create_archive(self, path, caller):
     """
@@ -283,7 +283,7 @@ class Core(object):
     """
     synchrone_future = Queue()
     self._add_task(self._task_create_archive, path, caller, synchrone_future)
-    self._logger.info("Create archive task added")
+    #self._logger.info("Create archive task added")
     return synchrone_future
 
   """
