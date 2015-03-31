@@ -47,7 +47,7 @@ def create_tree_nodes_dict(nodes):
 
 def set_author_bool_in_dict(serialized_changes, user):
   for sc in serialized_changes:
-    sc['author'] = (sc['author'] == user)
+    sc['is_from_you'] = (sc['author'] == user)
 
 
 class IDEController(object):
@@ -257,10 +257,10 @@ class IDEController(object):
                   'file':    '<<Filepath of edited file>>',
                   'vers':    '<<File version>>',
                   'changes': [{
-                               'type':    '<<Type of edit (ins | del)>>',
-                               'pos':     '<<Position of edit>>',
-                               'content': '<<Content of insert | Number of deletes>>'
-                               'author':   <<If the user is the author>>
+                               'type':        '<<Type of edit (ins | del)>>',
+                               'pos':         '<<Position of edit>>',
+                               'content':     '<<Content of insert | Number of deletes>>'
+                               'is_from_you':  <<If the user is the author>>
                              }]
                 }
       }
@@ -425,10 +425,10 @@ class IDEController(object):
                   'file':    '<<Filepath of edited file>>',
                   'vers':    '<<File version>>',
                   'changes': [{
-                               'type':    '<<Type of edit (ins | del)>>',
-                               'pos':     '<<Position of edit>>',
-                               'content': '<<Content of insert | Number of deletes>>'
-                               'author':   <<If the user is the author>>
+                               'type':        '<<Type of edit (ins | del)>>',
+                               'pos':         '<<Position of edit>>',
+                               'content':     '<<Content of insert | Number of deletes>>'
+                               'is_from_you':  <<If the user is the author>>
                              }]
                 }
       }
