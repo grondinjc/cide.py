@@ -29,13 +29,11 @@ BOOST_PYTHON_MODULE(libZoneTransit)
   //Definit la classe Fichier. Fichier est un alias pour FichierType<string>
   class_<Fichier, boost::noncopyable>("File")
     .def(init<const string &>())
-    .def(init<const string&, const string&>())
     .def("writeToDisk", &Fichier::ecrireSurDisque)
     .def("insert", &Fichier::inserer)
     .def("delete", &Fichier::supprimer)
     .def("printContent", &Fichier::printContenu)
-    .add_property("content", &Fichier::getContenu)
-    .add_property("version", &Fichier::getVersion);
+    .add_property("content", &Fichier::getContenu);
 
   class_<ZoneTransit, boost::noncopyable>("TransitZone")
     .def(init<const string&>())
