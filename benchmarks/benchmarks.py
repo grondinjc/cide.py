@@ -55,10 +55,16 @@ class Benchmarks(object):
       
     for file in self.files:
       self.core.add_file(file)
-      
+ 
+    #Register all users to all files
     for file in self.files:
         for user in self.callers:
-            self.core._task_file_edit(file, [Core.Change(0,"Hello",True)])
+            self.core._task_open_file(user, file)
+ 
+    #One change per user per file 
+    for file in self.files:
+        for user in self.callers:
+            self.core._task_file_edit(file, [Core.Change(0,"Hello",True)],user)
             
   def tearDown(self):
     self.core = None
@@ -99,7 +105,8 @@ class Benchmarks(object):
   def benchmarks_task_file_edit(self):
     print 'Test de _task_file_edit'
     file = random.choice(self.files)
-    self.myTimeIt(lambda: self.core._task_file_edit(file, [Core.Change(0,"Hello",True)]))
+    user = random.choice(self.callers)
+    self.myTimeIt(lambda: self.core._task_file_edit(file, [Core.Change(0,"Hello",True)],user))
     print ' '
     
   def benchmarks_task_check_apply_notify(self):
@@ -116,14 +123,11 @@ class Benchmarks(object):
   def myTimeIt(self, function, n=100):
     times = []
     for i in range(n):
-      gc.disable()
       self.setUp()
       startTime = datetime.now()
       function()
       endTime = datetime.now()
       self.tearDown()
-      gc.enable()
-      gc.collect()
       times.append(endTime - startTime)
     
     print '3 first are : {0} {1} {2}'.format(times[0],times[1],times[2])
@@ -142,6 +146,7 @@ benchmarks.benchmarks_task_get_project_nodes()
 benchmarks.benchmarks_task_get_file_content()
 benchmarks.benchmarks_task_open_file()
 benchmarks.benchmarks_task_unregister_user_to_file()
+benchmarks.benchmarks_task_unregister_user_to_all_files()
 benchmarks.benchmarks_task_file_edit()
 benchmarks.benchmarks_task_check_apply_notify()
 benchmarks.benchmarks_task_create_archive()
