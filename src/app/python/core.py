@@ -1,6 +1,7 @@
 import sys
 import os
 import shutil
+import traceback
 from Queue import Queue, Empty as EmptyQueue
 from copy import deepcopy
 from threading import Thread
@@ -563,6 +564,15 @@ class CoreThread(Thread):
     self._stop_asked = True
 
   def run(self):
+    # Run even if exeception occurs to avoid freezing
+    while not self._stop_asked:
+      try:
+        self._run_impl()
+      except:
+        print traceback.format_exc()
+        print sys.exc_info()[0]
+
+  def _run_impl(self):
     none_critical_time_buffer = self._time_buffer_secondary+self._time_buffer_auxiliary
 
     # Define the ending point in time of the cycle
