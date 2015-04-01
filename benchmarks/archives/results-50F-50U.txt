@@ -1,3 +1,5 @@
+#Latest tests -- no mutex, no logs, gc enabled, reserve for vectors
+
 Test de _task_get_project_nodes
 3 first are : 0:00:00.000092 0:00:00.000080 0:00:00.000063
 3 last are : 0:00:00.000066 0:00:00.000061 0:00:00.000077

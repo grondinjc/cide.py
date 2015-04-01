@@ -1,3 +1,5 @@
+#100 tests for each task, no mutex, no logs, gc enabled and reserve space for vectors
+
 Test de _task_get_project_nodes
 3 first are : 0:00:00.000148 0:00:00.000150 0:00:00.000157
 3 last are : 0:00:00.000146 0:00:00.000145 0:00:00.000151

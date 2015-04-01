@@ -1,3 +1,5 @@
+#100 tests for each task, gc disabled, no logs, with mutex and no reserve
+
 Test de _task_get_project_nodes
 3 first are : 0:00:00.000643 0:00:00.000613 0:00:00.000638
 3 last are : 0:00:00.000622 0:00:00.000627 0:00:00.000620

@@ -1,3 +1,5 @@
+#Results for 10 000 tests, disabling the gc, before logs and mutex were removed
+
 Test de _task_get_project_nodes
 3 first are : 0:00:00.000168 0:00:00.000160 0:00:00.000121
 3 last are : 0:00:00.000118 0:00:00.000137 0:00:00.000125
