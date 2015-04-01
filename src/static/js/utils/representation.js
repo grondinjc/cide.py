@@ -87,9 +87,9 @@ ObjectRemoveChange.prototype.serialize = function(){
 function ObjectChangeFactory(changeObjJSON){
   return changeObjJSON.type == CHANGE_ADD_TYPE ?
     new ObjectAddChange(changeObjJSON.pos, changeObjJSON.content,
-                        changeObjJSON.author):
+                        changeObjJSON.is_from_you):
     new ObjectRemoveChange(changeObjJSON.pos, changeObjJSON.count,
-                           changeObjJSON.author);
+                           changeObjJSON.is_from_you);
 }
 
 function serializeObjectChangeList(changesList){
