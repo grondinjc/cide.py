@@ -37,13 +37,12 @@ class Benchmarks(object):
     self.logger.setLevel(logging.DEBUG)
     self.logger.addHandler(handler)
     
-    #debug()             
     self.core = None
     self.callers = []
     self.files = []
     self.changes = []
     
-    for i in range(676):
+    for i in range(50):
         self.callers.append(chr(ord('a')+i / 26) + chr(ord('a')+i % 26))
         filename = ""
         for j in range(random.randint(1,100)):
@@ -120,7 +119,7 @@ class Benchmarks(object):
     self.myTimeIt(lambda: self.core._task_create_archive('.', caller, Queue()))
     print ' '
     
-  def myTimeIt(self, function, n=100):
+  def myTimeIt(self, function, n=1000):
     times = []
     for i in range(n):
       self.setUp()
