@@ -792,14 +792,13 @@ class IDEWebSocket(WebSocket):
 
   def opened(self):
     self.username = cherrypy.session['username']
+    if self.username in self.IDEClients:
+      cherrypy.log("WARNING: User {0} already had a WS. Replacing".format(self.username))
+
     self.IDEClients[self.username] = self
     cherrypy.log("User {0} ({1}) WS connected".format(self.username, self.peer_address))
 
   def closed(self, code, reason=None):
-    # XXX May raise Key Error, but I don't get why...double dc?
-    # FIXME Browser doing shenanigans when checking suggestions in URL bar...
-    # FIXME Opening a 2nd WS for same users, and triggers 2 closing...hurray.
-    # TODO do not create 2 ws for same session?
     try:
       del self.IDEClients[self.username]
     except:
