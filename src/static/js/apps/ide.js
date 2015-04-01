@@ -363,14 +363,16 @@ IdeEditState.prototype._notifySoft = function(modifications) {
   this._lastVersion.update(modifications);
 
   var cursor_pos = this._displayZone.getCursorPos();
-  this._displayZone.forceUpdate(this._combineText(cursor_pos));
+  this._displayZone.forceUpdate(this._combineText(cursor_pos, modifications));
 };
-IdeEditState.prototype._combineText = function(cursor_pos) {
+IdeEditState.prototype._combineText = function(cursor_pos, remote_modifs) {
   var base = this._lastVersion.get();
-  var modifs = this._changeMemory.getUnserialized();
-  for(var i = 0; i < modifs.length; ++i) {
-    base = modifs[i].applyOnText(base);
-    cursor_pos = modifs[i].applyOnPos(cursor_pos);
+  var local_modifs = this._changeMemory.getUnserialized();
+  for(var i = 0; i < local_modifs.length; ++i) {
+    base = local_modifs[i].applyOnText(base);
+  }
+  for(var i = 0; i < remote_modifs.length; ++i) {
+    cursor_pos = remote_modifs[i].applyOnPos(cursor_pos);
   }
   return [base, cursor_pos];
 };
