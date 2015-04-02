@@ -14,13 +14,14 @@
 
 using namespace types;
 using std::max;
+using std::min;
 
 class Suppression : public Modification
 {
   public:
     Suppression() = default;
 
-    Suppression(pos_t position, size_t taille, const string& auteur)
+    Suppression(pos_t position, taille_t taille, const string& auteur)
       : Modification(position, taille, auteur)
     {}
 
@@ -49,7 +50,8 @@ class Suppression : public Modification
           //il faut recalculer la taille de la modification
           m2.updateTaille(*this);
 
-          m2.setPosition(posAutre - getTaille());
+          // On ne reculle pas avant 0
+          m2.setPosition(posAutre - min(getTaille(), posAutre));
 
           //La nouvelle position de m2 se trouvera avant celle de m1
           //si et seulement si m2 empiete (overlaps) m1
@@ -70,20 +72,18 @@ class Suppression : public Modification
       //m2:  ......2.............7
       //overlapsSize = 0 + 5 -2 = 3
 
-      int overlapsSize = m1.getPosition() + m1.getTaille() - getPosition();
-      overlapsSize = max(overlapsSize, 0);
-      //s'ils ne s'empietent pas, on ramene la taille de l'empietement a 0
-      //m1: 0.........3.............
-      //m2:  ..............4........6
-      //overlapsSize calcule = -1 => 0 (pas d'overlaps)
+      if(getPosition() < m1.getPosition() + m1.getTaille())
+      {
+        taille_t overlapsSize = m1.getPosition() + m1.getTaille() - getPosition();
 
-      //on reduit la taille de l'overlapsSize
-      size_t tailleCourante = getTaille();
-      setTaille(overlapsSize <= tailleCourante ? tailleCourante - overlapsSize : 0);
-      //si m2 est completement contenu dans m1, alors m2 a un impact nul (taille == 0)
-      //m1: 0..............7
-      //m2:  ...2........5...
-      //overlapsSize calcule = 7 - 2 = 5 => 3 puisque m2 est de taille 3
+        //on reduit la taille de l'overlapsSize
+        taille_t tailleCourante = getTaille();
+        setTaille(overlapsSize < tailleCourante ? tailleCourante - overlapsSize : 0);
+        //si m2 est completement contenu dans m1, alors m2 a un impact nul (taille == 0)
+        //m1: 0..............7
+        //m2:  ...2........5...
+        //overlapsSize calcule = 7 - 2 = 5 => 3 puisque m2 est de taille 3
+      }
     }
 
     virtual bool isAdd() const override
