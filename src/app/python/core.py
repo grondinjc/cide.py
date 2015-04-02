@@ -114,11 +114,11 @@ class Core(object):
     # Association user -> Exec(process, file, args)
     self._project_execs = dict()
 
-    self.tasks_secondary = Queue()
-    self.tasks_auxiliary = Queue()
-    task_regular = [self.task_check_apply_notify, 
+    self._tasks_secondary = Queue()
+    self._tasks_auxiliary = Queue()
+    self._task_regular = [self.task_check_apply_notify, 
                     self.task_check_program_output_notify]
-    self._thread = CoreThread(core_conf, task_regular, self.tasks_secondary, self.tasks_auxiliary)
+    self._thread = CoreThread(core_conf, self._task_regular, self._tasks_secondary, self._tasks_auxiliary)
 
   """
   Sync Call
@@ -182,7 +182,7 @@ class Core(object):
     @param f: The task
     @param args: The arugments to be applied on f
     """
-    self.tasks_secondary.put(Core.Task(f, args))
+    self._tasks_secondary.put(Core.Task(f, args))
 
   def _add_auxiliary_task(self, f, *args):
     """
@@ -193,7 +193,7 @@ class Core(object):
     @param f: The task
     @param args: The arugments to be applied on f
     """
-    self.tasks_secondary.put(Core.Task(f, args))
+    self._tasks_secondary.put(Core.Task(f, args))
 
   def _create_file(self, content=""):
     """
