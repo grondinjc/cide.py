@@ -114,8 +114,11 @@ class Core(object):
     # Association user -> Exec(process, file, args)
     self._project_execs = dict()
 
-    self.tasks = Queue()
-    self._thread = CoreThread(self, core_conf)
+    self._tasks_secondary = Queue()
+    self._tasks_auxiliary = Queue()
+    self._task_regular = [self.task_check_apply_notify, 
+                    self.task_check_program_output_notify]
+    self._thread = CoreThread(core_conf, self._task_regular, self._tasks_secondary, self._tasks_auxiliary)
 
   """
   Sync Call
@@ -170,16 +173,27 @@ class Core(object):
     if path in self._project_files:
       del self._project_files[path]
 
-  def _add_task(self, f, *args):
+  def _add_secondary_task(self, f, *args):
     """
-    Add a task into the task list
+    Add a task into the secondary task pool
 
     @type f: function
 
     @param f: The task
     @param args: The arugments to be applied on f
     """
-    self.tasks.put(Core.Task(f, args))
+    self._tasks_secondary.put(Core.Task(f, args))
+
+  def _add_auxiliary_task(self, f, *args):
+    """
+    Add a task into the auxiliary task pool
+
+    @type f: function
+
+    @param f: The task
+    @param args: The arugments to be applied on f
+    """
+    self._tasks_secondary.put(Core.Task(f, args))
 
   def _create_file(self, content=""):
     """
@@ -208,7 +222,7 @@ class Core(object):
     List of nodes is: list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
     Callback will be called with: nodes, caller
     """
-    self._add_task(self._task_get_project_nodes, caller)
+    self._add_auxiliary_task(self._task_get_project_nodes, caller)
     self._logger.info("get_project_nodes task added")
 
   def get_file_content(self, path, caller):
@@ -223,7 +237,7 @@ class Core(object):
 
     Callback will be called with: tuple (<<File name>>, <<File Content>>, <<File Version>>), caller
     """
-    self._add_task(self._task_get_file_content, path, caller)
+    self._add_secondary_task(self._task_get_file_content, path, caller)
     self._logger.info("get_file_content task added")
 
   def open_file(self, user, path):
@@ -237,7 +251,7 @@ class Core(object):
     @param user: The user name
     @param path: The path of the file to be registered to
     """
-    self._add_task(self._task_open_file, user, path)
+    self._add_secondary_task(self._task_open_file, user, path)
     self._logger.info("open_file task added")
 
   def unregister_user_to_file(self, user, path):
@@ -251,7 +265,7 @@ class Core(object):
     @param user: The user name
     @param path: The path of the file to be unregistrered from
     """
-    self._add_task(self._task_unregister_user_to_file, user, path)
+    self._add_auxiliary_task(self._task_unregister_user_to_file, user, path)
     self._logger.info("unregister_user_to_file task added")
 
   def unregister_user_to_all_files(self, user):
@@ -263,7 +277,7 @@ class Core(object):
 
     @param user: The user name
     """
-    self._add_task(self._task_unregister_user_to_all_files, user)
+    self._add_auxiliary_task(self._task_unregister_user_to_all_files, user)
     self._logger.info("unregister_user_to_all_files task added")
 
   def file_edit(self, path, changes, caller):
@@ -278,7 +292,7 @@ class Core(object):
     @param changes: Changes to be applied on the file
     @param caller: The author of the changes
     """
-    self._add_task(self._task_file_edit, path, changes, caller)
+    self._add_secondary_task(self._task_file_edit, path, changes, caller)
     self._logger.info("File_edit task added")
 
   def create_archive(self, path, caller):
@@ -291,11 +305,10 @@ class Core(object):
     @param path: The project directory path to compress
     @param caller: The user name
 
-
     @return: Queue on which the first element will be the path to the archive
     """
     synchrone_future = Queue()
-    self._add_task(self._task_create_archive, path, caller, synchrone_future)
+    self._add_auxiliary_task(self._task_create_archive, path, caller, synchrone_future)
     self._logger.info("Create archive task added")
     return synchrone_future
 
@@ -311,7 +324,7 @@ class Core(object):
     @param args: Data to send to the executed file
     @param caller: The user name
     """
-    self._add_task(self._task_program_launch, mainpath, args, caller)
+    self._add_auxiliary_task(self._task_program_launch, mainpath, args, caller)
     self._logger.info("Program_launch task added")
 
   def program_input(self, data, caller):
@@ -324,7 +337,7 @@ class Core(object):
     @param data: Data to send to the executing program
     @param caller: The user name
     """
-    self._add_task(self._task_program_input, data, caller)
+    self._add_secondary_task(self._task_program_input, data, caller)
     self._logger.info("Program_input task added")
 
   def program_kill(self, caller):
@@ -335,7 +348,7 @@ class Core(object):
 
     @param caller: The user name
     """
-    self._add_task(self._task_program_kill, caller)
+    self._add_auxiliary_task(self._task_program_kill, caller)
     self._logger.info("Program_kill task added")
 
   """
@@ -559,14 +572,15 @@ class Core(object):
     response.put(archive_path)
 
   """
-  Periodic tasks section
-  Those are calls to be executed each cycle by the CoreThread
+  Regular tasks section
+  Those are calls to be executed each cycle by the CoreThread possibly
+  at different time point within that cycle
   """
 
   @task_time(microseconds=1)
   def task_check_apply_notify(self):
     """
-    Periodic task to apply pending modifications on all file from project.
+    Regular task to apply pending modifications on all file from project.
     It also sends notifications uppon change application.
     """
     for (filepath, element) in self._project_files.iteritems():
@@ -703,19 +717,23 @@ class CoreThread(Thread):
   Core app Thread
   """
 
-  def __init__(self, app, conf):
+  def __init__(self, conf, regular_tasks, secondary_tasks, auxiliary_tasks):
     """
-    @type app: core.Core
     @type conf: dict
+    @type regular_tasks: list
+    @type secondary_tasks: Queue.Queue
+    @type auxiliary_tasks: Queue.Queue
 
-    @param app: The core application
     @param conf: Configuration dictionnary for realtime
+    @param regular_tasks: The list of regular tasks
+    @param secondary_tasks: The queue of secondary tasks
+    @param auxiliary_tasks: The queue of auxiliary tasks
     """
     Thread.__init__(self)
-    # Alias for shorter name
-    self._c_a_n = app.task_check_apply_notify
-    self._c_p_o_n = app.task_check_program_output_notify
-    self._tasks = app.tasks
+
+    self._tasks_regular = regular_tasks
+    self._tasks_secondary = secondary_tasks
+    self._tasks_auxiliary = auxiliary_tasks
     self._stop_asked = False
 
     cycle_time = conf["cycle_time"]
@@ -741,53 +759,62 @@ class CoreThread(Thread):
         print sys.exc_info()[0]
 
   def _run_impl(self):
-    none_critical_time_buffer = self._time_buffer_secondary+self._time_buffer_auxiliary
-
     # Define the ending point in time of the cycle
     # Tasks will be executed in the following order : auxiliary, secondary, critical
     # Therefore, end time points are defined corresponding to this order
-    time_end_none_critical = datetime.now() + none_critical_time_buffer
-    time_end_critical = time_end_none_critical + self._time_buffer_critical
+    time_end_critical = datetime.now() + self._time_buffer_critical
+    time_end_secondary = time_end_critical + self._time_buffer_secondary
+    time_end_auxiliary = time_end_secondary + self._time_buffer_auxiliary
 
     while not self._stop_asked:
+      # Critical tasks
+      # Those regular tasks need to be execute once each cycle
+      for reg_task in self._tasks_regular:
+        if datetime.now() + reg_task.time < time_end_critical:
+          reg_task()
+        else:
+          print "CoreThread WARNING :: Not enough time to call {0}".format(reg_task.debugname)
 
-      # None critical tasks
-      # Execute loop until the time buffer exceeds
-      while datetime.now() < time_end_none_critical:
+      # None critical tasks summary (Secondary and Auxiliary)
+      # Execute loop until the time buffer exceeds for this type
+      # Until time buffer exceeds,
+      #   Blocking until timeout or an available task allows lower CPU intensive work
+      #   Without blocking, CPU usage raises a lot and reduce CPU time for incomming requests  
+      #   If timeout is reached,
+      #     Exit loop of this task type
+      #   Else (timeout is not reached)
+      #     Replace task in queue if there is not enough time to execute it, else execute it
+
+      # Secondary tasks
+      while datetime.now() < time_end_secondary:
         try:
-          # Blocking until timeout or an available task allows lower CPU intensive work
-          # Without blocking, CPU usage raises a lot and reduce CPU time for incomming requests
-          available_block_time = time_end_none_critical - datetime.now()
-          task = self._tasks.get(block=True, timeout=available_block_time.total_seconds())
-
-          # Execute only if the task will not exceed the time buffer
-          # Suppose that task were decorated by task_time function decorator
-          if datetime.now() + task.f.time < time_end_none_critical:
+          available_block_time = time_end_secondary - datetime.now()
+          task = self._tasks_secondary.get(block=True, timeout=available_block_time.total_seconds())
+        except EmptyQueue:
+          break  # Exit to avoid time check of while condition
+        else:  # No exception occurred
+          if datetime.now() + task.f.time < time_end_secondary:
             task.f(*task.args)
           else:
-            # Since there is not enough time left, replace task back in queue
-            # and proceed to other category of tasks.
-            # Since order in task list is irrelevant, putting task at the end does not matter
-            self._tasks.put(task)
+            self._tasks_secondary.put(task)
             break
 
-        # There were no tasks available
+      # Auxiliary tasks
+      while datetime.now() < time_end_auxiliary:
+        try:
+          available_block_time = time_end_auxiliary - datetime.now()
+          task = self._tasks_auxiliary.get(block=True, timeout=available_block_time.total_seconds())
         except EmptyQueue:
-          pass
-
-      # Critical tasks
-      # Check if executing the task will exceed the time buffer
-      if datetime.now() + self._c_a_n.time < time_end_critical:
-        self._c_a_n()
-      else:
-        print "CoreThread WARNING :: Not enough time to call task_check_apply_notify"
-
-      if datetime.now() + self._c_p_o_n.time < time_end_critical:
-        self._c_p_o_n()
-      else:
-        print "CoreThread WARNING :: Not enough time to call task_check_program_output_notify"
+          break  # Exit to avoid time check of while condition
+        else:  # No exception occurred
+          if datetime.now() + task.f.time < time_end_auxiliary:
+            task.f(*task.args)
+          else:
+            self._tasks_auxiliary.put(task)
+            break
 
       # Increment rather than affecting to preserve any
       # unused or  overused time from last cycle
-      time_end_none_critical += self._cycle_time
       time_end_critical += self._cycle_time
+      time_end_secondary += self._cycle_time
+      time_end_auxiliary += self._cycle_time
