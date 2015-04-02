@@ -811,16 +811,20 @@ class IDEWebSocket(WebSocket):
     self.username = None
 
   def opened(self):
-    self.username = cherrypy.session['username']
-    if self.username in self.IDEClients:
-      cherrypy.log("WARNING: User {0} already had a WS. Replacing".format(self.username))
+    self.username = cherrypy.session.get('username')
+    if self.username is None:
+      cherrypy.log("WS requested without session-auth. Ignoring")
 
-    self.IDEClients[self.username] = self
-    cherrypy.log("User {0} ({1}) WS connected".format(self.username, self.peer_address))
+    else:
+      if self.username in self.IDEClients:
+        cherrypy.log("WARNING: User {0} already had a WS. Replacing".format(self.username))
+
+      self.IDEClients[self.username] = self
+      cherrypy.log("User {0} ({1}) WS connected".format(self.username, self.peer_address))
 
   def closed(self, code, reason=None):
     if self.IDEClients.pop(self.username, None) is None:
-      cherrypy.log("ERROR: WS for {0} was not in dict.".format(self.username))
+      cherrypy.log("WARNING: WS for {0} was not in dict.".format(self.username))
 
     cherrypy.log("User {0} ({1}) WS disconnected. Reason: {2}".format(self.username,
                                                                       self.peer_address,
