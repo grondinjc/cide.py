@@ -40,10 +40,12 @@ DisplayZone.prototype.getText = function(){
   return this._zone.text();
 };
 DisplayZone.prototype.getCursorPos = function(){
-  return this._zone.text() == "" ? 0 : this._zone.caret();
+  return !this._zone.text() ? 0 : this._zone.caret();
 };
 DisplayZone.prototype.setCursorPos = function(pos){
-  pos = Math.min(pos, this.getText().length); // Checkup upper bound
-  pos = Math.max(pos, 0); // Checkup lower bound
-  this._zone.caret(pos);
+  if(this._zone.text()){
+    pos = Math.min(pos, this.getText().length); // Checkup upper bound
+    pos = Math.max(pos, 0); // Checkup lower bound
+    this._zone.caret(pos);
+  }
 };
