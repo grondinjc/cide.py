@@ -40,7 +40,7 @@ DisplayZone.prototype.getText = function(){
   return this._zone.text();
 };
 DisplayZone.prototype.getCursorPos = function(){
-  return this._zone.caret();
+  return this._zone.text() == "" ? 0 : this._zone.caret();
 };
 DisplayZone.prototype.setCursorPos = function(pos){
   pos = Math.min(pos, this.getText().length); // Checkup upper bound
