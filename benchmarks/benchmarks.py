@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
+#auteure: Mariane Maynard
 """
 Fonctions testant le temps d'execution de chacune des taches du core
 """
 
-import timeit
 from datetime import datetime, timedelta
 import random
-from cide.app.python.core import Core
+from cide.app.python.core import Core, MAX_USERS, MAX_FILES
 import logging
-import gc
 from Queue import Queue
 from pdb import set_trace as debug
 from libZoneTransit import Addition
@@ -24,10 +22,10 @@ class Benchmarks(object):
                 tmp_dir = './temp')
     
     #Not used since tasks are called directly              
-    self.core_conf = dict(cycle_time = 0.0, 
-                 buffer_critical = 0.0,
-                 buffer_secondary = 0.0,
-                 buffer_auxiliary = 0.0)
+    self.core_conf = dict(cycle_time = 100000, 
+                 buffer_critical = 50,
+                 buffer_secondary = 40,
+                 buffer_auxiliary = 10)
                  
     # Setup Log
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(module)s - %(message)s')
@@ -37,24 +35,28 @@ class Benchmarks(object):
     self.logger.setLevel(logging.DEBUG)
     self.logger.addHandler(handler)
     
-    self.core = None
+    self.core = Core(self.project_conf, self.core_conf, self.logger)
     self.callers = []
     self.files = []
     self.changes = []
+    self.executables = [path for path in self.core._project_files]
+    self.core = None
     
-    for i in range(50):
+    for i in range(MAX_USERS):
         self.callers.append(chr(ord('a')+i / 26) + chr(ord('a')+i % 26))
+        
+    for i in range(MAX_FILES):
         filename = ""
         for j in range(random.randint(1,100)):
             filename += '/' + chr(ord('a')+i / 26) + chr(ord('a')+i % 26)
-        self.files.append(filename)     
+        self.files.append(filename)
             
   def setUp(self):
     self.core = Core(self.project_conf, self.core_conf, self.logger)
-      
+    
     for file in self.files:
       self.core.add_file(file)
- 
+      
     #Register all users to all files
     for file in self.files:
         for user in self.callers:
@@ -119,10 +121,50 @@ class Benchmarks(object):
     self.myTimeIt(lambda: self.core._task_create_archive('.', caller, Queue()))
     print ' '
     
-  def myTimeIt(self, function, n=1000):
+  def bencharmarks_task_program_launch(self):
+    print 'Test de _task_program_launch'
+    caller = random.choice(self.callers)
+    mainpath = random.choice(self.executables)
+    self.myTimeIt(lambda: self.core._task_program_launch(mainpath, '', caller))
+    print ''
+    
+  def benchmarks_task_program_input(self):
+    print 'Test de _task_program_input'
+    caller = random.choice(self.callers)
+    specificSetup = lambda: self.task_program_setup(caller)
+    self.myTimeIt(lambda: self.core._task_program_input(caller, caller),1000, specificSetup)
+    print ''
+    
+  def benchmarks_task_program_kill(self):
+    print 'Test de _task_program_kill'
+    caller = random.choice(self.callers)
+    specificSetup = lambda: self.task_program_setup(caller)
+    self.myTimeIt(lambda: self.core._task_program_kill(caller),1000, specificSetup)
+    print ''
+    
+  def task_program_setup(self, caller):
+    #The caller launches the program
+    self.core._task_program_launch('/aa.py', '', caller)   
+    self.core.task_check_program_output_notify()
+    
+  def benchmarks_task_check_program_output_notify(self):
+    print 'Test de task_check_program_output_notify'
+    specificSetup = lambda: self.check_program_output_notify_setup()
+    self.myTimeIt(lambda: self.core.task_check_program_output_notify(),1000, specificSetup)
+    print ''
+    
+  def check_program_output_notify_setup(self):
+    #All users call a program
+    for caller in self.callers:
+      file = random.choice(self.executables)
+      self.core._task_program_launch(file, '', caller)
+    
+  def myTimeIt(self, function, n=1000, specificSetup=None):
     times = []
     for i in range(n):
       self.setUp()
+      if specificSetup is not None:
+          specificSetup()
       startTime = datetime.now()
       function()
       endTime = datetime.now()
@@ -138,14 +180,18 @@ class Benchmarks(object):
     
     print 'best case is : {0}'.format(min(times))     
     print 'worst case is : {0}'.format(max(times))
-    print 'average is: {0}'.format((reduce(lambda x, y: x + y, times)/len(times)))
+    print 'average is: {0}'.format((reduce(lambda x, y: x + y, times)/len(times)))  
     
 benchmarks = Benchmarks()
-benchmarks.benchmarks_task_get_project_nodes()
-benchmarks.benchmarks_task_get_file_content()
-benchmarks.benchmarks_task_open_file()
-benchmarks.benchmarks_task_unregister_user_to_file()
-benchmarks.benchmarks_task_unregister_user_to_all_files()
-benchmarks.benchmarks_task_file_edit()
-benchmarks.benchmarks_task_check_apply_notify()
-benchmarks.benchmarks_task_create_archive()
+#benchmarks.benchmarks_task_get_project_nodes()
+#benchmarks.benchmarks_task_get_file_content()
+#benchmarks.benchmarks_task_open_file()
+#benchmarks.benchmarks_task_unregister_user_to_file()
+#benchmarks.benchmarks_task_unregister_user_to_all_files()
+#benchmarks.benchmarks_task_file_edit()
+#benchmarks.benchmarks_task_check_apply_notify()
+#benchmarks.benchmarks_task_create_archive()
+benchmarks.bencharmarks_task_program_launch()
+benchmarks.benchmarks_task_program_input()
+benchmarks.benchmarks_task_program_kill()
+benchmarks.benchmarks_task_check_program_output_notify()
