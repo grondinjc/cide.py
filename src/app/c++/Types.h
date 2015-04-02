@@ -9,7 +9,8 @@
 
 namespace types
 {
-  using pos_t = int;
+  using pos_t = size_t;
+  using taille_t = size_t;
   using vers_t = uint;
 };
 

@@ -6,10 +6,10 @@ from pdb import set_trace as dbg
 
 class TestTransitZone(TestCase):
   def setUp(self):
-    self.addition1 = Addition(0, 5, "Hello")
-    self.addition2 = Addition(4, 3, "123")
-    self.addition3 = Addition(6, 5, "World")
-    self.addition4 = Addition(6, 5, "monde")
+    self.addition1 = Addition(0, 5, "Hello", "me")
+    self.addition2 = Addition(4, 3, "123", "me")
+    self.addition3 = Addition(6, 5, "World", "me")
+    self.addition4 = Addition(6, 5, "monde", "me")
     self.zone = TransitZone("Hello ")
 
   def tearDown(self):

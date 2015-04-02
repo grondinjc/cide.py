@@ -21,7 +21,7 @@ class Ajout : public Modification
   public:
     Ajout() = default;
 
-    Ajout(pos_t position, size_t taille, const string& data, const string& auteur)
+    Ajout(pos_t position, taille_t taille, const string& data, const string& auteur)
       : Modification(position, taille, auteur)
       , _data{data}
     {}

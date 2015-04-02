@@ -31,8 +31,8 @@ class FichierType
 
     ~FichierType() = default;
     void ecrireSurDisque() {}
-    void inserer(const char *data, pos_t position, size_t taille) {}
-    void supprimer(pos_t position, size_t taille) {}
+    void inserer(const char *data, pos_t position, taille_t taille) {}
+    void supprimer(pos_t position, taille_t taille) {}
     void printContenu() {}  //Fonction de debug
     T getContenu() const {return _contenu;}
 };

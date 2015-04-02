@@ -44,16 +44,17 @@ template <>
 
       void ecrireSurDisque() {}
 
-      void inserer(const char *data, pos_t position, size_t taille)
+      void inserer(const char *data, pos_t position, taille_t taille)
       {_contenu.insert(position, data, taille);}
 
-      void supprimer(pos_t position, size_t taille)
+      void supprimer(pos_t position, taille_t taille)
       {_contenu.erase(position, taille);}
 
       void printContenu()
       {cout << _contenu << endl;}
 
       string getContenu() const {return _contenu;}
+      size_t getTaille() const {return _contenu.size();}
   };
 
 #endif //SFICHIER

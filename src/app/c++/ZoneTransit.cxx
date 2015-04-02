@@ -33,7 +33,8 @@ BOOST_PYTHON_MODULE(libZoneTransit)
     .def("insert", &Fichier::inserer)
     .def("delete", &Fichier::supprimer)
     .def("printContent", &Fichier::printContenu)
-    .add_property("content", &Fichier::getContenu);
+    .add_property("content", &Fichier::getContenu)
+    .add_property("size", &Fichier::getTaille);
 
   class_<ZoneTransit, boost::noncopyable>("TransitZone")
     .def(init<const string&>())
@@ -57,13 +58,13 @@ BOOST_PYTHON_MODULE(libZoneTransit)
 
   //Definit Ajout heritant de Modification
   class_<Ajout, bases<Modification>>("Addition")
-    .def(init<pos_t, size_t, const string&, const string&>())
+    .def(init<pos_t, taille_t, const string&, const string&>())
     .def(init<pos_t, const string&, const string&>())
     .def(init<const Ajout&>())
     .add_property("data", &Ajout::getData);
 
   class_<Suppression, bases<Modification>>("Removal")
-    .def(init<pos_t, size_t, const string&>())
+    .def(init<pos_t, taille_t, const string&>())
     .def(init<const Suppression&>());
 
   class_<std::vector<ModificationPtr>>("Modifications")
