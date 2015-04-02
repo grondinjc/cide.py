@@ -8,7 +8,7 @@ from pdb import set_trace as dbg
 class TestSuppression(TestCase):
   def setUp(self):
     self.file = File("test")
-    self.removal = Removal(2, 2)
+    self.removal = Removal(2, 2, "me")
 
   def tearDown(self):
     pass
@@ -24,7 +24,7 @@ class TestSuppression(TestCase):
     self.assertEqual(self.file.content, "te")
     
   def test_update(self):
-    modification = Addition(0,5,"allo ")
+    modification = Addition(0,5,"allo ", "me")
     self.removal.update(modification)
     self.assertEqual(self.removal.position, 7)
     

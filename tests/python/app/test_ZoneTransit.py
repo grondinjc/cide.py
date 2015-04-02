@@ -8,10 +8,10 @@ from pdb import set_trace as dbg
 
 class TestTransitZone(TestCase):
   def setUp(self):
-    self.addition1 = Addition(6, 4, "allo")
-    self.removal1 = Removal(0, 11)
-    self.removal2 = Removal(6,5)
-    self.addition2 = Addition(6, 5, "monde")
+    self.addition1 = Addition(6, 4, "allo", "me")
+    self.removal1 = Removal(0, 11, "me")
+    self.removal2 = Removal(6, 5, "me")
+    self.addition2 = Addition(6, 5, "monde", "me")
     self.zone = TransitZone("Hello World")
 
   def tearDown(self):
@@ -19,7 +19,7 @@ class TestTransitZone(TestCase):
 
   def test_add(self):
     self.zone.add(self.addition1)
-    self.zone.add(Addition(0, "test"))
+    self.zone.add(Addition(0, "test", "me"))
     self.assertFalse(self.zone.isEmpty())
 
   def test_writeModificationsComplex(self):
@@ -80,9 +80,9 @@ class TestTransitZone(TestCase):
     
   def test_writeModificationsFromSameBundle0(self):
     bundle = Modifications()
-    add0 = Addition(11,"1")
-    add1 = Addition(12,"2")
-    add2 = Addition(13,"3")
+    add0 = Addition(11, "1", "me")
+    add1 = Addition(12, "2", "me")
+    add2 = Addition(13, "3", "me")
     bundle.extend([add0,add1,add2])
     self.zone.add(bundle)
     self.zone.writeModifications()
@@ -90,10 +90,10 @@ class TestTransitZone(TestCase):
     
   def test_writeModificationsFromSameBundle1(self):
     bundle = Modifications()
-    add0 = Addition(11,"1")
-    add1 = Addition(12,"2")
-    add2 = Addition(13,"3")
-    rem1 = Removal(13,1)
+    add0 = Addition(11, "1", "me")
+    add1 = Addition(12, "2", "me")
+    add2 = Addition(13, "3", "me")
+    rem1 = Removal(13, 1, "me")
     bundle.extend([add0,add1,add2,rem1])
     self.zone.add(bundle)
     self.zone.writeModifications()
@@ -101,9 +101,9 @@ class TestTransitZone(TestCase):
     
   def test_writeTwoBundles0(self):
     bundle = Modifications()
-    add0 = Addition(11,"1")
-    add1 = Addition(12,"2")
-    add2 = Addition(13,"3")
+    add0 = Addition(11, "1", "me")
+    add1 = Addition(12, "2", "me")
+    add2 = Addition(13, "3", "me")
     bundle.extend([add0,add1,add2])
     self.zone.add(self.addition1)
     self.zone.add(bundle)
@@ -112,9 +112,9 @@ class TestTransitZone(TestCase):
     
   def test_writeTwoBundles1(self):
     bundle = Modifications()
-    add0 = Addition(11,"1")
-    add1 = Addition(12,"2")
-    add2 = Addition(13,"3")
+    add0 = Addition(11, "1", "me")
+    add1 = Addition(12, "2", "me")
+    add2 = Addition(13, "3", "me")
     bundle.extend([add0,add1,add2])
     self.zone.add(self.removal1)
     self.zone.add(bundle)

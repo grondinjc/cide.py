@@ -8,7 +8,7 @@ from pdb import set_trace as dbg
 class TestAjout(TestCase):
   def setUp(self):
     self.file = File("test")
-    self.addition = Addition(2, 4, "allo")
+    self.addition = Addition(2, 4, "allo", "me")
 
   def tearDown(self):
     pass
@@ -24,7 +24,7 @@ class TestAjout(TestCase):
     self.assertEqual(self.file.content, "teallost")
 
   def test_mettreAJour(self):
-    modification = Removal(1,3)
+    modification = Removal(1, 3, "me")
     self.addition.update(modification)
     self.assertEqual(self.addition.position, 1)
     

@@ -111,6 +111,7 @@ class IDEController(object):
     self.notify_program_output = self._exec_output_callback
     self.notify_program_ended = self._exec_ended_callback
     # Error callbacks
+    self.notify_get_file_content_error = self._dump_error_callback
     self.notify_program_unknow_file_error = self._exec_invalid_file_error_callback
     self.notify_program_no_running_error = self._exec_no_process_error_callback
     self.notify_program_running_error = self._exec_in_progress_error_callback
@@ -641,6 +642,25 @@ class IDEController(object):
     to_send = simplejson.dumps(wrap_opCode('dump',
                                            create_file_dump_dict(filename, version, content)))
     self._send_on_ws(caller, to_send, "file dump")
+
+  def _dump_error_callback(self, filename, caller):
+    """
+    Error indication that the file did not exist for the dump
+    This is the call back from /ide/open and /ide/dump
+
+    Output on the WS will be JSON of the following format:
+      {
+        'opCode': 'dumpinvalidfileerror',
+        'data': {
+                  'file':    '<<Filepath of given file>>',
+                }
+      }
+    """
+    self._logger.info("ExecErrorInvalidFile-callback for {0}".format(caller))
+
+    to_send = simplejson.dumps(wrap_opCode('dumpinvalidfileerror',
+                                           create_file_error_dict(filename)))
+    self._send_on_ws(caller, to_send, "dump invalid file error")
 
   def _exec_started_callback(self, filename, args, caller):
     """
