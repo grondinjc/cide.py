@@ -193,7 +193,7 @@ class Core(object):
     @param f: The task
     @param args: The arugments to be applied on f
     """
-    self._tasks_secondary.put(Core.Task(f, args))
+    self._tasks_auxiliary.put(Core.Task(f, args))
 
   def _create_file(self, content=""):
     """
