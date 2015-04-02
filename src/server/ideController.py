@@ -799,9 +799,7 @@ class IDEWebSocket(WebSocket):
     cherrypy.log("User {0} ({1}) WS connected".format(self.username, self.peer_address))
 
   def closed(self, code, reason=None):
-    try:
-      del self.IDEClients[self.username]
-    except:
+    if self.IDEClients.pop(self.username, None) is None:
       cherrypy.log("ERROR: WS for {0} was not in dict.".format(self.username))
 
     cherrypy.log("User {0} ({1}) WS disconnected. Reason: {2}".format(self.username,

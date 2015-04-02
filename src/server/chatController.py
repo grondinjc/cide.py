@@ -152,9 +152,7 @@ class ChatWebSocket(WebSocket):
     cherrypy.log("User {0} ({1}) ChatWS connected".format(self.username, self.peer_address))
 
   def closed(self, code, reason=None):
-    try:
-      del self.ChatClients[self.username]
-    except:
+    if self.ChatClients.pop(self.username, None) is None:
       cherrypy.log("ERROR: ChatWS for {0} was not in dict.".format(self.username))
 
     cherrypy.log("User {0} ({1}) ChatWS disconnected. Reason: {2}".format(self.username,
