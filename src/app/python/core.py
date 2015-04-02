@@ -116,9 +116,10 @@ class Core(object):
 
     self._tasks_secondary = Queue()
     self._tasks_auxiliary = Queue()
-    self._task_regular = [self.task_check_apply_notify, 
-                    self.task_check_program_output_notify]
-    self._thread = CoreThread(core_conf, self._task_regular, self._tasks_secondary, self._tasks_auxiliary)
+    self._task_regular = [self.task_check_apply_notify,
+                          self.task_check_program_output_notify]
+    self._thread = CoreThread(core_conf,
+                              self._task_regular, self._tasks_secondary, self._tasks_auxiliary)
 
   """
   Sync Call
@@ -382,9 +383,13 @@ class Core(object):
     @param caller: Username of the client to answer to
 
     Callback will be called with: tuple (<<File name>>, <<File Content>>, <<File Version>>)
+    Or, on result None: <<File name>>
     """
     result = self._impl_get_file_content(path)
-    self._notify_event(lambda l: l.notify_get_file_content(result, caller))
+    if result:
+      self._notify_event(lambda l: l.notify_get_file_content(result, caller))
+    else:
+      self._notify_event(lambda l: l.notify_get_file_content_error(path, caller))
 
   @task_time(microseconds=1)
   def _task_open_file(self, user, path):
@@ -668,6 +673,7 @@ class Core(object):
    - notify_program_output(output, caller)
    - notify_program_ended(exitcode, caller)
 
+   - notify_get_file_content_error(filename, caller)
    - notify_program_unknow_file_error(filename, caller)
    - notify_program_running_error(running_file, running_args, caller)
    - notify_program_no_running_error(caller)
@@ -779,7 +785,7 @@ class CoreThread(Thread):
       # Execute loop until the time buffer exceeds for this type
       # Until time buffer exceeds,
       #   Blocking until timeout or an available task allows lower CPU intensive work
-      #   Without blocking, CPU usage raises a lot and reduce CPU time for incomming requests  
+      #   Without blocking, CPU usage raises a lot and reduce CPU time for incomming requests
       #   If timeout is reached,
       #     Exit loop of this task type
       #   Else (timeout is not reached)
