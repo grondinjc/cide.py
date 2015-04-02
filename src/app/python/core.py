@@ -194,7 +194,7 @@ class Core(object):
     @param f: The task
     @param args: The arugments to be applied on f
     """
-    self._tasks_secondary.put(Core.Task(f, args))
+    self._tasks_auxiliary.put(Core.Task(f, args))
 
   def _create_file(self, content=""):
     """
@@ -751,6 +751,13 @@ class CoreThread(Thread):
     self._time_buffer_critical = timedelta(microseconds=critical_time)
     self._time_buffer_secondary = timedelta(microseconds=secondary_time)
     self._time_buffer_auxiliary = timedelta(microseconds=auxiliary_time)
+
+    # Make sure there is enough time for regular tasks within a cycle
+    total_regular_time = sum((reg_task.time for reg_task in self._tasks_regular), timedelta())
+    assert total_regular_time < self._cycle_time, "ERROR : Unable to fit regular tasks within cycle"
+    assert total_regular_time < self._time_buffer_critical, ("ERROR : Unable to fit regular tasks "
+                                                             "within critical time buffer")
+
 
   def stop(self):
     self._stop_asked = True
