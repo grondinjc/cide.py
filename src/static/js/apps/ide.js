@@ -265,9 +265,11 @@ function IdeEditState(ide, rqh, tree, pushInterval, nodeLastVersion, nodeDisplay
     var modifObject = createModifGroup(changes, obj._currentFile, obj._currentFileRevision);
     //console.log("Current bundle id is ", currentBundleID, modifObject);
     obj._debugStopWatchLap.start(); // debug
-    obj._rqh.put("save", modifObject, function(){
-      // Will I delete new input ??
-    }, function(){}, false);
+    obj._rqh.put("save", modifObject, null, function(){
+      // Client is in an invalid state
+      alert("Invalid detected from server, dump");
+      obj._requestDump();
+    }, false);
   };
 }
 IdeEditState.prototype.init = function(targetFilepath, dumpObj, changeObjs){
@@ -400,6 +402,12 @@ IdeEditState.prototype._combineText = function(cursor_pos) {
     cursor_pos = modifs[i].applyOnPos(cursor_pos);
   }
   return [base, cursor_pos];
+};
+IdeEditState.prototype._requestDump = function() {
+  this._rqh.get("dump", createDump(this._currentFile), null, function(){
+    alert("Dump error, provided file is invalid. \nPage will be reloaded.");
+    location.reload();
+  }, false); // synchronous request
 };
 IdeEditState.prototype.getCurrentFile = function(){ return this._currentFile; };
 
