@@ -21,6 +21,13 @@ using namespace types;
 
 class ZoneTransit
 {
+public:
+  enum
+  {
+    MAX_USERS = 50,
+    MAX_CHANGES = 5*MAX_USERS
+  };
+
   private:
     vector<PaquetModifications> _paquetModifications; //ce vecteur sert a la gestion interne d'ecriture et de mise a jour des modifications
     vector<ModificationPtr> _modifications; //ce vecteur sera retourne a l'application lorsqu'ecrireModifications est appele
@@ -34,9 +41,8 @@ class ZoneTransit
       , _modifications{}
       , _fichier{contenu}
     {
-      //// TODO Make reserve based on maximum modification constant
-      _paquetModifications.reserve(500);
-      _modifications.reserve(500);
+      _paquetModifications.reserve(MAX_USERS);
+      _modifications.reserve(MAX_CHANGES);
     }
 
     //ajoute la modification a la liste

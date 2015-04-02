@@ -23,6 +23,8 @@ from libZoneTransit import (TransitZone as EditBuffer,
                             Removal as EditRemove,
                             Modifications)
 
+MAX_USERS = 50
+MAX_FILES = 50
 
 def task_time(microseconds):
   """
@@ -38,7 +40,6 @@ def task_time(microseconds):
     func.debugname = func.func_name
     return func
   return wrapper
-
 
 class Core(object):
   """
@@ -63,11 +64,9 @@ class Core(object):
   def __init__(self, project_conf, core_conf, logger):
     """
     Core initialiser
-
     @type project_conf: dict
     @type core_conf: dict
     @type logger: logging.Logger
-
     @param project_conf: Configuration dictionnary containing name and paths
     @param core_conf: Configuration dictionnary for the core thread
     @param logger: The CIDE.py logger instance
@@ -151,9 +150,7 @@ class Core(object):
   def add_file(self, path):
     """
     Adds a file to the project tree
-
     @type path: str
-
     @param path: The path of the new file to be added in the project tree
     """
     # XXX Currently Unused
@@ -164,9 +161,7 @@ class Core(object):
   def delete_file(self, path):
     """
     Removes a file to the project tree
-
     @type path: str
-
     @param path: The path of the file to be removed in the project tree
     """
     # XXX Currently Unused
@@ -190,7 +185,6 @@ class Core(object):
     Add a task into the auxiliary task pool
 
     @type f: function
-
     @param f: The task
     @param args: The arugments to be applied on f
     """
@@ -200,11 +194,8 @@ class Core(object):
     """
     Creates the representation of a file
     Construction isolated in a function to simply further changes
-
     @type content: str
-
     @param content: The initial content of the file representation
-
     @return FileUserPair namedtuple
     """
     return self.FileUserPair(EditBuffer(content), set())
@@ -217,9 +208,7 @@ class Core(object):
   def get_project_nodes(self, caller):
     """
     Get all files and directories from project
-
     @param caller: Username of the client to answer to
-
     List of nodes is: list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
     Callback will be called with: nodes, caller
     """
@@ -229,13 +218,10 @@ class Core(object):
   def get_file_content(self, path, caller):
     """
     Get the content of a file
-
     @type path: str
     @type caller: str
-
     @param path: The path of the file in the project tree
     @param caller: Username of the client to answer to
-
     Callback will be called with: tuple (<<File name>>, <<File Content>>, <<File Version>>), caller
     """
     self._add_secondary_task(self._task_get_file_content, path, caller)
@@ -245,10 +231,8 @@ class Core(object):
     """
     Register a user to a file in order to receive file modification
     notifications. When the file does not exists, it is created
-
     @type user: str
     @type path: str
-
     @param user: The user name
     @param path: The path of the file to be registered to
     """
@@ -259,10 +243,8 @@ class Core(object):
     """
     Unregister a user to a file in order to stop receiving file modification
     notifications
-
     @type user: str
     @type path: str
-
     @param user: The user name
     @param path: The path of the file to be unregistrered from
     """
@@ -273,9 +255,7 @@ class Core(object):
     """
     Unregister a user from all files in order to stop receiving file modification
     notifications
-
     @type user: str
-
     @param user: The user name
     """
     self._add_auxiliary_task(self._task_unregister_user_to_all_files, user)
@@ -284,11 +264,9 @@ class Core(object):
   def file_edit(self, path, changes, caller):
     """
     Send changes, text added or text removed, to the file
-
     @type path: str
     @type changes: list [Change namedtuple]
     @type caller: str
-
     @param path: The path of the file in the project tree
     @param changes: Changes to be applied on the file
     @param caller: The author of the changes
@@ -299,10 +277,8 @@ class Core(object):
   def create_archive(self, path, caller):
     """
     Compress all files under a project directory
-
     @type path: str
     @type caller: str
-
     @param path: The project directory path to compress
     @param caller: The user name
 
@@ -357,13 +333,11 @@ class Core(object):
   Those are queued to be executed by the CoreThread
   """
 
-  @task_time(microseconds=1)
+  @task_time(microseconds=300)
   def _task_get_project_nodes(self, caller):
     """
     Task to get all files and directories from project
-
     @param caller: Username of the client to answer to
-
     Callback called: notify_get_project_nodes
     List of nodes is: list((str, bool)) [(<<Project node>>, <<Node is directory flag>>)]
     Callback will be called with: nodes, caller
@@ -371,17 +345,14 @@ class Core(object):
     sorted_nodes = self._impl_get_project_nodes()
     self._notify_event(lambda l: l.notify_get_project_nodes(sorted_nodes, caller))
 
-  @task_time(microseconds=1)
+  @task_time(microseconds=50)
   def _task_get_file_content(self, path, caller):
     """
     Task to get the content of a file
-
     @type path: str
     @type path: caller
-
     @param path: The path of the file in the project tree
     @param caller: Username of the client to answer to
-
     Callback will be called with: tuple (<<File name>>, <<File Content>>, <<File Version>>)
     Or, on result None: <<File name>>
     """
@@ -391,15 +362,13 @@ class Core(object):
     else:
       self._notify_event(lambda l: l.notify_get_file_content_error(path, caller))
 
-  @task_time(microseconds=1)
+  @task_time(microseconds=80)
   def _task_open_file(self, user, path):
     """
     Task to register a user to a file in order to receive file modification
     notifications. When the file does not exists, it is created
-
     @type user: str
     @type path: str
-
     @param user: The user name
     @param path: The path of the file to be registered to
     """
@@ -414,43 +383,37 @@ class Core(object):
     result = self._impl_get_file_content(path)
     self._notify_event(lambda l: l.notify_get_file_content(result, user))
 
-  @task_time(microseconds=1)
+  @task_time(microseconds=50)
   def _task_unregister_user_to_file(self, user, path):
     """
     Task to unregister a user to a file in order to stop receiving file modification
     notifications
-
     @type user: str
     @type path: str
-
     @param user: The user name
     @param path: The path of the file to be unregistrered from
     """
     if path in self._project_files:
       self._project_files[path].users.discard(user)
 
-  @task_time(microseconds=1)
+  @task_time(microseconds=82)
   def _task_unregister_user_to_all_files(self, user):
     """
     Task to unregister a user from all files in order to stop receiving file modification
     notifications
-
     @type user: str
-
     @param user: The user name
     """
     for f in self._project_files.itervalues():
       f.users.discard(user)
 
-  @task_time(microseconds=1)
+  @task_time(microseconds=66)
   def _task_file_edit(self, path, changes, user):
     """
     Task to add change to be applied to a file
-
     @type path: str
     @type changes: [namedtuple Change]
     @type user: str
-
     @param path: The path of the file in the project tree
     @param changes: Changes to be applied on the file
     @param user: User who sent the changes
@@ -543,11 +506,9 @@ class Core(object):
   def _task_create_archive(self, path, caller, response):
     """
     Task to create an archive of the files under a project directory
-
     @type path: str
     @type caller: str
     @type response: Queue.Queue
-
     @param path: The path of the directory to compress
     @param caller: The user name
     @param response: Synchrone helper on which response needs to be written
@@ -575,14 +536,14 @@ class Core(object):
 
     # Export file
     response.put(archive_path)
-
+    
   """
   Regular tasks section
   Those are calls to be executed each cycle by the CoreThread possibly
   at different time point within that cycle
   """
 
-  @task_time(microseconds=1)
+  @task_time(microseconds=25000)
   def task_check_apply_notify(self):
     """
     Regular task to apply pending modifications on all file from project.
@@ -664,7 +625,6 @@ class Core(object):
   """
   Observer and Stategy design patterns
   Handle event notifications to registered objects
-
   The listener will need to implement the following functions :
    - notify_file_edit(filename, changes, version, users)
    - notify_get_project_nodes(nodes_list)
@@ -682,7 +642,6 @@ class Core(object):
   def register_application_listener(self, listener):
     """
     Registers the listener to any events of the application
-
     @param listener: The observer requesting notifications from the app
     """
     if listener not in self._core_listeners:
@@ -692,7 +651,6 @@ class Core(object):
   def unregister_application_listener(self, listener):
     """
     Unregisters the listener to stop receiving event notifications from the app
-
     @param listener: The observer requesting notifications from the application
     """
     if listener in self._core_listeners:
@@ -702,7 +660,6 @@ class Core(object):
   def _change_core_strategy(self, strategy):
     """
     Change the current strategy
-
     @param strategy: The new strategy to use
     """
     self._core_listeners_strategy = strategy
@@ -710,9 +667,7 @@ class Core(object):
   def _notify_event(self, f):
     """
     Transfers an event to all application listeners using the current strategy
-
     @type f: callable
-
     @param f: The notification callable
     """
     self._core_listeners_strategy.send(f, self._core_listeners)
