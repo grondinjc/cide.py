@@ -54,6 +54,7 @@ template <>
       {cout << _contenu << endl;}
 
       string getContenu() const {return _contenu;}
+      size_t getTaille() const {return _contenu.size();}
   };
 
 #endif //SFICHIER

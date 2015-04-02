@@ -35,10 +35,10 @@ function createProcessInput(arguments) { return {data: arguments}; }
 function createProcessTermination() { return {}; }
 
 
-function ObjectAddChange(pos, content, author){
+function ObjectAddChange(pos, content, is_from_you){
   this._pos = pos;
   this._content = content;
-  this._author = author; // From server only
+  this._is_from_you = is_from_you; // From server only
 }
 ObjectAddChange.prototype.size = function(){
   return this._content.length;
@@ -47,24 +47,22 @@ ObjectAddChange.prototype.applyOnText = function(text){
   return text.insert(this._content, this._pos);
 };
 ObjectAddChange.prototype.applyOnPos = function(pos){
-  if(!this._author){
+  if(!this._is_from_you){
     pos += (this._pos <= pos ? this.size() : 0);
   }
   return pos;
 };
 ObjectAddChange.prototype.updatePos = function(modObject){
-  if(!this._author){
-    this._pos = modObject.applyOnPos(this._pos);
-  }
+  this._pos = modObject.applyOnPos(this._pos);
 };
 ObjectAddChange.prototype.serialize = function(){
   return createAddModif(this._content, this._pos);
 };
 
-function ObjectRemoveChange(pos, count, author){
+function ObjectRemoveChange(pos, count, is_from_you){
   this._pos = pos;
   this._count = count;
-  this._author = author; // From server only
+  this._is_from_you = is_from_you; // From server only
 }
 ObjectRemoveChange.prototype.size = function(){
   return this._count;
@@ -73,15 +71,13 @@ ObjectRemoveChange.prototype.applyOnText = function(text){
   return text.cutFrom(this._pos, this._count);
 };
 ObjectRemoveChange.prototype.applyOnPos = function(pos){
-  if(!this._author){
-    pos -= (this._pos <= pos ? this.size() : 0);
+  if(!this._is_from_you){
+    pos -= (this._pos < pos ? this.size() : 0);
   }
   return pos;
 };
 ObjectRemoveChange.prototype.updatePos = function(modObject){
-  if(!this._author){
-    this._pos = modObject.applyOnPos(this._pos);
-  }
+  this._pos = modObject.applyOnPos(this._pos);
 };
 ObjectRemoveChange.prototype.serialize = function(){
   return createRemoveModif(this._count, this._pos);
@@ -91,9 +87,9 @@ ObjectRemoveChange.prototype.serialize = function(){
 function ObjectChangeFactory(changeObjJSON){
   return changeObjJSON.type == CHANGE_ADD_TYPE ?
     new ObjectAddChange(changeObjJSON.pos, changeObjJSON.content,
-                        changeObjJSON.author):
+                        changeObjJSON.is_from_you):
     new ObjectRemoveChange(changeObjJSON.pos, changeObjJSON.count,
-                           changeObjJSON.author);
+                           changeObjJSON.is_from_you);
 }
 
 function serializeObjectChangeList(changesList){

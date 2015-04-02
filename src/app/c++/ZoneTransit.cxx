@@ -33,7 +33,8 @@ BOOST_PYTHON_MODULE(libZoneTransit)
     .def("insert", &Fichier::inserer)
     .def("delete", &Fichier::supprimer)
     .def("printContent", &Fichier::printContenu)
-    .add_property("content", &Fichier::getContenu);
+    .add_property("content", &Fichier::getContenu)
+    .add_property("size", &Fichier::getTaille);
 
   class_<ZoneTransit, boost::noncopyable>("TransitZone")
     .def(init<const string&>())

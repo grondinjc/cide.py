@@ -47,30 +47,31 @@ def create_tree_nodes_dict(nodes):
 
 def set_author_bool_in_dict(serialized_changes, user):
   for sc in serialized_changes:
-    sc['author'] = (sc['author'] == user)
+    sc['is_from_you'] = (sc['author'] == user)
 
 
 def create_exec_started_dict(filename, args):
-  return {'file' : filename, 'args' : args}
+  return {'file': filename, 'args': args}
 
 
 def create_exec_output_dict(output):
-  return {'output' : output}
+  return {'output': output}
 
 
 def create_exec_ended_dict(exitcode):
-  return {'exitcode' : exitcode}
+  return {'exitcode': exitcode}
 
 
 def create_exec_in_progress_error_dict(filename, args):
-  return {'file' : filename, 'args' : args}
+  return {'file': filename, 'args': args}
 
 
 def create_exec_not_in_progress_error_dict():
   return {}
 
+
 def create_file_error_dict(filename):
-  return {'file' : filename}
+  return {'file': filename}
 
 
 class IDEController(object):
@@ -287,10 +288,10 @@ class IDEController(object):
                   'file':    '<<Filepath of edited file>>',
                   'vers':    '<<File version>>',
                   'changes': [{
-                               'type':    '<<Type of edit (ins | del)>>',
-                               'pos':     '<<Position of edit>>',
-                               'content': '<<Content of insert | Number of deletes>>'
-                               'author':   <<If the user is the author>>
+                               'type':        '<<Type of edit (ins | del)>>',
+                               'pos':         '<<Position of edit>>',
+                               'content':     '<<Content of insert | Number of deletes>>'
+                               'is_from_you': '<<If the user is the author>>'
                              }]
                 }
       }
@@ -405,7 +406,7 @@ class IDEController(object):
     Download the zip archive with the file under the specified project directory
     Method : GET
     (Path : /ide/export)
-    
+
     Input must be JSON of the following format:
       {
         'path':    '<<The project directory from where to compress>>'
@@ -448,7 +449,7 @@ class IDEController(object):
     Execute the program with the specified arguments and file entry point
     Method : PUT
     (Path : /ide/execstart)
-    
+
     Input must be JSON of the following format:
       {
         'file':    '<<Filepath of entry point of the program>>',
@@ -482,7 +483,7 @@ class IDEController(object):
     Send input text to a running program
     Method : PUT
     (Path : /ide/execinput)
-    
+
     Input must be JSON of the following format:
       {
         'data':    '<<Data input to send to the program>>'
@@ -511,15 +512,15 @@ class IDEController(object):
     Terminate a running program
     Method : PUT
     (Path : /ide/execkill)
-    
+
     Input must be JSON of the following format:
       {
       }
     """
     self._logger.debug("Execkill by {0} ({1}:{2})".format(cherrypy.session['username'],
-                                                                     request.remote.ip,
-                                                                     request.remote.port,
-                                                                     request.json))
+                                                          request.remote.ip,
+                                                          request.remote.port,
+                                                          request.json))
 
     username = cherrypy.session['username']
     self._logger.info("Execkill requested by {0} ({1}:{2})".format(username,
@@ -556,10 +557,10 @@ class IDEController(object):
                   'file':    '<<Filepath of edited file>>',
                   'vers':    '<<File version>>',
                   'changes': [{
-                               'type':    '<<Type of edit (ins | del)>>',
-                               'pos':     '<<Position of edit>>',
-                               'content': '<<Content of insert | Number of deletes>>'
-                               'author':   <<If the user is the author>>
+                               'type':        '<<Type of edit (ins | del)>>',
+                               'pos':         '<<Position of edit>>',
+                               'content':     '<<Content of insert | Number of deletes>>'
+                               'is_from_you': '<<If the user is the author>>'
                              }]
                 }
       }
@@ -699,7 +700,7 @@ class IDEController(object):
                                            create_exec_ended_dict(exitcode)))
     self._send_on_ws(caller, to_send, "exec ended")
 
-  def _exec_invalid_file_error_callback(filename, caller):
+  def _exec_invalid_file_error_callback(self, filename, caller):
     """
     Error indication that executed file is unknown
     This is the call back of a program creation attempt by /ide/execstart
@@ -778,6 +779,7 @@ class IDEController(object):
     else:
       self._logger.error("{0} has no WS in server".format(user))
 
+
 class IDEWebSocket(WebSocket):
   """
   WebSocket for the IDEController
@@ -790,17 +792,14 @@ class IDEWebSocket(WebSocket):
 
   def opened(self):
     self.username = cherrypy.session['username']
+    if self.username in self.IDEClients:
+      cherrypy.log("WARNING: User {0} already had a WS. Replacing".format(self.username))
+
     self.IDEClients[self.username] = self
     cherrypy.log("User {0} ({1}) WS connected".format(self.username, self.peer_address))
 
   def closed(self, code, reason=None):
-    # XXX May raise Key Error, but I don't get why...double dc?
-    # FIXME Browser doing shenanigans when checking suggestions in URL bar...
-    # FIXME Opening a 2nd WS for same users, and triggers 2 closing...hurray.
-    # TODO do not create 2 ws for same session?
-    try:
-      del self.IDEClients[self.username]
-    except:
+    if self.IDEClients.pop(self.username, None) is None:
       cherrypy.log("ERROR: WS for {0} was not in dict.".format(self.username))
 
     cherrypy.log("User {0} ({1}) WS disconnected. Reason: {2}".format(self.username,

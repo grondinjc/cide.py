@@ -39,6 +39,7 @@ def task_time(microseconds):
     return func
   return wrapper
 
+
 class Core(object):
   """
   Cide.py core app module
@@ -135,7 +136,7 @@ class Core(object):
     self._thread.stop()
     # Stop existing executions
     for execution in self._project_execs.itervalues():
-      execution.process.kill() # brutal
+      execution.process.kill()  # brutal
 
   def get_project_name(self):
     """
@@ -466,7 +467,7 @@ class Core(object):
                                         stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.STDOUT,
-                                        env=dict(), # For security purposes
+                                        env=dict(),  # For security purposes
                                         )
 
         # Save execution
@@ -581,41 +582,28 @@ class Core(object):
 
     @param path: The path of the file on which modifications will be applied
     """
-    try:
-      if path in self._project_files:
-        version, changes = self._project_files[path].file.writeModifications()
-        users_registered = deepcopy(self._project_files[path].users)
+    if path in self._project_files:
+      version, changes = self._project_files[path].file.writeModifications()
+      users_registered = deepcopy(self._project_files[path].users)
 
-        # Notify registered users
-        self._notify_event(
-          lambda l: l.notify_file_edit(path,
-                                       changes,
-                                       version,
-                                       users_registered))
-    except:
-      e = sys.exc_info()
-      # XXX Remove after correction! C++ Should handle this!
-      self._logger.exception("EXCEPTION RAISED {0}\n{1}\n{2}".format(e[0], e[1], e[2]))
+      # Notify registered users
+      self._notify_event(
+        lambda l: l.notify_file_edit(path,
+                                     changes,
+                                     version,
+                                     users_registered))
 
   @task_time(microseconds=1)
   def task_check_program_output_notify(self):
     """
-    Task to create an archive of the files under a project directory
-
-    @type path: str
-    @type caller: str
-    @type response: Queue.Queue
-
-    @param path: The path of the directory to compress
-    @param caller: The user name
-    @param response: Synchrone helper on which response needs to be written
+    Task to check if there's program output and send it
     """
     processes_stdout = (execution.process.stdout for execution in self._project_execs.itervalues())
     ready, _, _, = select(processes_stdout, [], [], 0)
 
     for (caller, execution) in self._project_execs.items():
       if execution.process.stdout in ready:
-        if execution.process.poll() != None:
+        if execution.process.poll() is not None:
           # Remove from list
           del self._project_execs[caller]
 
@@ -625,7 +613,7 @@ class Core(object):
           # Notify
           if last_data:
             self._notify_event(lambda l: l.notify_program_output(last_data, caller))
-            
+
           # Notify process end
           self._notify_event(lambda l: l.notify_program_ended(exitcode, caller))
 
@@ -634,7 +622,6 @@ class Core(object):
           if data:
             # Notify
             self._notify_event(lambda l: l.notify_program_output(data, caller))
-
 
   """
   Implementation of tasks without communication overhead.
