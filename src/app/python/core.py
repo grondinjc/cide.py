@@ -442,11 +442,8 @@ class Core(object):
         # Where copied files will be written
         exec_path = os.path.join(self._project_exec_path, caller)
 
-        # Write to disk latest changes
-        project_filenodes = (filenode for filenode in self._project_files.keys())
-
         try:
-          for filenode in project_filenodes:
+          for filenode in self._project_files.iterkeys():
             # Create any parent needed directories
             exec_filenode_path = exec_path+filenode
             exec_filenode_dir = os.path.dirname(exec_filenode_path)
