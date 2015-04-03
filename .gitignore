@@ -18,6 +18,7 @@ bin/*.prj
 
 # Logs
 logs/*.log
+benchmarks/log_benchmarks
 
 # Compiled Object files
 *.slo
