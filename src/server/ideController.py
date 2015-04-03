@@ -50,7 +50,7 @@ def set_author_bool_in_dict(serialized_changes, user):
     sc['is_from_you'] = (sc['author'] == user)
 
 
-def create_exec_started_dict(filename, args):
+def create_exec_info_dict(filename, args):
   return {'file': filename, 'args': args}
 
 
@@ -112,6 +112,7 @@ class IDEController(object):
     self.notify_program_ended = self._exec_ended_callback
     # Error callbacks
     self.notify_get_file_content_error = self._dump_error_callback
+    self.notify_program_start_error = self._exec_start_error_callback
     self.notify_program_unknow_file_error = self._exec_invalid_file_error_callback
     self.notify_program_no_running_error = self._exec_no_process_error_callback
     self.notify_program_running_error = self._exec_in_progress_error_callback
@@ -645,7 +646,7 @@ class IDEController(object):
 
   def _dump_error_callback(self, filename, caller):
     """
-    Error indication that the file did not exist for the dump
+    Error indicating that the file did not exist for the dump
     This is the call back from /ide/open and /ide/dump
 
     Output on the WS will be JSON of the following format:
@@ -679,7 +680,7 @@ class IDEController(object):
     self._logger.info("ExecStarted-callback for {0}".format(caller))
 
     to_send = simplejson.dumps(wrap_opCode('execstarted',
-                                           create_exec_started_dict(filename, args)))
+                                           create_exec_info_dict(filename, args)))
     self._send_on_ws(caller, to_send, "exec started")
 
   def _exec_output_callback(self, output, caller):
@@ -722,7 +723,7 @@ class IDEController(object):
 
   def _exec_invalid_file_error_callback(self, filename, caller):
     """
-    Error indication that executed file is unknown
+    Error indicating that executed file is unknown
     This is the call back of a program creation attempt by /ide/execstart
 
     Output on the WS will be JSON of the following format:
@@ -741,7 +742,7 @@ class IDEController(object):
 
   def _exec_in_progress_error_callback(self, running_file, running_args, caller):
     """
-    Error indication that user already possesses a process
+    Error indicating that user already possesses a process
     This is the call back of a program creation attempt by /ide/execstart
 
     Output on the WS will be JSON of the following format:
@@ -756,13 +757,12 @@ class IDEController(object):
     self._logger.info("ExecErrorInProgress-callback for {0}".format(caller))
 
     to_send = simplejson.dumps(wrap_opCode('execerrorinprogress',
-                                           create_exec_in_progress_error_dict(running_file,
-                                                                              running_args)))
+                                           create_exec_info_dict(running_file, running_args)))
     self._send_on_ws(caller, to_send, "exec in progress error")
 
   def _exec_no_process_error_callback(self, caller):
     """
-    Error indication that user does not possess a process
+    Error indicating that user does not possess a process
     This is the call back of a program interraction attempt by /ide/execinput and /ide/execkill
 
     Output on the WS will be JSON of the following format:
@@ -776,6 +776,26 @@ class IDEController(object):
     to_send = simplejson.dumps(wrap_opCode('execerrornotinprogress',
                                            create_exec_not_in_progress_error_dict()))
     self._send_on_ws(caller, to_send, "exec no existing process error")
+
+  def _exec_start_error_callback(self, filename, args, caller):
+    """
+    Error indicating that user already possesses a process
+    This is the call back of a program creation attempt by /ide/execstart
+
+    Output on the WS will be JSON of the following format:
+      {
+        'opCode': 'execerrorstart',
+        'data': {
+                  'file':    '<<The file of the running process>>',
+                  'args':    '<<The arguments of the running process>>'
+                }
+      }
+    """
+    self._logger.info("ExecErrorStart-callback for {0}".format(caller))
+
+    to_send = simplejson.dumps(wrap_opCode('execerrorstart',
+                                           create_exec_info_dict(filename, args)))
+    self._send_on_ws(caller, to_send, "exec start error")
 
   """
   Helper methods with websocket

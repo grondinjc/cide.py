@@ -13,9 +13,9 @@ def get_existing_dirs(path):
     dir_paths.extend(['/' + os.path.relpath(os.path.join(root, name), path) for name in dirs])
   return dir_paths
 
-def remove_dir_content(dirpath):
+def remove_physical_dir_content(dirpath):
   shutil.rmtree(dirpath)
   os.mkdir(dirpath)
 
-def remove_dir(dirpath):
+def remove_physical_dir(dirpath):
   shutil.rmtree(dirpath)

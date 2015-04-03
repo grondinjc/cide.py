@@ -13,7 +13,8 @@ from tempfile import NamedTemporaryFile
 
 from cide.app.python.utils.nodes import (get_existing_files,
                                          get_existing_dirs,
-                                         remove_dir_content)
+                                         remove_physical_dir,
+                                         remove_physical_dir_content)
 
 # Other stategies will be used but are not required
 from cide.app.python.utils.strategies import (StrategyCallEmpty)
@@ -89,12 +90,9 @@ class Core(object):
       if not os.path.exists(project_dir):
         os.makedirs(project_dir)
 
-    from pdb import set_trace as dbg
-    dbg()
-
     # Cleanup leftovers from previous executions
     for cleanable_dir in (self._project_tmp_path, self._project_exec_path):
-      remove_dir_content(cleanable_dir)
+      remove_physical_dir_content(cleanable_dir)
 
     # Asociation filepath -> (zoneTransit, set(userlist))
     # Recreate structure from existing files on disk
@@ -441,8 +439,6 @@ class Core(object):
     """
     if caller not in self._project_execs:
       if mainpath in self._project_files:
-        from pdb import set_trace as dbg
-        dbg()
         # Where copied files will be written
         exec_path = os.path.join(self._project_exec_path, caller)
         print "exec_path", exec_path
@@ -450,33 +446,43 @@ class Core(object):
         # Write to disk latest changes
         project_nodes = (node for (node, is_dir) in self._impl_get_project_nodes())
 
-        for filenode in project_nodes:
-          # Create any parent needed directories
-          exec_filenode_path = exec_path+filenode
-          os.makedirs(exec_filenode_path)
-          # Create file
-          with open(exec_filenode_path, "w") as copied_file:
-            # Not reading from disk to get the lastest version
-            _, content, _ = self._impl_get_file_content(filenode)
-            copied_file.write(content)
-            copied_file.flush()  # Make sure text gets written
+        try:
+          for filenode in project_nodes:
+            # Create any parent needed directories
+            exec_filenode_path = exec_path+filenode
+            exec_filenode_dir = os.path.dirname(exec_filenode_path)
+            if not os.path.exists(exec_filenode_dir):
+              os.makedirs(exec_filenode_dir)
 
-        return
-        # The -u switch forces subprocess to be unbuffered
-        # It is better than subprocess.bufsize parameter
-        # since it does not seems to always work
-        cmd = ['python', '-u', exec_path+mainpath] + args.split()
-        exec_process = subprocess.Popen(args=cmd,
-                                        stdin=subprocess.PIPE,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.STDOUT,
-                                        env=dict(),  # For security purposes
-                                        )
+            # Create file
+            with open(exec_filenode_path, "w") as copied_file:
+              # Not reading from disk to get the lastest version
+              _, content, _ = self._impl_get_file_content(filenode)
+              copied_file.write(content)
+              copied_file.flush()  # Make sure text gets written
 
-        # Save execution
-        self._project_execs[caller] = Core.Exec(exec_process, mainpath, args, exec_path)
-        # Notify started
-        self._notify_event(lambda l: l.notify_program_started(mainpath, args, caller))
+          # The -u switch forces subprocess to be unbuffered
+          # It is better than subprocess.bufsize parameter
+          # since it does not seems to always work
+          cmd = ['python', '-u', exec_path+mainpath] + args.split()
+          exec_process = subprocess.Popen(args=cmd,
+                                          stdin=subprocess.PIPE,
+                                          stdout=subprocess.PIPE,
+                                          stderr=subprocess.STDOUT,
+                                          env=dict(),  # For security purposes
+                                          )
+
+          # Save execution
+          self._project_execs[caller] = Core.Exec(exec_process, mainpath, args, exec_path)
+          # Notify started
+          self._notify_event(lambda l: l.notify_program_started(mainpath, args, caller))
+
+        except OSError:
+          # Clean up
+          self._inner_task_remove_program_files()
+          # Notify file error
+          self._notify_event(lambda l: l.notify_program_start_error(mainpath, caller))
+
       else:
         # Notify file error
         self._notify_event(lambda l: l.notify_program_unknow_file_error(mainpath, caller))
@@ -606,28 +612,29 @@ class Core(object):
     for (caller, execution) in self._project_execs.items():
       if execution.process.stdout in ready:
         # Send any output data
-        self._inner_task_output_notify(execution.process, caller)
+        self._inner_task_output_notify(execution, caller)
         # Check if program exited
         if execution.process.poll() is not None:
-          # Remove from list
-          del self._project_execs[caller]
           # Notify process end
           exitcode = execution.process.poll()
           self._notify_event(lambda l: l.notify_program_ended(exitcode, caller))
           self._inner_task_remove_program_files(caller)
+          # Remove from list
+          del self._project_execs[caller]
 
   # Does not need the task_time decorator since it is called from a task
-  def _inner_task_output_notify(self, user_process, caller):
-    output = os.read(user_process.stdout.fileno(), 1024)
+  def _inner_task_output_notify(self, user_exec, caller):
+    output = os.read(user_exec.process.stdout.fileno(), 1024)
     if output:
       # Replace path to avoid showing physical path of program
       # This will not be needed if the program runs under a virtual root (chroot)
-      self._notify_event(lambda l: l.notify_program_output(output.replace(self._project_src_path, ""), 
+      self._notify_event(lambda l: l.notify_program_output(output.replace(user_exec.exec_path, ""), 
                                                            caller))
 
   # Does not need the task_time decorator since it is called from a task
   def _inner_task_remove_program_files(self, caller):
-    pass
+    user_execution = self._project_execs[caller]
+    remove_physical_dir(user_execution.exec_path)
 
   """
   Implementation of tasks without communication overhead.
@@ -660,6 +667,7 @@ class Core(object):
    - notify_program_ended(exitcode, caller)
 
    - notify_get_file_content_error(filename, caller)
+   - notify_program_start_error(filename, args, caller)
    - notify_program_unknow_file_error(filename, caller)
    - notify_program_running_error(running_file, running_args, caller)
    - notify_program_no_running_error(caller)
