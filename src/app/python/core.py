@@ -441,13 +441,12 @@ class Core(object):
       if mainpath in self._project_files:
         # Where copied files will be written
         exec_path = os.path.join(self._project_exec_path, caller)
-        print "exec_path", exec_path
 
         # Write to disk latest changes
-        project_nodes = (node for (node, is_dir) in self._impl_get_project_nodes())
+        project_filenodes = (filenode for filenode in self._project_files.keys())
 
         try:
-          for filenode in project_nodes:
+          for filenode in project_filenodes:
             # Create any parent needed directories
             exec_filenode_path = exec_path+filenode
             exec_filenode_dir = os.path.dirname(exec_filenode_path)
@@ -469,8 +468,7 @@ class Core(object):
                                           stdin=subprocess.PIPE,
                                           stdout=subprocess.PIPE,
                                           stderr=subprocess.STDOUT,
-                                          env=dict(),  # For security purposes
-                                          )
+                                          env=dict())  # For security purposes
 
           # Save execution
           self._project_execs[caller] = Core.Exec(exec_process, mainpath, args, exec_path)
