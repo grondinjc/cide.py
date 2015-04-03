@@ -40,6 +40,7 @@ class IdentifyController(object):
   IDENTIFY_LOGIN_PAGE = "login.html"
   LOGIN_REDIRECT = '/ide'
   LOGOUT_REDIRECT = '/'
+  ILLEGAL_USERNAME_CHAR = ['<', '>', '/', '\\']
 
   def __init__(self, template_path, logger):
     """
@@ -69,6 +70,8 @@ class IdentifyController(object):
     """
     if username == 'system':
       return "Username 'system' is not allowed"
+    elif [e for e in self.ILLEGAL_USERNAME_CHAR if e in username]:
+      return "Username contains illegal character {0}".format(self.ILLEGAL_USERNAME_CHAR)
 
     for _, sess in cherrypy.session.cache.items():
       if sess[0].get('username') == username:
