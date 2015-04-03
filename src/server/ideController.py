@@ -638,7 +638,7 @@ class IDEController(object):
       }
     """
     self._logger.info("Dump-callback for {0}".format(caller))
-    filename, content, version = result  # TODO Check if result is None
+    filename, content, version = result
 
     to_send = simplejson.dumps(wrap_opCode('dump',
                                            create_file_dump_dict(filename, version, content)))
