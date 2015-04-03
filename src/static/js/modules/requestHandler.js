@@ -68,7 +68,11 @@ RequestHandler.prototype._send = function(type, url, requestData, successCallbac
       successCallback(response, text);
     },
     error: function(request, status, error) {  
-      errorCallback(request, status, error);
+      if(request.status == 200){
+        location.reload();
+      } else {
+        errorCallback(request, status, error);
+      }
     }
   });
 };
