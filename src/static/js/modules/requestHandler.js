@@ -68,7 +68,14 @@ RequestHandler.prototype._send = function(type, url, requestData, successCallbac
       successCallback(response, text);
     },
     error: function(request, status, error) {  
-      errorCallback(request, status, error);
+      // An error with a code 200 means the server sent data, put the client
+      // was unable to parse it.
+      // In our case, it is most likely a login-redirect
+      if(request.status == 200){
+        location.reload();
+      } else {
+        errorCallback(request, status, error);
+      }
     }
   });
 };

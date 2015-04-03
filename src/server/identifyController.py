@@ -120,5 +120,8 @@ class IdentifyController(object):
     if username:
       cherrypy.request.login = None
 
+    cherrypy.lib.sessions.expire()
+    sess.clean_up()
+
     raise cherrypy.HTTPRedirect(IdentifyController.LOGOUT_REDIRECT)
 
