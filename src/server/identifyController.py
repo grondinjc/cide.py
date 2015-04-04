@@ -69,6 +69,8 @@ class IdentifyController(object):
     """
     if username == 'system':
       return "Username 'system' is not allowed"
+    elif not username.isalnum():
+      return "Username must contains alphanumeric caracters only"
 
     for _, sess in cherrypy.session.cache.items():
       if sess[0].get('username') == username:

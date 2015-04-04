@@ -27,6 +27,7 @@ from libZoneTransit import (TransitZone as EditBuffer,
 MAX_USERS = 50
 MAX_FILES = 50
 
+
 def task_time(microseconds):
   """
   Function decorator to specify the worse execution time metadata
@@ -41,6 +42,7 @@ def task_time(microseconds):
     func.debugname = func.func_name
     return func
   return wrapper
+
 
 class Core(object):
   """
@@ -117,7 +119,8 @@ class Core(object):
     self._task_regular = [self.task_check_apply_notify,
                           self.task_check_program_output_notify]
     self._thread = CoreThread(core_conf,
-                              self._task_regular, self._tasks_secondary, self._tasks_auxiliary)
+                              self._task_regular, self._tasks_secondary, self._tasks_auxiliary,
+                              self._logger)
 
   """
   Sync Call
@@ -559,7 +562,7 @@ class Core(object):
 
     # Export file
     response.put(archive_path)
-    
+
   """
   Regular tasks section
   Those are calls to be executed each cycle by the CoreThread possibly
@@ -623,7 +626,7 @@ class Core(object):
     if output:
       # Replace path to avoid showing physical path of program
       # This will not be needed if the program runs under a virtual root (chroot)
-      self._notify_event(lambda l: l.notify_program_output(output.replace(user_exec.exec_path, ""), 
+      self._notify_event(lambda l: l.notify_program_output(output.replace(user_exec.exec_path, ""),
                                                            caller))
 
   # Does not need the task_time decorator since it is called from a task
@@ -707,17 +710,19 @@ class CoreThread(Thread):
   Core app Thread
   """
 
-  def __init__(self, conf, regular_tasks, secondary_tasks, auxiliary_tasks):
+  def __init__(self, conf, regular_tasks, secondary_tasks, auxiliary_tasks, logger):
     """
     @type conf: dict
     @type regular_tasks: list
     @type secondary_tasks: Queue.Queue
     @type auxiliary_tasks: Queue.Queue
+    @type logger: logging.Logger
 
     @param conf: Configuration dictionnary for realtime
     @param regular_tasks: The list of regular tasks
     @param secondary_tasks: The queue of secondary tasks
     @param auxiliary_tasks: The queue of auxiliary tasks
+    @param logger: The CIDE.py logger instance
     """
     Thread.__init__(self)
 
@@ -736,12 +741,13 @@ class CoreThread(Thread):
     self._time_buffer_secondary = timedelta(microseconds=secondary_time)
     self._time_buffer_auxiliary = timedelta(microseconds=auxiliary_time)
 
+    self._logger = logger
+
     # Make sure there is enough time for regular tasks within a cycle
     total_regular_time = sum((reg_task.time for reg_task in self._tasks_regular), timedelta())
     assert total_regular_time < self._cycle_time, "ERROR : Unable to fit regular tasks within cycle"
     assert total_regular_time < self._time_buffer_critical, ("ERROR : Unable to fit regular tasks "
                                                              "within critical time buffer")
-
 
   def stop(self):
     self._stop_asked = True
@@ -752,8 +758,8 @@ class CoreThread(Thread):
       try:
         self._run_impl()
       except:
-        print traceback.format_exc()
-        print sys.exc_info()[0]
+        self._logger.exception("EXCEPTION RAISE IN CORE THREAD:\n{0}\n{1}".format(
+          traceback.format_exc(), sys.exc_info()[0]))
 
   def _run_impl(self):
     # Define the ending point in time of the cycle
@@ -770,7 +776,8 @@ class CoreThread(Thread):
         if datetime.now() + reg_task.time < time_end_critical:
           reg_task()
         else:
-          print "CoreThread WARNING :: Not enough time to call {0}".format(reg_task.debugname)
+          self._logger.warning(
+            "CoreThread WARNING :: Not enough time to call {0}".format(reg_task.debugname))
 
       # None critical tasks summary (Secondary and Auxiliary)
       # Execute loop until the time buffer exceeds for this type
@@ -815,3 +822,4 @@ class CoreThread(Thread):
       time_end_critical += self._cycle_time
       time_end_secondary += self._cycle_time
       time_end_auxiliary += self._cycle_time
+
