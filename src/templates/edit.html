@@ -48,6 +48,7 @@
             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"><span class="glyphicon glyphicon-cog"></span> Parameter</a>
             <ul class="dropdown-menu" role="menu">
               <li class="divider"></li>
+              <li><a href="#" onclick="menuClientDebug(); return false;"><span class="glyphicon glyphicon-dashboard"></span> Client debug</a></li>
               <li><a href="/identify/logout"><span class="glyphicon glyphicon-log-out"></span> Logout</a></li>
             </ul>
           </li>
@@ -115,8 +116,8 @@
           <!-- Container of all lines  contenteditable="true"-->
           <h4>Display</h4>
           <code id="editorDisplay" class="codeDisplay" contenteditable="true"></code>
-          <h4>Last version from server</h4>
-          <code id="editorLastVersion" class="codeDisplay" contenteditable="true"></code>
+          <h4 class="clientdebug" hidden="true">Last version from server</h4>
+          <code id="editorLastVersion" class="codeDisplay clientdebug" hidden="true"></code>
         </div><!-- ide sections -->
 
       </div><!-- side sections and ide -->

@@ -31,6 +31,12 @@ function menuProjectExport(){
   ideApplication.export("/");
 }
 
+// Menu -> Parameter -> Client debug
+function menuClientDebug(){
+  $(".clientdebug").toggle();
+  ideApplication.toggleDebug();
+}
+
 // Menu -> Execution -> Run
 function menuProjectRun(){
   var args = $("#exec-args-input").val(); // Get args
