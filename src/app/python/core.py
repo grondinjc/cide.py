@@ -330,6 +330,17 @@ class Core(object):
     self._add_auxiliary_task(self._task_program_kill, caller)
     self._logger.info("Program_kill task added")
 
+  def write_to_disk(self, caller):
+    """
+    Writes the project files to disk
+
+    @type caller: str
+
+    @param caller: The user name
+    """
+    self._add_auxiliary_task(self._task_write_to_disk, caller)
+    self._logger.info("Write_to_disk task added")
+
   """
   Tasks call section
   Those are queued to be executed by the CoreThread
@@ -562,6 +573,38 @@ class Core(object):
 
     # Export file
     response.put(archive_path)
+
+  @task_time(microseconds=1)
+  def _task_write_to_disk(self, caller):
+    """
+    Task that will write every file of the project to the disk.
+
+    @type caller: str
+
+    @param caller: The user name
+    """
+    try:
+      for filenode in self._project_files.iterkeys():
+        # Create any parent needed directories
+        code_filenode_path = self._project_src_path + filenode
+        code_filenode_dir = os.path.dirname(code_filenode_path)
+        if not os.path.exists(code_filenode_dir):
+          os.makedirs(code_filenode_dir)
+
+        # Save file
+        with open(code_filenode_path, "w") as copied_file:
+          # Not reading from disk to get the lastest version
+          _, content, _ = self._impl_get_file_content(filenode)
+          copied_file.write(content)
+          copied_file.flush()  # Make sure text gets written
+
+      # Notify write to disk completed
+      # TODO self._notify_event(lambda l: l.notify_...(caller))
+
+    except OSError:
+      self._logger.exception("EXCEPTION while writing project to disk ({0})".format(caller))
+      # Notify write error
+      # TODO self._notify_event(lambda l: l.notify_error...(caller))
 
   """
   Regular tasks section

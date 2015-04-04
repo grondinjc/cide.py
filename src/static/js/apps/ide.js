@@ -111,6 +111,10 @@ AppIDE.prototype.runCurrentFile = function(args){
   }
 };
 
+AppIDE.prototype.saveProject = function(){
+  this._ideState._rqh.put('saveproject', {});
+};
+
 
 /*  The initial state of the ide 
     No state should go back to this one */
