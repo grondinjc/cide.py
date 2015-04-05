@@ -14,7 +14,7 @@ function AppIDE(lastVersionZoneId, displayZoneId, pushInterval) {
   tree.initRoot("tree");
 
   // Handle ways of sending and receiving data from/to server
-  var onopen = function(){ obj._ideState.init(); };
+  var onopen = function(){ obj._ideState.init(obj._debug); };
   var onclose = function(){ /* For future usage */ };
   var onreceive = function(opCode, jsonObj) {
     // hack
@@ -48,6 +48,7 @@ function AppIDE(lastVersionZoneId, displayZoneId, pushInterval) {
 
   // Debug
   $("#stateHelper").text("Waiting project tree from server");
+  this._debug = false;
 };
 AppIDE.prototype.close = function() {
   this._ideState.close();
@@ -61,6 +62,10 @@ AppIDE.prototype.handleReceive = function(opCode, jsonObj) {
 AppIDE.prototype.handleInput = function() {
   this._ideState.handleInput();
 };
+AppIDE.prototype.toggleDebug = function() {
+  this._debug = !this._debug;
+  this._ideState.debug(this._debug);
+};
 
 // State transitions
 AppIDE.prototype.waitForFileSelected = function() {
@@ -69,7 +74,7 @@ AppIDE.prototype.waitForFileSelected = function() {
 
   console.log("INFO", "IDE : Switch to NoFileState");
   this._ideState.leave();
-  this._noFileState.init();
+  this._noFileState.init(this._debug);
   this._ideState = this._noFileState;
 };
 AppIDE.prototype.waitForTargetFile = function(targetFilepath) {
@@ -78,7 +83,7 @@ AppIDE.prototype.waitForTargetFile = function(targetFilepath) {
 
   console.log("INFO", "IDE : Switch to ChangeFileState ('" +targetFilepath+"')");
   this._ideState.leave();
-  this._fileChangeState.init(targetFilepath);
+  this._fileChangeState.init(targetFilepath, this._debug);
   this._ideState = this._fileChangeState;
 };
 AppIDE.prototype.switchToEditFileState = function(targetFilepath, dumpObj, changeObjs) {
@@ -87,7 +92,7 @@ AppIDE.prototype.switchToEditFileState = function(targetFilepath, dumpObj, chang
 
   console.log("INFO", "IDE : Switch to EditFileState ('" +targetFilepath+"')");
   this._ideState.leave();
-  this._editState.init(targetFilepath, dumpObj, changeObjs);
+  this._editState.init(targetFilepath, dumpObj, changeObjs, this._debug);
   this._ideState = this._editState;
 };
 
@@ -117,10 +122,11 @@ function IdeInitState(ide, rqh, tree){
   this._tree_success = function() { console.log("Tree request received successfully"); };
   this._tree_error = function() { console.log("Tree request failed"); };
 }
-IdeInitState.prototype.init = function(){
+IdeInitState.prototype.init = function(debug){
   // Request project tree and load TreeView content
   // Display a msg for user to wait ??
   this._rqh.get("tree", {}, this._tree_success, this._tree_error);
+  this.debug(debug);
 };
 IdeInitState.prototype.leave = function(){};
 IdeInitState.prototype.close = function(){ this._rqh.close(); };
@@ -139,6 +145,7 @@ IdeInitState.prototype.handleReceive = function(opCode, jsonObj) {
 };
 IdeInitState.prototype.handleInput = function(){};
 IdeInitState.prototype.getCurrentFile = function(){ return null; };
+IdeInitState.prototype.debug = function(debug){};
 
 
 /* There is no active page to edit */
@@ -147,7 +154,7 @@ function IdeNoFileState(ide, rqh, tree){
   this._rqh = rqh;
   this._tree = tree;
 }
-IdeNoFileState.prototype.init = function(){};
+IdeNoFileState.prototype.init = function(debug){ this.debug(debug); };
 IdeNoFileState.prototype.leave = function(){};
 IdeNoFileState.prototype.close = function(){ this._rqh.close(); };
 IdeNoFileState.prototype.showFile = function(targetFilepath){
@@ -160,6 +167,7 @@ IdeNoFileState.prototype.handleReceive = function(opCode, jsonObj) {
 };
 IdeNoFileState.prototype.handleInput = function(){};
 IdeNoFileState.prototype.getCurrentFile = function(){ return null; };
+IdeNoFileState.prototype.debug = function(debug){};
 
 
 /* User requested to change file */
@@ -174,11 +182,12 @@ function IdeFileChangeState(ide, rqh, tree){
   this._open_success = function() { console.log("Open request received successfully"); };
   this._open_error = function() { console.log("Open request failed"); };
 }
-IdeFileChangeState.prototype.init = function(targetFilepath){
+IdeFileChangeState.prototype.init = function(targetFilepath, debug){
   this._targetFilepath = targetFilepath;
   this._changesBuffer = [];
   // Do request
   this._rqh.post("open", createOpen(targetFilepath), this._open_success, this._open_error);
+  this.debug(debug);
 };
 IdeFileChangeState.prototype.leave = function(){};
 IdeFileChangeState.prototype.close = function(){ this._rqh.close(); };
@@ -217,6 +226,7 @@ IdeFileChangeState.prototype.handleReceive = function(opCode, jsonObj) {
 };
 IdeFileChangeState.prototype.handleInput = function(){};
 IdeFileChangeState.prototype.getCurrentFile = function(){ return null; };
+IdeFileChangeState.prototype.debug = function(debug){};
 
 
 /* There is an active page to edit */
@@ -272,7 +282,7 @@ function IdeEditState(ide, rqh, tree, pushInterval, nodeLastVersion, nodeDisplay
     }, false);
   };
 }
-IdeEditState.prototype.init = function(targetFilepath, dumpObj, changeObjs){
+IdeEditState.prototype.init = function(targetFilepath, dumpObj, changeObjs, debug){
   // Initialize base text
   this._currentFile = targetFilepath;
   this._handleReceiveDump(dumpObj);
@@ -285,7 +295,7 @@ IdeEditState.prototype.init = function(targetFilepath, dumpObj, changeObjs){
                                          this._pushInterval);
 
   // debug
-  this._debugStopWatchLap.show();
+  this.debug(debug);
 };
 IdeEditState.prototype.leave = function(){
   // Avoid sending other packages
@@ -412,6 +422,13 @@ IdeEditState.prototype._requestDump = function() {
   }, false); // synchronous request
 };
 IdeEditState.prototype.getCurrentFile = function(){ return this._currentFile; };
+IdeEditState.prototype.debug = function(debug){
+  if(debug){
+    this._debugStopWatchLap.show();
+  } else {
+    this._debugStopWatchLap.hide();
+  }
+};
 
 
 
@@ -429,6 +446,7 @@ function StopWatch(){
                                  .text("Clear"));
   $("#editorLastVersion").parent().append(this._node);
   this._startTime = [];
+  this._shown = true;
 }
 StopWatch.prototype.start = function(){
   this._startTime.push(performance.now());
@@ -441,9 +459,18 @@ StopWatch.prototype.stop = function(){
 };
 StopWatch.prototype.hide = function(){
   this._node.hide();
+  this._shown = false;
 };
 StopWatch.prototype.show = function(){
   this._node.show();
+  this._shown = true;
+};
+StopWatch.prototype.toggleShow = function(){
+  if(this._shown){
+    this._node.hide();
+  } else {
+    this._node.show();
+  }
 };
 StopWatch.prototype._displayLaps = function(startsArray, end){
   for(var i = 0; i < startsArray.length; ++i){
