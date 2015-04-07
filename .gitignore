@@ -1,7 +1,11 @@
 # Python and Boost.Python compiled files
 *.pyc
+*.pyo
 *~
 src/app/c++/build
+
+# Benchmarks temp files
+benchmarks/temp/*
 
 # Misc Dev tools configs
 .ycm_extra_conf.py
