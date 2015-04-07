@@ -491,10 +491,11 @@ class Core(object):
 
         except OSError:
           # Clean up
-          raise  # XXX ...
           self._inner_task_remove_program_files(caller)
           # Notify file error
           self._notify_event(lambda l: l.notify_program_start_error(mainpath, caller))
+          # Re-raise the exception
+          raise
 
       else:
         # Notify file error
@@ -682,8 +683,9 @@ class Core(object):
 
   # Does not need the task_time decorator since it is called from a task
   def _inner_task_remove_program_files(self, caller):
-    user_execution = self._project_execs[caller]
-    remove_physical_dir(user_execution.exec_path)
+    user_execution = self._project_execs.pop(caller, None)
+    if user_execution:
+      remove_physical_dir(user_execution.exec_path)
 
   """
   Implementation of tasks without communication overhead.
