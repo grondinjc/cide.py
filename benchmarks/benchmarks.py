@@ -16,9 +16,9 @@ class Benchmarks(object):
     self.project_conf = dict(name='Benchmarks',
                              base_dir='./temp',
                              code_dir='./temp',
-                             exec_dir='./temp',
-                             backup_dir='./temp',
-                             tmp_dir='./temp')
+                             exec_dir='./temp/exec',
+                             backup_dir='./temp/bck',
+                             tmp_dir='./temp/tmp')
 
     # Not used since tasks are called directly
     self.core_conf = dict(cycle_time=100000,
@@ -131,15 +131,21 @@ class Benchmarks(object):
     print 'Test de _task_program_input'
     caller = random.choice(self.callers)
     specificSetup = lambda: self.task_program_setup(caller)
-    self.myTimeIt(lambda: self.core._task_program_input(caller, caller), 1000, specificSetup)
+    self.myTimeIt(lambda: self.core._task_program_input(caller, caller), specificSetup=specificSetup)
     print ''
 
   def benchmarks_task_program_kill(self):
     print 'Test de _task_program_kill'
     caller = random.choice(self.callers)
     specificSetup = lambda: self.task_program_setup(caller)
-    self.myTimeIt(lambda: self.core._task_program_kill(caller), 1000, specificSetup)
+    self.myTimeIt(lambda: self.core._task_program_kill(caller), specificSetup=specificSetup)
     print ''
+
+  def benchmarks_task_write_to_disk(self):
+    print 'Test de _task_write_to_disk'
+    caller = random.choice(self.callers)
+    self.myTimeIt(lambda: self.core._task_write_to_disk(caller))
+    print ' '
 
   def task_program_setup(self, caller):
     # The caller launches the program
@@ -149,7 +155,7 @@ class Benchmarks(object):
   def benchmarks_task_check_program_output_notify(self):
     print 'Test de task_check_program_output_notify'
     specificSetup = lambda: self.check_program_output_notify_setup()
-    self.myTimeIt(lambda: self.core.task_check_program_output_notify(), 1000, specificSetup)
+    self.myTimeIt(lambda: self.core.task_check_program_output_notify(), specificSetup=specificSetup)
     print ''
 
   def check_program_output_notify_setup(self):
@@ -194,3 +200,4 @@ benchmarks.bencharmarks_task_program_launch()
 benchmarks.benchmarks_task_program_input()
 benchmarks.benchmarks_task_program_kill()
 benchmarks.benchmarks_task_check_program_output_notify()
+benchmarks.benchmarks_task_write_to_disk()

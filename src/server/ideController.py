@@ -532,6 +532,26 @@ class IDEController(object):
     self._app.program_kill(username)
 
   @cherrypy.expose
+  @cherrypy.tools.json_out()
+  @cherrypy.tools.json_in()
+  @require_identify()
+  def saveproject(self):
+    """
+    Save the whole project to disk
+    Method : PUT
+    (Path : /ide/saveproject)
+    """
+    self._logger.debug("Saveproject by {0} ({1}:{2})".format(cherrypy.session['username'],
+                                                             request.remote.ip,
+                                                             request.remote.port))
+
+    username = cherrypy.session['username']
+    self._logger.info("Saveproject requested by {0} ({1}:{2})".format(username,
+                                                                      request.remote.ip,
+                                                                      request.remote.port))
+    self._app.write_to_disk(username)
+
+  @cherrypy.expose
   @require_identify()
   def ws(self):
     """

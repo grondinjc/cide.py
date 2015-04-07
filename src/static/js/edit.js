@@ -31,6 +31,11 @@ function menuProjectExport(){
   ideApplication.export("/");
 }
 
+// Menu -> Project -> Save
+function menuProjectSave(){
+  ideApplication.saveProject();
+}
+
 // Menu -> Parameter -> Client debug
 function menuClientDebug(){
   $(".clientdebug").toggle();
