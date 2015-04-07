@@ -141,6 +141,8 @@ class Core(object):
     self._thread.stop()
     # Stop existing executions
     for execution in self._project_execs.itervalues():
+      execution.process.stdout.close()
+      execution.process.stdin.close()
       execution.process.kill()  # brutal
 
   def get_project_name(self):
@@ -488,7 +490,8 @@ class Core(object):
 
         except OSError:
           # Clean up
-          self._inner_task_remove_program_files()
+          raise  # XXX ...
+          self._inner_task_remove_program_files(caller)
           # Notify file error
           self._notify_event(lambda l: l.notify_program_start_error(mainpath, caller))
 
@@ -657,7 +660,9 @@ class Core(object):
         # Check if program exited
         if execution.process.poll() is not None:
           # Notify process end
-          exitcode = execution.process.poll()
+          execution.process.stdout.close()
+          execution.process.stdin.close()
+          exitcode = execution.process.wait()
           self._notify_event(lambda l: l.notify_program_ended(exitcode, caller))
           self._inner_task_remove_program_files(caller)
           # Remove from list

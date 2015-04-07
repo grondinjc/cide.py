@@ -15,7 +15,7 @@ class Benchmarks(object):
 
     self.project_conf = dict(name='Benchmarks',
                              base_dir='./temp',
-                             code_dir='./temp',
+                             code_dir='./temp/code',
                              exec_dir='./temp/exec',
                              backup_dir='./temp/bck',
                              tmp_dir='./temp/tmp')
@@ -45,9 +45,7 @@ class Benchmarks(object):
       self.callers.append(chr(ord('a')+i / 26) + chr(ord('a')+i % 26))
 
     for i in range(MAX_FILES):
-      filename = ""
-      for j in range(random.randint(1, 100)):
-        filename += '/' + chr(ord('a')+i / 26) + chr(ord('a')+i % 26)
+      filename = '/' + chr(ord('a')+i / 26) + chr(ord('a')+i % 26)
       self.files.append(filename)
 
   def setUp(self):
@@ -67,6 +65,7 @@ class Benchmarks(object):
         self.core._task_file_edit(file, [Core.Change(0, "Hello", True)], user)
 
   def tearDown(self):
+    self.core.stop()
     self.core = None
 
   def benchmarks_task_get_project_nodes(self):
@@ -188,16 +187,16 @@ class Benchmarks(object):
     print 'average is: {0}'.format((reduce(lambda x, y: x + y, times)/len(times)))
 
 benchmarks = Benchmarks()
-benchmarks.benchmarks_task_get_project_nodes()
-benchmarks.benchmarks_task_get_file_content()
-benchmarks.benchmarks_task_open_file()
-benchmarks.benchmarks_task_unregister_user_to_file()
-benchmarks.benchmarks_task_unregister_user_to_all_files()
-benchmarks.benchmarks_task_file_edit()
-benchmarks.benchmarks_task_check_apply_notify()
-benchmarks.benchmarks_task_create_archive()
-benchmarks.bencharmarks_task_program_launch()
-benchmarks.benchmarks_task_program_input()
-benchmarks.benchmarks_task_program_kill()
+# benchmarks.benchmarks_task_get_project_nodes()
+# benchmarks.benchmarks_task_get_file_content()
+# benchmarks.benchmarks_task_open_file()
+# benchmarks.benchmarks_task_unregister_user_to_file()
+# benchmarks.benchmarks_task_unregister_user_to_all_files()
+# benchmarks.benchmarks_task_file_edit()
+# benchmarks.benchmarks_task_check_apply_notify()
+# benchmarks.benchmarks_task_create_archive()
+# benchmarks.bencharmarks_task_program_launch()
+# benchmarks.benchmarks_task_program_input()
+# benchmarks.benchmarks_task_program_kill()
 benchmarks.benchmarks_task_check_program_output_notify()
-benchmarks.benchmarks_task_write_to_disk()
+# benchmarks.benchmarks_task_write_to_disk()
