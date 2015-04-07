@@ -4,6 +4,9 @@
 *~
 src/app/c++/build
 
+# Demo directory
+demo
+
 # Benchmarks temp files
 benchmarks/temp/*
 
