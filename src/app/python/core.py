@@ -346,7 +346,7 @@ class Core(object):
   Those are queued to be executed by the CoreThread
   """
 
-  @task_time(microseconds=300)
+  @task_time(microseconds=203)
   def _task_get_project_nodes(self, caller):
     """
     Task to get all files and directories from project
@@ -375,7 +375,7 @@ class Core(object):
     else:
       self._notify_event(lambda l: l.notify_get_file_content_error(path, caller))
 
-  @task_time(microseconds=80)
+  @task_time(microseconds=78)
   def _task_open_file(self, user, path):
     """
     Task to register a user to a file in order to receive file modification
@@ -396,7 +396,7 @@ class Core(object):
     result = self._impl_get_file_content(path)
     self._notify_event(lambda l: l.notify_get_file_content(result, user))
 
-  @task_time(microseconds=50)
+  @task_time(microseconds=45)
   def _task_unregister_user_to_file(self, user, path):
     """
     Task to unregister a user to a file in order to stop receiving file modification
@@ -438,7 +438,7 @@ class Core(object):
                       else EditRemove(c.pos, c.data, author)) for c in changes])
       self._project_files[path].file.add(bundle)
 
-  @task_time(microseconds=1)
+  @task_time(microseconds=31239)
   def _task_program_launch(self, mainpath, args, caller):
     """
     Task that will add a process with pipes input, output and error.
@@ -502,7 +502,7 @@ class Core(object):
                                                                   user_exec.args,
                                                                   caller))
 
-  @task_time(microseconds=1)
+  @task_time(microseconds=57)
   def _task_program_input(self, data, caller):
     """
     Task that will add input into the stdin pipe of the executing program
@@ -521,7 +521,7 @@ class Core(object):
       # Notify no process in progress
       self._notify_event(lambda l: l.notify_program_no_running_error(caller))
 
-  @task_time(microseconds=1)
+  @task_time(microseconds=91)
   def _task_program_kill(self, caller):
     """
     Task that will kill the execution of the caller
@@ -539,7 +539,7 @@ class Core(object):
       # Notify no process in progress
       self._notify_event(lambda l: l.notify_program_no_running_error(caller))
 
-  @task_time(microseconds=1)
+  @task_time(microseconds=14000)
   def _task_create_archive(self, path, caller, response):
     """
     Task to create an archive of the files under a project directory
@@ -612,7 +612,7 @@ class Core(object):
   at different time point within that cycle
   """
 
-  @task_time(microseconds=25000)
+  @task_time(microseconds=24557)
   def task_check_apply_notify(self):
     """
     Regular task to apply pending modifications on all file from project.
@@ -642,7 +642,7 @@ class Core(object):
                                      version,
                                      users_registered))
 
-  @task_time(microseconds=1)
+  @task_time(microseconds=6127)
   def task_check_program_output_notify(self):
     """
     Task to check if there's program output and send it
