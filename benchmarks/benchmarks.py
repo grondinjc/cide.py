@@ -45,7 +45,9 @@ class Benchmarks(object):
       self.callers.append(chr(ord('a')+i / 26) + chr(ord('a')+i % 26))
 
     for i in range(MAX_FILES):
-      filename = '/' + chr(ord('a')+i / 26) + chr(ord('a')+i % 26)
+      filename = ""
+      for j in range(random.randint(1, 3)):
+        filename += '/' + chr(ord('a')+i / 26) + chr(ord('a')+i % 26)
       self.files.append(filename)
 
   def setUp(self):
