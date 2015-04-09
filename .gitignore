@@ -9,6 +9,10 @@ demo
 
 # Benchmarks temp files
 benchmarks/temp/*
+!benchmarks/temp/aa.py
+!benchmarks/temp/code
+benchmarks/temp/code/*
+!benchmarks/temp/code/aa.py
 
 # Misc Dev tools configs
 .ycm_extra_conf.py

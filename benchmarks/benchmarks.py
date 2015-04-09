@@ -15,7 +15,7 @@ class Benchmarks(object):
 
     self.project_conf = dict(name='Benchmarks',
                              base_dir='./temp',
-                             code_dir='./temp',
+                             code_dir='./temp/code',
                              exec_dir='./temp/exec',
                              backup_dir='./temp/bck',
                              tmp_dir='./temp/tmp')
@@ -46,7 +46,7 @@ class Benchmarks(object):
 
     for i in range(MAX_FILES):
       filename = ""
-      for j in range(random.randint(1, 100)):
+      for j in range(random.randint(1, 3)):
         filename += '/' + chr(ord('a')+i / 26) + chr(ord('a')+i % 26)
       self.files.append(filename)
 
@@ -67,6 +67,7 @@ class Benchmarks(object):
         self.core._task_file_edit(file, [Core.Change(0, "Hello", True)], user)
 
   def tearDown(self):
+    self.core.stop()
     self.core = None
 
   def benchmarks_task_get_project_nodes(self):

@@ -141,7 +141,10 @@ class Core(object):
     self._thread.stop()
     # Stop existing executions
     for execution in self._project_execs.itervalues():
+      execution.process.stdin.close()
+      execution.process.stdout.close()
       execution.process.kill()  # brutal
+      execution.process.wait()
 
   def get_project_name(self):
     """
@@ -488,9 +491,11 @@ class Core(object):
 
         except OSError:
           # Clean up
-          self._inner_task_remove_program_files()
+          self._inner_task_remove_program_files(caller)
           # Notify file error
           self._notify_event(lambda l: l.notify_program_start_error(mainpath, caller))
+          # Re-raise the exception
+          raise
 
       else:
         # Notify file error
@@ -533,7 +538,9 @@ class Core(object):
     if caller in self._project_execs:
       user_execution = self._project_execs[caller]
       user_execution.process.stdin.close()
+      user_execution.process.stdout.close()
       user_execution.process.terminate()
+      user_execution.process.wait()
       del self._project_execs[caller]
     else:
       # Notify no process in progress
@@ -657,7 +664,9 @@ class Core(object):
         # Check if program exited
         if execution.process.poll() is not None:
           # Notify process end
-          exitcode = execution.process.poll()
+          execution.process.stdin.close()
+          execution.process.stdout.close()
+          exitcode = execution.process.wait()
           self._notify_event(lambda l: l.notify_program_ended(exitcode, caller))
           self._inner_task_remove_program_files(caller)
           # Remove from list
@@ -674,8 +683,9 @@ class Core(object):
 
   # Does not need the task_time decorator since it is called from a task
   def _inner_task_remove_program_files(self, caller):
-    user_execution = self._project_execs[caller]
-    remove_physical_dir(user_execution.exec_path)
+    user_execution = self._project_execs.pop(caller, None)
+    if user_execution:
+      remove_physical_dir(user_execution.exec_path)
 
   """
   Implementation of tasks without communication overhead.
