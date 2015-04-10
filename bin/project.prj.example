@@ -7,7 +7,7 @@ project_backup_dir = "<<PRJ_BASE_DIR>>/backup"
 project_tmp_dir = "<<PRJ_BASE_DIR>>/tmp"
 
 [CoreAppRealtime]
-cycle_time = 1000000         # in microseconds
-time_buffer_critical = 50    # percentage
-time_buffer_secondary  = 40  # percentage
-time_buffer_auxiliary  = 10  # percentage
+cycle_time = 100000          # in microseconds
+time_buffer_critical = 25    # percentage
+time_buffer_secondary  = 25  # percentage
+time_buffer_auxiliary  = 50  # percentage
