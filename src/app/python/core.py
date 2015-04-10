@@ -349,7 +349,6 @@ class Core(object):
   Those are queued to be executed by the CoreThread
   """
 
-  #@task_time(microseconds=203)
   @task_time(microseconds=500)
   def _task_get_project_nodes(self, caller):
     """
@@ -362,7 +361,6 @@ class Core(object):
     sorted_nodes = self._impl_get_project_nodes()
     self._notify_event(lambda l: l.notify_get_project_nodes(sorted_nodes, caller))
 
-  #@task_time(microseconds=50)
   @task_time(microseconds=300)
   def _task_get_file_content(self, path, caller):
     """
@@ -380,7 +378,6 @@ class Core(object):
     else:
       self._notify_event(lambda l: l.notify_get_file_content_error(path, caller))
 
-  #@task_time(microseconds=78)
   @task_time(microseconds=400)
   def _task_open_file(self, user, path):
     """
@@ -402,7 +399,6 @@ class Core(object):
     result = self._impl_get_file_content(path)
     self._notify_event(lambda l: l.notify_get_file_content(result, user))
 
-  #@task_time(microseconds=45)
   @task_time(microseconds=200)
   def _task_unregister_user_to_file(self, user, path):
     """
@@ -416,7 +412,6 @@ class Core(object):
     if path in self._project_files:
       self._project_files[path].users.discard(user)
 
-  #@task_time(microseconds=82)
   @task_time(microseconds=300)
   def _task_unregister_user_to_all_files(self, user):
     """
@@ -428,7 +423,6 @@ class Core(object):
     for f in self._project_files.itervalues():
       f.users.discard(user)
 
-  #@task_time(microseconds=66)
   @task_time(microseconds=600)
   def _task_file_edit(self, path, changes, user):
     """
@@ -447,7 +441,6 @@ class Core(object):
                       else EditRemove(c.pos, c.data, author)) for c in changes])
       self._project_files[path].file.add(bundle)
 
-  #@task_time(microseconds=31239)
   @task_time(microseconds=40000)
   def _task_program_launch(self, mainpath, args, caller):
     """
@@ -514,7 +507,6 @@ class Core(object):
                                                                   user_exec.args,
                                                                   caller))
 
-  #@task_time(microseconds=57)
   @task_time(microseconds=200)
   def _task_program_input(self, data, caller):
     """
@@ -534,7 +526,6 @@ class Core(object):
       # Notify no process in progress
       self._notify_event(lambda l: l.notify_program_no_running_error(caller))
 
-  #@task_time(microseconds=91)
   @task_time(microseconds=7000)
   def _task_program_kill(self, caller):
     """
@@ -555,7 +546,6 @@ class Core(object):
       # Notify no process in progress
       self._notify_event(lambda l: l.notify_program_no_running_error(caller))
 
-  #@task_time(microseconds=14000)
   @task_time(microseconds=15000)
   def _task_create_archive(self, path, caller, response):
     """
@@ -591,7 +581,6 @@ class Core(object):
     # Export file
     response.put(archive_path)
 
-  #@task_time(microseconds=1)
   @task_time(microseconds=10000)
   def _task_write_to_disk(self, caller):
     """
@@ -630,7 +619,6 @@ class Core(object):
   at different time point within that cycle
   """
 
-  #@task_time(microseconds=24557)
   @task_time(microseconds=15000)
   def task_check_apply_notify(self):
     """
@@ -661,7 +649,6 @@ class Core(object):
                                      version,
                                      users_registered))
 
-  #@task_time(microseconds=6127)
   @task_time(microseconds=5000)
   def task_check_program_output_notify(self):
     """
