@@ -33,6 +33,11 @@ class Ajout : public Modification
 
     virtual void effectuerModification(Fichier& fichier) override
     {
+      size_t finFichier = fichier.getTaille();
+      if(getPosition() > finFichier){
+        setPosition(finFichier);
+      }
+
       fichier.inserer(_data.c_str(), getPosition(), getTaille());
     }
 

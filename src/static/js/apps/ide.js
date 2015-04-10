@@ -1,4 +1,4 @@
-DEFAULT_PUSH_INTERVAL = 2000; // ms
+DEFAULT_PUSH_INTERVAL = 500; // ms
 
 /* Central class that will interact will all other classes. */
 function AppIDE(lastVersionZoneId, displayZoneId, pushInterval) {
