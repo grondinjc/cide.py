@@ -18,6 +18,7 @@ cd "$DIR_PATH"
 echo "Building libs ..."
 mkdir -p ../src/app/c++/build
 cd ../src/app/c++/build
+rm -rf ./*
 cmake .. -DCMAKE_CXX_COMPILER=/usr/bin/g++
 make
 
